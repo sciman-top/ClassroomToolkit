@@ -19,4 +19,29 @@ public sealed class PaintOverlayWindowLifecycleContractTests
         source.Should().Contain("_presentationFocusMonitor.Stop();");
         source.Should().Contain("_inkMonitor.Stop();");
     }
+
+    [Fact]
+    public void VisibilityChanges_ShouldRefreshNativeInputOwnershipBeforeAsyncHookRefresh()
+    {
+        var source = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Lifecycle.cs"));
+        var handlerStart = source.IndexOf(
+            "private void OnOverlayVisibleChanged(",
+            StringComparison.Ordinal);
+        handlerStart.Should().BeGreaterThanOrEqualTo(0);
+        var handlerEnd = source.IndexOf(
+            "private void OnOverlaySourceInitialized(",
+            handlerStart,
+            StringComparison.Ordinal);
+        handlerEnd.Should().BeGreaterThan(handlerStart);
+
+        var handler = source[handlerStart..handlerEnd];
+        var refreshIndex = handler.IndexOf("RefreshPresentationInputOwnership();", StringComparison.Ordinal);
+        var asyncRefreshIndex = handler.IndexOf("UpdateWpsNavHookState();", StringComparison.Ordinal);
+        refreshIndex.Should().BeGreaterThanOrEqualTo(0);
+        asyncRefreshIndex.Should().BeGreaterThan(refreshIndex);
+    }
 }

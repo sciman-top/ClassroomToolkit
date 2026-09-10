@@ -71,6 +71,10 @@ public partial class PaintOverlayWindow
             WindowPlacementHelper.EnsureVisible(this);
         }
 
+        // Update the native authorization set synchronously.  The async hook
+        // state refresh remains the lifecycle owner, but hidden HWNDs must not
+        // stay authorized during its scheduling window.
+        RefreshPresentationInputOwnership();
         UpdateWpsNavHookState();
         UpdateFocusAcceptance();
         UpdatePresentationFocusMonitor();

@@ -309,23 +309,43 @@ public partial class PaintOverlayWindow
     {
         // Keep fullscreen tracking aligned with slideshow-window validation.
         // This avoids treating WPS non-slideshow fullscreen windows as active presentation sessions.
+        var previousType = _currentPresentationType;
         var nextType = ResolveFullscreenPresentationType();
         var fullscreenNow = nextType != PresentationType.None;
         var stateChanged = fullscreenNow != _presentationFullscreenActive;
+        var typeChanged = previousType != nextType;
+
+        if (previousType != PresentationType.None && previousType != nextType)
+        {
+            _presentationTargetSessionBinding.Invalidate(previousType);
+        }
+        if (!fullscreenNow && (stateChanged || previousType != PresentationType.None))
+        {
+            // A fullscreen exit ends the HWND session. Clear both channels so a
+            // recycled HWND cannot survive into the next presentation session.
+            _presentationTargetSessionBinding.InvalidateAll();
+        }
+
         _presentationFullscreenActive = fullscreenNow;
         _currentPresentationType = fullscreenNow ? nextType : PresentationType.None;
-        if (!stateChanged)
+        if (!stateChanged && !typeChanged)
         {
             return;
         }
-        if (fullscreenNow)
+        if (stateChanged && fullscreenNow)
         {
             DispatchSessionEvent(new EnterPresentationFullscreenEvent(MapPresentationSource(nextType)));
             TryFollowPresentationMonitor();
         }
-        else
+        else if (stateChanged)
         {
             DispatchSessionEvent(new ExitPresentationFullscreenEvent());
+        }
+        else if (fullscreenNow)
+        {
+            // A live WPS -> Office (or reverse) switch is still a monitor/session
+            // transition even though fullscreen remains true.
+            TryFollowPresentationMonitor();
         }
         SafeActionExecutionExecutor.TryExecute(
             () => PresentationFullscreenDetected?.Invoke(),
@@ -679,6 +699,14 @@ public partial class PaintOverlayWindow
             : PresentationType.None;
         var foregroundIsFullscreen = foregroundHasInfo && IsFullscreenPresentationWindow(foreground);
         var foregroundOwnedByCurrentProcess = foregroundHasInfo && foreground.Info!.ProcessId == _currentProcessId;
+
+        if (foregroundIsFullscreen
+            && foregroundType is PresentationType.Wps or PresentationType.Office)
+        {
+            _presentationTargetSessionBinding.InvalidateIfBoundToDifferentWindow(
+                foregroundType,
+                foreground.Handle);
+        }
 
         bool wpsFullscreen = false;
         bool officeFullscreen = false;

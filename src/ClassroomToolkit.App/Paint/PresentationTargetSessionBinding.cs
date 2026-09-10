@@ -49,6 +49,26 @@ internal sealed class PresentationTargetSessionBinding
         }
     }
 
+    internal bool InvalidateIfBoundToDifferentWindow(PresentationType type, IntPtr activeWindow)
+    {
+        if (activeWindow == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        lock (_sync)
+        {
+            var bound = Get(type);
+            if (!bound.IsValid || bound.Handle == activeWindow)
+            {
+                return false;
+            }
+
+            Set(type, PresentationTarget.Empty);
+            return true;
+        }
+    }
+
     internal void InvalidateAll()
     {
         lock (_sync)

@@ -62,6 +62,57 @@ public sealed class PresentationTargetSessionBindingTests
             .IsValid.Should().BeFalse();
     }
 
+    [Fact]
+    public void InvalidateIfBoundToDifferentWindow_ShouldForceNewSessionTarget()
+    {
+        var binding = new PresentationTargetSessionBinding();
+        var first = BuildTarget(400);
+        var second = BuildTarget(500);
+        var resolveCount = 0;
+
+        binding.Resolve(
+                PresentationType.Wps,
+                () =>
+                {
+                    resolveCount++;
+                    return resolveCount == 1 ? first : second;
+                },
+                target => target.IsValid)
+            .Should().Be(first);
+
+        binding.InvalidateIfBoundToDifferentWindow(PresentationType.Wps, second.Handle)
+            .Should().BeTrue();
+
+        binding.Resolve(
+                PresentationType.Wps,
+                () =>
+                {
+                    resolveCount++;
+                    return second;
+                },
+                target => target.IsValid)
+            .Should().Be(second);
+        resolveCount.Should().Be(2);
+    }
+
+    [Fact]
+    public void InvalidateIfBoundToDifferentWindow_ShouldKeepSameSessionTarget()
+    {
+        var binding = new PresentationTargetSessionBinding();
+        var target = BuildTarget(600);
+
+        binding.Resolve(PresentationType.Office, () => target, candidate => candidate.IsValid)
+            .Should().Be(target);
+
+        binding.InvalidateIfBoundToDifferentWindow(PresentationType.Office, target.Handle)
+            .Should().BeFalse();
+        binding.InvalidateIfBoundToDifferentWindow(PresentationType.Office, IntPtr.Zero)
+            .Should().BeFalse();
+
+        binding.Resolve(PresentationType.Office, () => BuildTarget(700), candidate => candidate.IsValid)
+            .Should().Be(target);
+    }
+
     private static PresentationTarget BuildTarget(long hwnd)
     {
         return new PresentationTarget(
