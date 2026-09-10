@@ -15,7 +15,7 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        PushHistory();
+        _activeInkOperationHistory = PushHistory();
         CaptureStrokeContext();
         _strokeInProgress = true;
         _activeBrushStrokeUsesCrossPageContinuation = false;
@@ -40,6 +40,7 @@ public partial class PaintOverlayWindow
             return;
         }
 
+        _activeInkOperationHistory = null;
         _strokeInProgress = true;
         _activeBrushStrokeUsesCrossPageContinuation = true;
         var color = EffectiveBrushColor();
@@ -132,6 +133,7 @@ public partial class PaintOverlayWindow
         _activeRenderer.Reset();
         _visualHost.Clear();
         _strokeInProgress = false;
+        _activeInkOperationHistory = null;
         var usedCrossPageContinuation = _activeBrushStrokeUsesCrossPageContinuation;
         _activeBrushStrokeUsesCrossPageContinuation = false;
         _lastBrushInputSample = null;

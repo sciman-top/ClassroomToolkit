@@ -26,7 +26,61 @@ public sealed class PaintOverlayDrawingStateContractTests
         source.Should().Contain("private void OnOverlayLostMouseCapture(object sender, System.Windows.Input.MouseEventArgs e)");
         source.Should().Contain("private void OnOverlayLostStylusCapture(object sender, StylusEventArgs e)");
         source.Should().Contain("HandlePointerCaptureLoss(\"stylus-capture-lost\")");
+        source.Should().Contain("PointerCaptureCleanupPolicy.ShouldDeferCleanup(");
+        source.Should().NotContain("() => EndBrushStroke(input)");
+        source.Should().Contain("DiscardActiveInkOperationHistory();");
         source.Should().Contain("ResetInterruptedBrushState();");
+
+        var history = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Ink.History.cs");
+        history.Should().Contain("private void DiscardActiveInkOperationHistory()");
+        history.Should().Contain("receipt.Raster.Pixels.Length");
+        history.Should().Contain("private void DisposeRasterHistory()");
+        history.Should().Contain("Interlocked.Exchange(ref _returned, 1)");
+
+        var eraser = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Ink.EraserAndRegion.cs");
+        eraser.Should().Contain("EnsureActiveRegionErasePageSnapshot()");
+        eraser.Should().Contain("RemoveReference(_globalInkHistory, pageSnapshot)");
+        eraser.Should().Contain("_lastEraserAppliedPoint");
+        eraser.Should().Contain(">= InkGeometryDefaults.EraserTapDistanceThresholdDip");
+
+        var undo = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.HistoryAndTransform.cs");
+        undo.Should().Contain("OperationId");
+        undo.Should().Contain("_globalInkHistory.RemoveRange(");
+
+        var photo = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Photo.Transform.PanInertia.cs");
+        photo.Should().Contain("Stylus.Capture(OverlayRoot, CaptureMode.None)");
+        photo.Should().NotContain("Stylus.Capture(null)");
+
+        var photoState = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Photo.cs");
+        photoState.Should().Contain("ContainsReference(_globalInkHistory, activeGlobalSnapshot)");
+
+        var lifecycleSource = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Lifecycle.cs");
+        lifecycleSource.Should().Contain("DisposeRasterHistory();");
+        lifecycleSource.Should().Contain("_globalInkHistory.Clear();");
     }
 
     [Fact]

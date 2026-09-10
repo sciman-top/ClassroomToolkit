@@ -65,7 +65,9 @@ public partial class PaintOverlayWindow
     private double _eraserSize = 24.0;
     private bool _isErasing;
     private bool _strokeInProgress;
+    private HistoryPushReceipt? _activeInkOperationHistory;
     private WpfPoint? _lastEraserPoint;
+    private WpfPoint? _lastEraserAppliedPoint;
     private bool _hasDrawing;
     private DateTime _lastCalligraphyPreviewUtc = InkRuntimeTimingDefaults.UnsetTimestampUtc;
     private WpfPoint? _lastCalligraphyPreviewPoint;

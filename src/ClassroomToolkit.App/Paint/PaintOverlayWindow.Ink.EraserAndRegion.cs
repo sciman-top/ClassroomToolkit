@@ -16,10 +16,11 @@ public partial class PaintOverlayWindow
 {
     private void BeginEraser(WpfPoint position)
     {
-        PushHistory();
+        _activeInkOperationHistory = PushHistory();
         _isErasing = true;
         _lastEraserPoint = position;
         ApplyEraserAt(position);
+        _lastEraserAppliedPoint = position;
     }
 
     private void UpdateEraser(WpfPoint position)
@@ -41,6 +42,7 @@ public partial class PaintOverlayWindow
         if (geometry != null)
         {
             EraseGeometry(geometry);
+            _lastEraserAppliedPoint = position;
         }
         _lastEraserPoint = position;
     }
@@ -51,12 +53,16 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        if (_lastEraserPoint == null || (_lastEraserPoint.Value - position).Length < InkGeometryDefaults.EraserTapDistanceThresholdDip)
+        if (_lastEraserAppliedPoint == null
+            || (_lastEraserAppliedPoint.Value - position).Length >= InkGeometryDefaults.EraserTapDistanceThresholdDip)
         {
             ApplyEraserAt(position);
+            _lastEraserAppliedPoint = position;
         }
         _isErasing = false;
         _lastEraserPoint = null;
+        _lastEraserAppliedPoint = null;
+        _activeInkOperationHistory = null;
         NotifyInkStateChanged(updateActiveSnapshot: true);
         var photoInkModeActive = IsPhotoInkModeActive();
         if (PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
@@ -70,7 +76,7 @@ public partial class PaintOverlayWindow
 
     private void BeginRegionSelection(WpfPoint position)
     {
-        PushHistory();
+        _activeInkOperationHistory = PushHistory();
         _regionStart = position;
         if (_regionRect == null)
         {
@@ -113,7 +119,17 @@ public partial class PaintOverlayWindow
             {
                 NotifyInkStateChanged(updateActiveSnapshot: true);
             }
+            else
+            {
+                DiscardActiveInkOperationHistory();
+            }
         }
+        else
+        {
+            DiscardActiveInkOperationHistory();
+        }
+
+        _activeInkOperationHistory = null;
     }
 
     private bool EraseRectAcrossVisibleCrossPages(Rect region)
@@ -142,7 +158,12 @@ public partial class PaintOverlayWindow
             {
                 continue;
             }
+            var pageSnapshot = EnsureActiveRegionErasePageSnapshot();
             var pageChanged = EraseRect(region);
+            if (!pageChanged)
+            {
+                RemoveReference(_globalInkHistory, pageSnapshot);
+            }
             anyChanged |= pageChanged;
             if (!pageChanged)
             {
@@ -160,6 +181,27 @@ public partial class PaintOverlayWindow
             RequestCrossPageDisplayUpdate(CrossPageUpdateSources.RegionEraseCrossPage);
         }
         return anyChanged;
+    }
+
+    private GlobalInkSnapshot? EnsureActiveRegionErasePageSnapshot()
+    {
+        var activeGlobalSnapshot = _activeInkOperationHistory?.Global;
+        if (activeGlobalSnapshot == null)
+        {
+            return null;
+        }
+
+        foreach (var snapshot in _globalInkHistory)
+        {
+            if (snapshot.OperationId == activeGlobalSnapshot.OperationId
+                && snapshot.PageIndex == _currentPageIndex
+                && string.Equals(snapshot.SourcePath, _currentDocumentPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return snapshot;
+            }
+        }
+
+        return PushGlobalInkHistorySnapshot(activeGlobalSnapshot.OperationId);
     }
 
     private bool TryNavigateCrossPageForRegionErase(int targetPage)

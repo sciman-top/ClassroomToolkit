@@ -125,9 +125,9 @@ public partial class PaintOverlayWindow
 
     private void OnOverlayClosed(object? sender, EventArgs e)
     {
-        HandlePointerCaptureLoss("overlay-closed");
         Interlocked.Exchange(ref _overlayClosed, 1);
         _overlayLifecycleCancellation.Cancel();
+        HandlePointerCaptureLoss("overlay-closed");
         if (_hwnd != IntPtr.Zero)
         {
             try
@@ -179,6 +179,10 @@ public partial class PaintOverlayWindow
         _photoActiveTouchIds.Clear();
         _photoTouchPanDeviceId = null;
         SaveCurrentPageIfNeeded();
+        DisposeRasterHistory();
+        _inkHistory.Clear();
+        _globalInkHistory.Clear();
+        _activeInkOperationHistory = null;
         _photoTransformSaveTimer?.Stop();
         _photoTransformSaveTimer?.Tick -= OnPhotoTransformSaveTimerTick;
         _photoUnifiedTransformSaveTimer?.Stop();

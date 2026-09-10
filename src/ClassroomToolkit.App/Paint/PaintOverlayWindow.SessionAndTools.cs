@@ -144,9 +144,9 @@ public partial class PaintOverlayWindow
 
     public void SetShapeType(PaintShapeType type)
     {
-        if (_shapeType == PaintShapeType.Triangle)
+        if (_shapeType != type && HasPendingShapeDraft())
         {
-            CancelPendingTriangleDraft($"shape-switch:{_shapeType}->{type}");
+            CancelPendingShapeDraft($"shape-switch:{_shapeType}->{type}");
         }
 
         _shapeType = type;
@@ -158,6 +158,36 @@ public partial class PaintOverlayWindow
 
     public void ClearAll()
     {
+        if (_strokeInProgress)
+        {
+            ResetInterruptedBrushState();
+        }
+        if (_isErasing)
+        {
+            var position = _lastEraserPoint ?? _lastPointerPosition;
+            if (position.HasValue)
+            {
+                EndEraser(position.Value);
+            }
+            else
+            {
+                _isErasing = false;
+                _lastEraserPoint = null;
+                _lastEraserAppliedPoint = null;
+                _activeInkOperationHistory = null;
+            }
+        }
+        if (HasPendingShapeDraft())
+        {
+            CancelPendingShapeDraft("clear-all");
+        }
+        if (_isRegionSelecting)
+        {
+            ClearRegionSelection();
+            DiscardActiveInkOperationHistory();
+        }
+        ReleasePointerInput();
+
         if (_hasDrawing)
         {
             PushHistory();

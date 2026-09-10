@@ -32,8 +32,15 @@ public partial class PaintOverlayWindow
 
     private void ResetInkHistory()
     {
-        _history.Clear();
+        // Cross-page region erase keeps one global receipt alive while navigation
+        // resets the page-local/raster stacks. Preserve only that receipt so a
+        // canceled operation can remove it instead of leaving a phantom undo.
+        var activeGlobalSnapshot = _activeInkOperationHistory?.Global;
+        DisposeRasterHistory();
         _inkHistory.Clear();
+        _activeInkOperationHistory = ContainsReference(_globalInkHistory, activeGlobalSnapshot)
+            ? new HistoryPushReceipt(null, null, activeGlobalSnapshot)
+            : null;
     }
 
     private void LoadCurrentPageIfExists(bool allowDiskFallback = true, bool preferInteractiveFastPath = false)
@@ -391,4 +398,3 @@ public partial class PaintOverlayWindow
     public bool IsWhiteboardActive => IsBoardActive();
     public bool IsPresentationFullscreenActive => _presentationFullscreenActive;
 }
-

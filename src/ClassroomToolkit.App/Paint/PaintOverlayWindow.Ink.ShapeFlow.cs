@@ -20,12 +20,13 @@ public partial class PaintOverlayWindow
             return;
         }
 
-        PushHistory();
+        _activeInkOperationHistory = PushHistory();
         CaptureStrokeContext();
         _shapeStart = position;
         EnsureActiveShapePreview();
         if (_activeShape == null)
         {
+            DiscardActiveInkOperationHistory();
             return;
         }
         UpdateShape(_activeShape!, _shapeType, _shapeStart, position);
@@ -66,8 +67,15 @@ public partial class PaintOverlayWindow
             return;
         }
         var geometry = BuildShapeGeometry(_shapeType, _shapeStart, position);
+        if (geometry == null)
+        {
+            ClearShapePreview();
+            DiscardActiveInkOperationHistory();
+            return;
+        }
         CommitShapeGeometry(geometry, _shapeType);
         ClearShapePreview();
+        _activeInkOperationHistory = null;
         var photoInkModeActive = IsPhotoInkModeActive();
         if (PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
                 photoInkModeActive,
@@ -129,13 +137,19 @@ public partial class PaintOverlayWindow
     {
         if (!_triangleAnchorSet)
         {
-            PushHistory();
+            _activeInkOperationHistory = PushHistory();
             CaptureStrokeContext();
             _trianglePoint1 = position;
             _triangleAnchorSet = true;
         }
 
         EnsureActiveShapePreview();
+        if (_activeShape == null)
+        {
+            DiscardActiveInkOperationHistory();
+            ResetTriangleState();
+            return;
+        }
         if (_activeShape is WpfPath path)
         {
             if (_triangleFirstEdgeCommitted)
@@ -185,6 +199,7 @@ public partial class PaintOverlayWindow
         CommitShapeGeometry(triangle, PaintShapeType.Triangle);
         ClearShapePreview();
         ResetTriangleState();
+        _activeInkOperationHistory = null;
         var photoInkModeActive = IsPhotoInkModeActive();
         if (PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
                 photoInkModeActive,
@@ -226,6 +241,25 @@ public partial class PaintOverlayWindow
 
         Debug.WriteLine($"[TriangleDraft] canceled: {reason}");
         ClearShapePreview();
+        DiscardActiveInkOperationHistory();
+    }
+
+    private bool HasPendingShapeDraft()
+    {
+        return _activeShape != null
+               || _isDrawingShape
+               || HasPendingTriangleDraft();
+    }
+
+    private void CancelPendingShapeDraft(string reason)
+    {
+        if (!HasPendingShapeDraft())
+        {
+            return;
+        }
+
+        Debug.WriteLine($"[ShapeDraft] canceled: {reason}");
+        ClearShapePreview();
+        DiscardActiveInkOperationHistory();
     }
 }
-

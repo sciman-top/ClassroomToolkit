@@ -262,6 +262,17 @@ public partial class PaintOverlayWindow
             return;
         }
 
+        if (PointerCaptureCleanupPolicy.ShouldDeferCleanup(
+                reason,
+                OverlayRoot.IsMouseCaptured,
+                OverlayRoot.IsStylusCaptured))
+        {
+            Debug.WriteLine(
+                $"[PaintOverlay] deferred pointer capture cleanup: {reason}; " +
+                "the other pointer capture is still active");
+            return;
+        }
+
         _pointerCleanupInProgress = true;
         try
         {
@@ -272,11 +283,8 @@ public partial class PaintOverlayWindow
 
             if (_strokeInProgress)
             {
-                var input = _lastBrushInputSample ?? BrushInputSample.CreatePointer(fallbackPosition);
-                SafeActionExecutionExecutor.TryExecute(
-                    () => EndBrushStroke(input),
-                    ex => Debug.WriteLine(
-                        $"[PaintOverlay] interrupted brush finalization failed: {ex.GetType().Name} - {ex.Message}"));
+                // Capture loss means the input stream is incomplete.  Do not turn
+                // the last sample into a committed tap/dot or an undo entry.
                 ResetInterruptedBrushState();
             }
 
@@ -288,27 +296,18 @@ public partial class PaintOverlayWindow
                         $"[PaintOverlay] interrupted eraser finalization failed: {ex.GetType().Name} - {ex.Message}"));
                 _isErasing = false;
                 _lastEraserPoint = null;
+                _lastEraserAppliedPoint = null;
             }
 
-            if (_shapeType == PaintShapeType.Triangle && HasPendingTriangleDraft())
+            if (HasPendingShapeDraft())
             {
-                CancelPendingTriangleDraft(reason);
-            }
-            else if (_isDrawingShape)
-            {
-                SafeActionExecutionExecutor.TryExecute(
-                    () => EndShape(fallbackPosition),
-                    ex => Debug.WriteLine(
-                        $"[PaintOverlay] interrupted shape finalization failed: {ex.GetType().Name} - {ex.Message}"));
-                if (_isDrawingShape)
-                {
-                    ClearShapePreview();
-                }
+                CancelPendingShapeDraft(reason);
             }
 
             if (_isRegionSelecting)
             {
                 ClearRegionSelection();
+                DiscardActiveInkOperationHistory();
             }
 
             if (_photoPanning)
@@ -359,6 +358,7 @@ public partial class PaintOverlayWindow
 
     private void ResetInterruptedBrushState()
     {
+        DiscardActiveInkOperationHistory();
         _activeRenderer?.Reset();
         _visualHost.Clear();
         _strokeInProgress = false;

@@ -35,7 +35,17 @@ public partial class PaintOverlayWindow
         }
         var rasterSnapshot = _history[^1];
         _history.RemoveAt(_history.Count - 1);
-        RestoreSnapshot(rasterSnapshot);
+        _currentHistoryMemoryBytes = Math.Max(
+            0,
+            _currentHistoryMemoryBytes - rasterSnapshot.Pixels.Length);
+        try
+        {
+            RestoreSnapshot(rasterSnapshot);
+        }
+        finally
+        {
+            rasterSnapshot.Dispose();
+        }
     }
 
     private bool TryUndoAcrossPages()
@@ -46,11 +56,31 @@ public partial class PaintOverlayWindow
         }
 
         var snapshot = _globalInkHistory[^1];
-        if (!TryApplyGlobalUndoSnapshot(snapshot))
+        var groupStart = _globalInkHistory.Count - 1;
+        while (groupStart > 0
+               && _globalInkHistory[groupStart - 1].OperationId == snapshot.OperationId)
         {
-            return false;
+            groupStart--;
         }
-        _globalInkHistory.RemoveAt(_globalInkHistory.Count - 1);
+
+        for (var index = _globalInkHistory.Count - 1; index >= groupStart; index--)
+        {
+            if (!TryApplyGlobalUndoSnapshot(_globalInkHistory[index]))
+            {
+                return false;
+            }
+        }
+
+        if (groupStart == _globalInkHistory.Count - 1)
+        {
+            _globalInkHistory.RemoveAt(_globalInkHistory.Count - 1);
+        }
+        else
+        {
+            _globalInkHistory.RemoveRange(
+                groupStart,
+                _globalInkHistory.Count - groupStart);
+        }
         return true;
     }
 

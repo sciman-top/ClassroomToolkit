@@ -43,22 +43,33 @@ public partial class PaintOverlayWindow
 
         public void Dispose()
         {
-            if (Pixels != null)
+            if (Interlocked.Exchange(ref _returned, 1) == 0)
             {
-                PixelPool.Return(Pixels);
+                PixelPool.Return(Pixels, clearArray: false);
             }
         }
+
+        private int _returned;
     }
 
     private sealed record InkSnapshot(string SourcePath, int PageIndex, string Hash, List<InkStrokeData> Strokes);
-    private sealed record GlobalInkSnapshot(string SourcePath, int PageIndex, string CacheKey, List<InkStrokeData> Strokes);
+    private sealed record GlobalInkSnapshot(
+        string SourcePath,
+        int PageIndex,
+        string CacheKey,
+        List<InkStrokeData> Strokes,
+        Guid OperationId);
+    private sealed record HistoryPushReceipt(
+        RasterSnapshot? Raster,
+        InkSnapshot? Local,
+        GlobalInkSnapshot? Global);
 
-    private void PushHistory()
+    private HistoryPushReceipt? PushHistory()
     {
         EnsureRasterSurface();
         if (_rasterSurface == null)
         {
-            return;
+            return null;
         }
 
         var trackVectorSnapshot = InkUndoHistoryPolicy.ShouldTrackVectorSnapshot(_inkRecordEnabled, IsPhotoInkModeActive());
@@ -66,7 +77,7 @@ public partial class PaintOverlayWindow
         {
             // 状态与上一条向量快照一致：原先会推入整页位图快照后再弹出，
             // 现在直接跳过，省掉一次全屏 CopyPixels 与全部笔画克隆。
-            return;
+            return null;
         }
 
         var stride = _surfacePixelWidth * 4;
@@ -84,17 +95,25 @@ public partial class PaintOverlayWindow
         var pixels = PixelPool.Rent(bytesRequired);
         _rasterSurface.CopyPixels(pixels, stride, 0);
 
-        var snapshot = new RasterSnapshot(_surfacePixelWidth, _surfacePixelHeight, _surfaceDpiX, _surfaceDpiY, pixels);
-        _history.Add(snapshot);
+        var rasterSnapshot = new RasterSnapshot(
+            _surfacePixelWidth,
+            _surfacePixelHeight,
+            _surfaceDpiX,
+            _surfaceDpiY,
+            pixels);
+        _history.Add(rasterSnapshot);
         _currentHistoryMemoryBytes += pixels.Length;
 
+        InkSnapshot? localInkSnapshot = null;
+        GlobalInkSnapshot? globalInkSnapshot = null;
         if (trackVectorSnapshot)
         {
             var strokeSnapshot = CloneInkStrokes(_inkStrokes);
             var snapshotHash = GetOrComputeInkStateHash();
             var sourcePath = _currentDocumentPath ?? string.Empty;
             var pageIndex = _currentPageIndex;
-            _inkHistory.Add(new InkSnapshot(sourcePath, pageIndex, snapshotHash, strokeSnapshot));
+            localInkSnapshot = new InkSnapshot(sourcePath, pageIndex, snapshotHash, strokeSnapshot);
+            _inkHistory.Add(localInkSnapshot);
             if (_inkHistory.Count > HistoryLimit)
             {
                 _inkHistory.RemoveAt(0);
@@ -102,17 +121,117 @@ public partial class PaintOverlayWindow
 
             if (_photoModeActive && _currentCacheScope == InkCacheScope.Photo && !string.IsNullOrWhiteSpace(_currentDocumentPath))
             {
-                _globalInkHistory.Add(new GlobalInkSnapshot(
+                globalInkSnapshot = new GlobalInkSnapshot(
                     _currentDocumentPath,
                     _currentPageIndex,
                     _currentCacheKey,
-                    CloneInkStrokes(strokeSnapshot)));
-                if (_globalInkHistory.Count > HistoryLimit)
-                {
-                    _globalInkHistory.RemoveAt(0);
-                }
+                    CloneInkStrokes(strokeSnapshot),
+                    Guid.NewGuid());
+                AppendGlobalInkSnapshot(globalInkSnapshot);
             }
         }
+
+        return new HistoryPushReceipt(rasterSnapshot, localInkSnapshot, globalInkSnapshot);
+    }
+
+    private GlobalInkSnapshot? PushGlobalInkHistorySnapshot(Guid operationId)
+    {
+        if (!_photoModeActive
+            || _currentCacheScope != InkCacheScope.Photo
+            || string.IsNullOrWhiteSpace(_currentDocumentPath))
+        {
+            return null;
+        }
+
+        var snapshot = new GlobalInkSnapshot(
+            _currentDocumentPath,
+            _currentPageIndex,
+            _currentCacheKey,
+            CloneInkStrokes(_inkStrokes),
+            operationId);
+        AppendGlobalInkSnapshot(snapshot);
+        return snapshot;
+    }
+
+    private void AppendGlobalInkSnapshot(GlobalInkSnapshot snapshot)
+    {
+        _globalInkHistory.Add(snapshot);
+        if (_globalInkHistory.Count > HistoryLimit)
+        {
+            _globalInkHistory.RemoveAt(0);
+        }
+    }
+
+    private void DiscardActiveInkOperationHistory()
+    {
+        var receipt = _activeInkOperationHistory;
+        _activeInkOperationHistory = null;
+        if (receipt == null)
+        {
+            return;
+        }
+
+        RemoveReference(_globalInkHistory, receipt.Global);
+        RemoveReference(_inkHistory, receipt.Local);
+        if (receipt.Raster != null && RemoveReference(_history, receipt.Raster))
+        {
+            _currentHistoryMemoryBytes = Math.Max(
+                0,
+                _currentHistoryMemoryBytes - receipt.Raster.Pixels.Length);
+            receipt.Raster.Dispose();
+        }
+    }
+
+    private static bool RemoveReference<T>(List<T> items, T? target)
+        where T : class
+    {
+        if (target == null)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < items.Count; index++)
+        {
+            if (!ReferenceEquals(items[index], target))
+            {
+                continue;
+            }
+
+            items.RemoveAt(index);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool ContainsReference<T>(IReadOnlyList<T> items, T? target)
+        where T : class
+    {
+        if (target == null)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < items.Count; index++)
+        {
+            if (ReferenceEquals(items[index], target))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void DisposeRasterHistory()
+    {
+        foreach (var snapshot in _history)
+        {
+            snapshot.Dispose();
+        }
+
+        _history.Clear();
+        _currentHistoryMemoryBytes = 0;
     }
 
     private bool HasDuplicateVectorSnapshot()
@@ -201,6 +320,7 @@ public partial class PaintOverlayWindow
         _strokeInProgress = false;
         _isErasing = false;
         _lastEraserPoint = null;
+        _lastEraserAppliedPoint = null;
         _lastCalligraphyPreviewPoint = null;
         _lastBrushInputSample = null;
         _lastBrushPredictionSample = null;
@@ -224,6 +344,7 @@ public partial class PaintOverlayWindow
         _strokeInProgress = false;
         _isErasing = false;
         _lastEraserPoint = null;
+        _lastEraserAppliedPoint = null;
         _lastCalligraphyPreviewPoint = null;
         _lastBrushInputSample = null;
         _lastBrushPredictionSample = null;

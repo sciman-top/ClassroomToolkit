@@ -92,7 +92,7 @@ public sealed class PaintOverlayClearAllCrossPageRecoveryContractTests
             "Paint",
             "PaintOverlayWindow*.cs");
 
-        source.Should().Contain("if (!TryApplyGlobalUndoSnapshot(snapshot))");
+        source.Should().Contain("if (!TryApplyGlobalUndoSnapshot(_globalInkHistory[index]))");
         source.Should().Contain("_globalInkHistory.RemoveAt(_globalInkHistory.Count - 1);");
         source.Should().Contain("RemoveMatchingCurrentInkHistorySnapshot(snapshot, snapshotHash);");
         source.Should().Contain("PersistUndoRestoredPhotoInkSnapshot(_currentDocumentPath, _currentPageIndex, _inkStrokes);");

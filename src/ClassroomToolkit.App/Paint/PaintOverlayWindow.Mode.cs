@@ -9,9 +9,38 @@ public partial class PaintOverlayWindow
 {
     public void SetMode(PaintToolMode mode)
     {
-        if (mode != PaintToolMode.Shape)
+        if (mode != _mode)
         {
-            CancelPendingTriangleDraft($"mode-switch:{_mode}->{mode}");
+            var reason = $"mode-switch:{_mode}->{mode}";
+            if (_strokeInProgress)
+            {
+                ResetInterruptedBrushState();
+            }
+            if (_isErasing)
+            {
+                var position = _lastEraserPoint ?? _lastPointerPosition;
+                if (position.HasValue)
+                {
+                    EndEraser(position.Value);
+                }
+                else
+                {
+                    _isErasing = false;
+                    _lastEraserPoint = null;
+                    _lastEraserAppliedPoint = null;
+                    _activeInkOperationHistory = null;
+                }
+            }
+            if (HasPendingShapeDraft())
+            {
+                CancelPendingShapeDraft(reason);
+            }
+            if (_isRegionSelecting)
+            {
+                ClearRegionSelection();
+                DiscardActiveInkOperationHistory();
+            }
+            ReleasePointerInput();
         }
 
         _mode = mode;

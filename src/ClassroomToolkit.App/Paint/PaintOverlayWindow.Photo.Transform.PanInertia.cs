@@ -1,7 +1,9 @@
 using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
+using ClassroomToolkit.App.Windowing;
 using WpfPoint = System.Windows.Point;
 
 namespace ClassroomToolkit.App.Paint;
@@ -40,11 +42,17 @@ public partial class PaintOverlayWindow
         LogPhotoInputTelemetry("pan-start", $"pointer={pointerKind}; stylus={captureStylus}");
         if (captureStylus)
         {
-            Stylus.Capture(OverlayRoot);
+            SafeActionExecutionExecutor.TryExecute(
+                () => Stylus.Capture(OverlayRoot, CaptureMode.Element),
+                ex => Debug.WriteLine(
+                    $"[PaintOverlay] photo stylus pan capture failed: {ex.GetType().Name} - {ex.Message}"));
         }
         else if (pointerKind != PhotoPanPointerKind.Touch)
         {
-            OverlayRoot.CaptureMouse();
+            SafeActionExecutionExecutor.TryExecute(
+                () => OverlayRoot.CaptureMouse(),
+                ex => Debug.WriteLine(
+                    $"[PaintOverlay] photo mouse pan capture failed: {ex.GetType().Name} - {ex.Message}"));
         }
     }
 
@@ -116,15 +124,24 @@ public partial class PaintOverlayWindow
         _photoPanning = false;
         if (OverlayRoot.IsMouseCaptured)
         {
-            OverlayRoot.ReleaseMouseCapture();
+            SafeActionExecutionExecutor.TryExecute(
+                () => OverlayRoot.ReleaseMouseCapture(),
+                ex => Debug.WriteLine(
+                    $"[PaintOverlay] photo mouse pan release failed: {ex.GetType().Name} - {ex.Message}"));
         }
         if (OverlayRoot.IsStylusCaptured)
         {
-            Stylus.Capture(null);
+            SafeActionExecutionExecutor.TryExecute(
+                () => Stylus.Capture(OverlayRoot, CaptureMode.None),
+                ex => Debug.WriteLine(
+                    $"[PaintOverlay] photo stylus pan release failed: {ex.GetType().Name} - {ex.Message}"));
         }
         if (_photoTouchPanDeviceId.HasValue)
         {
-            OverlayRoot.ReleaseAllTouchCaptures();
+            SafeActionExecutionExecutor.TryExecute(
+                () => OverlayRoot.ReleaseAllTouchCaptures(),
+                ex => Debug.WriteLine(
+                    $"[PaintOverlay] photo touch pan release failed: {ex.GetType().Name} - {ex.Message}"));
             _photoTouchPanDeviceId = null;
         }
         ApplyPhotoPanBounds(allowResistance: false);
