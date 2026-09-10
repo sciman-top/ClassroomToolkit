@@ -123,6 +123,19 @@ public sealed class PresentationClassifier
         return false;
     }
 
+    public static bool IsDedicatedWpsPresentationRuntime(string? processName)
+    {
+        var normalized = Normalize(processName);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return false;
+        }
+
+        return normalized.StartsWith("wpp", StringComparison.OrdinalIgnoreCase)
+               || normalized.StartsWith("wppt", StringComparison.OrdinalIgnoreCase)
+               || normalized.Contains("wpspresentation", StringComparison.OrdinalIgnoreCase);
+    }
+
     private bool HasWpsPresentationSignature(string className)
     {
         var normalized = Normalize(className);

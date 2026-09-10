@@ -40,6 +40,10 @@ public sealed partial class Win32PresentationResolver
                 {
                     return true;
                 }
+                if (!IsSelectableCandidate(check))
+                {
+                    return true;
+                }
                 if (check.Type == PresentationType.Office && allowOffice)
                 {
                     DebugOfficeCandidate(info.ProcessName, info.ClassNames, check.Score, check.ClassMatch, check.IsFullscreen);
@@ -122,7 +126,7 @@ public sealed partial class Win32PresentationResolver
                 }
 
                 var check = BuildWindowCheck(hwnd, info, classifier);
-                if (check == null || !check.IsFullscreen)
+                if (check == null || !IsSelectableCandidate(check) || !check.IsFullscreen)
                 {
                     return true;
                 }
@@ -148,5 +152,17 @@ public sealed partial class Win32PresentationResolver
             IntPtr.Zero);
 
         return bestTarget;
+    }
+
+    internal static bool IsSelectableCandidate(PresentationWindowCheck check)
+    {
+        ArgumentNullException.ThrowIfNull(check);
+
+        // A generic WPS editor can score as a fullscreen WPS window.  It must
+        // not shadow a real slideshow candidate before the higher-level
+        // admission policy gets a chance to validate the target.
+        return check.Type != PresentationType.Wps
+               || check.ClassMatch
+               || PresentationClassifier.IsDedicatedWpsPresentationRuntime(check.ProcessName);
     }
 }

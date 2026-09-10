@@ -39,6 +39,31 @@ public sealed class PresentationTargetSelectionTests
             .Should().Be(PresentationTarget.Empty);
     }
 
+    [Theory]
+    [InlineData(PresentationType.Wps, "wps.exe", false, false)]
+    [InlineData(PresentationType.Wps, "wpp.exe", false, true)]
+    [InlineData(PresentationType.Wps, "wps.exe", true, true)]
+    [InlineData(PresentationType.Office, "powerpnt.exe", false, true)]
+    public void IsSelectableCandidate_ShouldRejectOnlyGenericWpsEditorFullscreenCandidate(
+        PresentationType type,
+        string processName,
+        bool classMatch,
+        bool expected)
+    {
+        var check = new PresentationWindowCheck(
+            type,
+            ProcessId: 1,
+            processName,
+            ["randomclass"],
+            classMatch,
+            ProcessMatch: true,
+            HasCaption: false,
+            IsFullscreen: true,
+            Score: 100);
+
+        Win32PresentationResolver.IsSelectableCandidate(check).Should().Be(expected);
+    }
+
     private static PresentationTarget BuildTarget(long hwnd, string processName)
     {
         return new PresentationTarget(
