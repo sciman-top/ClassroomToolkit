@@ -7,7 +7,7 @@ public partial class PaintOverlayWindow
 {
     private void OnMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (!ShouldContinuePointerInput(e))
+        if (!ShouldContinueMouseInput(e))
         {
             return;
         }
@@ -26,7 +26,7 @@ public partial class PaintOverlayWindow
 
     private void OnMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (!ShouldContinuePointerInput(e, hideEraserPreviewWhenBlocked: true))
+        if (!ShouldContinueMouseInput(e, hideEraserPreviewWhenBlocked: true))
         {
             return;
         }
@@ -48,7 +48,7 @@ public partial class PaintOverlayWindow
 
     private void OnMouseUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (!ShouldContinuePointerInput(e))
+        if (!ShouldContinueMouseInput(e))
         {
             return;
         }
@@ -60,7 +60,7 @@ public partial class PaintOverlayWindow
 
     private void OnRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (!ShouldContinuePointerInput(e))
+        if (!ShouldContinueMouseInput(e))
         {
             return;
         }
@@ -91,7 +91,7 @@ public partial class PaintOverlayWindow
 
     private void OnRightButtonMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (!ShouldContinuePointerInput(e))
+        if (!ShouldContinueMouseInput(e))
         {
             return;
         }
@@ -112,7 +112,7 @@ public partial class PaintOverlayWindow
 
     private void OnRightButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (!ShouldContinuePointerInput(e))
+        if (!ShouldContinueMouseInput(e))
         {
             return;
         }
@@ -225,6 +225,29 @@ public partial class PaintOverlayWindow
         UpdatePhotoPanVelocitySamples(e.GetPosition(OverlayRoot));
         EndPhotoPan();
         e.Handled = executionPlan.ShouldMarkHandled;
+        return true;
+    }
+
+    private bool ShouldContinueMouseInput(
+        System.Windows.Input.MouseEventArgs e,
+        bool hideEraserPreviewWhenBlocked = false)
+    {
+        if (!ShouldContinuePointerInput(e, hideEraserPreviewWhenBlocked))
+        {
+            return false;
+        }
+
+        // WPF can carry a touch-originated stylus device on promoted mouse
+        // events. TouchDown must remain unhandled for manipulation, so stop
+        // that promotion here before it reaches ink or photo-pan routing.
+        if (e.StylusDevice != null
+            && PhotoTouchInteractionPolicy.ShouldIgnorePromotedTouchStylus(
+                e.StylusDevice.TabletDevice.Type))
+        {
+            e.Handled = true;
+            return false;
+        }
+
         return true;
     }
 }

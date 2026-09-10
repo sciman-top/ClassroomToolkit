@@ -52,4 +52,19 @@ public sealed class PhotoTouchInputContractTests
         source.Should().NotContain("e.Handled = true");
         source.Should().Contain("ManipulationStarting/Delta");
     }
+
+    [Fact]
+    public void PhotoTouchInput_ShouldBlockPromotedTouchMouseBeforeInkOrPhotoRouting()
+    {
+        var source = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Input.Mouse.cs"));
+
+        source.Should().Contain("ShouldContinueMouseInput(e)");
+        source.Should().Contain("e.StylusDevice.TabletDevice.Type");
+        source.Should().Contain("PhotoTouchInteractionPolicy.ShouldIgnorePromotedTouchStylus");
+        source.Should().Contain("e.Handled = true;");
+    }
 }
