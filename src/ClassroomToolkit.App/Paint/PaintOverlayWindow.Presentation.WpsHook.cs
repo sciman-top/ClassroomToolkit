@@ -53,9 +53,18 @@ public partial class PaintOverlayWindow
     {
         void ExecuteHookRequest()
         {
-            if (!_presentationOptions.AllowWps)
+            if (ShouldIgnoreLifecycleTick())
             {
-                Debug.WriteLine($"[WpsNavHook] ignored allow=false source={source} dir={direction}");
+                Debug.WriteLine($"[WpsNavHook] ignored stale-lifecycle source={source} dir={direction}");
+                return;
+            }
+            if (!WpsHookEnableGatePolicy.ShouldAttemptResolveTarget(
+                    _presentationOptions.AllowWps,
+                    IsBoardActive(),
+                    IsVisible,
+                    _photoModeActive))
+            {
+                Debug.WriteLine($"[WpsNavHook] ignored stale-state source={source} dir={direction}");
                 return;
             }
             var currentForeground = _presentationResolver.ResolveForeground();

@@ -32,6 +32,26 @@ public sealed class PaintOverlayWpsHookUnavailableContractTests
         source.Should().Contain("ShowUnavailableMessage();");
     }
 
+    [Fact]
+    public void PaintOverlayPresentation_ShouldRecheckLifecycleAndHookAdmission_WhenQueuedRequestRuns()
+    {
+        var source = GetSource();
+        var handlerStart = source.IndexOf("void ExecuteHookRequest()", StringComparison.Ordinal);
+        var handlerEnd = source.IndexOf(
+            "var scheduled = TryBeginInvoke(ExecuteHookRequest",
+            handlerStart,
+            StringComparison.Ordinal);
+
+        handlerStart.Should().BeGreaterThanOrEqualTo(0);
+        handlerEnd.Should().BeGreaterThan(handlerStart);
+
+        var handler = source[handlerStart..handlerEnd];
+        handler.Should().Contain("ShouldIgnoreLifecycleTick()");
+        handler.Should().Contain("WpsHookEnableGatePolicy.ShouldAttemptResolveTarget(");
+        handler.IndexOf("WpsHookEnableGatePolicy.ShouldAttemptResolveTarget(", StringComparison.Ordinal)
+            .Should().BeLessThan(handler.IndexOf("ResolveWpsTarget()", StringComparison.Ordinal));
+    }
+
     private static string GetSource()
     {
         var paintRoot = TestPathHelper.ResolveRepoPath(
