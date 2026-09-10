@@ -183,6 +183,10 @@ public static class NativeMethods
 
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll")]
+    public static extern uint MapVirtualKey(uint code, uint mapType);
+
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [DllImport("user32.dll")]
     public static extern IntPtr GetAncestor(IntPtr hwnd, uint flags);
 
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]

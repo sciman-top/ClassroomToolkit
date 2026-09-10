@@ -38,6 +38,56 @@ public sealed class InteropHookLifecycleContractTests
     }
 
     [Fact]
+    public void WpsHook_QueueNavigationRequest_ShouldCaptureFocusAndTimestampContext()
+    {
+        Action? pending = null;
+        WpsNavigationRequest? captured = null;
+        using var hook = new WpsSlideshowNavigationHook((_, action, _) => pending = action);
+        hook.NavigationRequestCaptured += request => captured = request;
+        hook.SetInterceptEnabled(true);
+
+        hook.QueueNavigationRequest(-1, "keyboard");
+        pending.Should().NotBeNull();
+        pending!();
+
+        captured.Should().NotBeNull();
+        captured!.Value.Direction.Should().Be(-1);
+        captured.Value.Source.Should().Be("keyboard");
+        captured.Value.CapturedTimestampTicks.Should().BeGreaterThan(0);
+    }
+
+    [Theory]
+    [InlineData(VirtualKey.PageUp, true)]
+    [InlineData(VirtualKey.PageDown, true)]
+    [InlineData(VirtualKey.Home, true)]
+    [InlineData(VirtualKey.End, true)]
+    [InlineData(VirtualKey.Left, true)]
+    [InlineData(VirtualKey.Up, true)]
+    [InlineData(VirtualKey.Right, true)]
+    [InlineData(VirtualKey.Down, true)]
+    [InlineData(VirtualKey.Enter, false)]
+    [InlineData(VirtualKey.Space, false)]
+    public void Win32InputSender_ShouldMarkEnhancedNavigationKeysAsExtended(
+        VirtualKey key,
+        bool expected)
+    {
+        Win32InputSender.IsExtendedKey(key).Should().Be(expected);
+    }
+
+    [Fact]
+    public void PresentationWindowValidation_ShouldRequireVisibleWindow()
+    {
+        var source = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.Interop",
+            "Presentation",
+            "PresentationWindowFocus.cs");
+
+        source.Should().Contain(
+            "return NativeMethods.IsWindow(hwnd) && NativeMethods.IsWindowVisible(hwnd);");
+    }
+
+    [Fact]
     public async Task WpsHook_ShouldRejectRestartAndInvalidateQueuedNavigation_AfterDispose()
     {
         Action? pending = null;

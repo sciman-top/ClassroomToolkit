@@ -11,6 +11,7 @@ using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Paint.Brushes;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Session;
+using ClassroomToolkit.App.Windowing;
 using WpfPoint = System.Windows.Point;
 
 namespace ClassroomToolkit.App.Paint;
@@ -130,17 +131,34 @@ public partial class PaintOverlayWindow
 
     private void ReleasePointerInput()
     {
-        if (OverlayRoot.IsMouseCaptured)
+        try
         {
-            OverlayRoot.ReleaseMouseCapture();
+            SafeActionExecutionExecutor.TryExecute(
+                () =>
+                {
+                    if (OverlayRoot.IsMouseCaptured)
+                    {
+                        OverlayRoot.ReleaseMouseCapture();
+                    }
+                },
+                ex => Debug.WriteLine($"[PaintOverlay] mouse capture release failed: {ex.GetType().Name} - {ex.Message}"));
+
+            SafeActionExecutionExecutor.TryExecute(
+                () =>
+                {
+                    if (OverlayRoot.IsStylusCaptured)
+                    {
+                        Stylus.Capture(null);
+                    }
+                },
+                ex => Debug.WriteLine($"[PaintOverlay] stylus capture release failed: {ex.GetType().Name} - {ex.Message}"));
         }
-        if (OverlayRoot.IsStylusCaptured)
+        finally
         {
-            Stylus.Capture(null);
+            // The global drawing latch must be cleared even when WPF has already
+            // torn down one of the captures during window close/deactivation.
+            PaintModeManager.Instance.IsDrawing = false;
         }
-        PaintModeManager.Instance.IsDrawing = false;
     }
 
 }
-
-

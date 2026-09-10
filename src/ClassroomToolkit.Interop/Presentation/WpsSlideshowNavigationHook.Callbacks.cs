@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
+using ClassroomToolkit.Interop;
 using ClassroomToolkit.Interop.Utilities;
 
 namespace ClassroomToolkit.Interop.Presentation;
@@ -51,12 +52,13 @@ public sealed partial class WpsSlideshowNavigationHook
                 return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
             }
 
+            var consumeAuthorizedInput = IsAuthorizedInputForeground();
             if (isDown)
             {
                 var direction = key is VirtualKey.Up or VirtualKey.Left or VirtualKey.PageUp ? -1 : 1;
                 QueueNavigationRequest(direction, "keyboard");
             }
-            if (_blockOnly)
+            if (_blockOnly || consumeAuthorizedInput)
             {
                 return new IntPtr(1);
             }
@@ -109,9 +111,10 @@ public sealed partial class WpsSlideshowNavigationHook
                 return new IntPtr(1);
             }
 
+            var consumeAuthorizedInput = IsAuthorizedInputForeground();
             var direction = delta < 0 ? 1 : -1;
             QueueNavigationRequest(direction, "wheel");
-            if (_blockOnly)
+            if (_blockOnly || consumeAuthorizedInput)
             {
                 return new IntPtr(1);
             }
@@ -143,6 +146,11 @@ public sealed partial class WpsSlideshowNavigationHook
         }
 
         var generation = Volatile.Read(ref _dispatchGeneration);
+        var request = new WpsNavigationRequest(
+            direction,
+            source,
+            CaptureForegroundWindow(),
+            Stopwatch.GetTimestamp());
         _queueBackgroundWork(
             $"WpsSlideshowNavigationHook.QueueNavigationRequest.{source}",
             () =>
@@ -151,6 +159,10 @@ public sealed partial class WpsSlideshowNavigationHook
                 {
                     return;
                 }
+                InteropEventDispatchPolicy.InvokeSafely(
+                    NavigationRequestCaptured,
+                    request,
+                    "WpsSlideshowNavigationHook.NavigationRequestCaptured");
                 InteropEventDispatchPolicy.InvokeSafely(
                     NavigationRequested,
                     direction,
@@ -164,5 +176,12 @@ public sealed partial class WpsSlideshowNavigationHook
                 ref _callbackExceptionCount,
                 ref _lastExceptionLogTick,
                 ExceptionLogIntervalMs));
+    }
+
+    private static IntPtr CaptureForegroundWindow()
+    {
+        return OperatingSystem.IsWindows()
+            ? NativeMethods.GetForegroundWindow()
+            : IntPtr.Zero;
     }
 }

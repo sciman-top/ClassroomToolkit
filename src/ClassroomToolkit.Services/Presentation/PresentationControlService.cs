@@ -10,6 +10,7 @@ public sealed class PresentationControlService
     private readonly IInputSender _inputSender;
     private readonly IPresentationTargetResolver _resolver;
     private readonly IPresentationWindowValidator _validator;
+    private readonly Func<PresentationTarget, bool>? _targetAdmission;
     private long _lastWpsCommandTick;
     private PresentationCommand? _lastWpsCommandType;
     private IntPtr _lastWpsTarget = IntPtr.Zero;
@@ -24,7 +25,8 @@ public sealed class PresentationControlService
         IInputSender inputSender,
         IPresentationTargetResolver resolver,
         IPresentationWindowValidator validator,
-        IForegroundWindowController? foregroundController = null)
+        IForegroundWindowController? foregroundController = null,
+        Func<PresentationTarget, bool>? targetAdmission = null)
     {
         ArgumentNullException.ThrowIfNull(planner);
         ArgumentNullException.ThrowIfNull(mapper);
@@ -37,6 +39,7 @@ public sealed class PresentationControlService
         _inputSender = inputSender;
         _resolver = resolver;
         _validator = validator;
+        _targetAdmission = targetAdmission;
         _foregroundController = foregroundController ?? new PresentationForegroundController();
         _currentProcessId = (uint)Environment.ProcessId;
     }
@@ -52,6 +55,11 @@ public sealed class PresentationControlService
     public bool IsOfficeAutoForcedMessageForTarget(IntPtr targetHandle)
     {
         return IsTargetForced(_officeAutoFallbackStates, targetHandle);
+    }
+
+    public void UpdateClassifier(PresentationClassifier classifier)
+    {
+        _planner.UpdateClassifier(classifier);
     }
 
     public void ResetWpsAutoFallback()
@@ -173,6 +181,10 @@ public sealed class PresentationControlService
         ArgumentNullException.ThrowIfNull(options);
 
         if (!IsTargetHandleValid(target))
+        {
+            return false;
+        }
+        if (_targetAdmission != null && !_targetAdmission(target))
         {
             return false;
         }
@@ -320,7 +332,11 @@ public sealed class PresentationControlService
             return false;
         }
         targetType = plan.TargetType;
-        var keyDownOnly = plan.TargetType == PresentationType.Wps;
+        // WPS also receives a real key lifecycle. Sending only key-down leaves
+        // modifier/navigation state latched in some WPS versions and makes the
+        // message path diverge from SendInput; paired down/up is the safe
+        // compatibility baseline.
+        const bool keyDownOnly = false;
         if (plan.Strategy == InputStrategy.Raw && RequiresForeground(plan.TargetType))
         {
             if (!TryEnsureForeground(target.Handle))
@@ -341,7 +357,7 @@ public sealed class PresentationControlService
                 fallbackBinding.Key,
                 fallbackBinding.Modifiers,
                 messageCompatibleStrategy,
-                keyDownOnly: true);
+                keyDownOnly: false);
             if (keySent)
             {
                 RememberWpsCommand(command, target.Handle);

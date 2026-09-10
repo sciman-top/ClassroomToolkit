@@ -191,7 +191,7 @@ public sealed class PresentationControlServiceTests
     }
 
     [Fact]
-    public void WpsWheelForwardDisabled_WhenDowngradedToMessage_ShouldSendKeyDownOnly()
+    public void WpsWheelForwardDisabled_WhenDowngradedToMessage_ShouldSendPairedKeyLifecycle()
     {
         var planner = new PresentationControlPlanner(new PresentationClassifier());
         var mapper = new PresentationCommandMapper();
@@ -212,14 +212,14 @@ public sealed class PresentationControlServiceTests
 
         result.Should().BeTrue();
         sender.KeyCalls.Should().Be(1);
-        sender.LastKeyDownOnly.Should().BeTrue();
+        sender.LastKeyDownOnly.Should().BeFalse();
         sender.LastKey.Should().Be(VirtualKey.PageDown);
         sender.LastKeyStrategy.Should().Be(InputStrategy.Message);
         sender.WheelCalls.Should().Be(0);
     }
 
     [Fact]
-    public void WpsWheelForwardDisabled_WhenRawAvailable_ShouldStillSendKeyDownOnly()
+    public void WpsWheelForwardDisabled_WhenRawAvailable_ShouldStillSendPairedKeyLifecycle()
     {
         var planner = new PresentationControlPlanner(new PresentationClassifier());
         var mapper = new PresentationCommandMapper();
@@ -246,14 +246,14 @@ public sealed class PresentationControlServiceTests
 
         result.Should().BeTrue();
         sender.KeyCalls.Should().Be(1);
-        sender.LastKeyDownOnly.Should().BeTrue();
+        sender.LastKeyDownOnly.Should().BeFalse();
         sender.LastKey.Should().Be(VirtualKey.PageDown);
         sender.LastKeyStrategy.Should().Be(InputStrategy.Message);
         sender.WheelCalls.Should().Be(0);
     }
 
     [Fact]
-    public void WpsWheelForwardEnabled_ShouldSendKeyDownOnlyUsingMessageFallback()
+    public void WpsWheelForwardEnabled_ShouldSendPairedKeyLifecycleUsingMessageFallback()
     {
         var planner = new PresentationControlPlanner(new PresentationClassifier());
         var mapper = new PresentationCommandMapper();
@@ -274,7 +274,7 @@ public sealed class PresentationControlServiceTests
 
         result.Should().BeTrue();
         sender.KeyCalls.Should().Be(1);
-        sender.LastKeyDownOnly.Should().BeTrue();
+        sender.LastKeyDownOnly.Should().BeFalse();
         sender.LastKey.Should().Be(VirtualKey.PageDown);
         sender.LastKeyStrategy.Should().Be(InputStrategy.Message);
         sender.WheelCalls.Should().Be(0);
@@ -403,7 +403,7 @@ public sealed class PresentationControlServiceTests
     }
 
     [Fact]
-    public void Wps_FirstCommand_ShouldSendHomeKeyDownOnly()
+    public void Wps_FirstCommand_ShouldSendHomeKeyLifecycle()
     {
         var planner = new PresentationControlPlanner(new PresentationClassifier());
         var mapper = new PresentationCommandMapper();
@@ -425,7 +425,7 @@ public sealed class PresentationControlServiceTests
         result.Should().BeTrue();
         sender.KeyCalls.Should().Be(1);
         sender.LastKey.Should().Be(VirtualKey.Home);
-        sender.LastKeyDownOnly.Should().BeTrue();
+        sender.LastKeyDownOnly.Should().BeFalse();
         sender.WheelCalls.Should().Be(0);
     }
 

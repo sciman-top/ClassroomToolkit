@@ -168,6 +168,99 @@ public sealed class OverlayPresentationCommandRouterTests
     }
 
     [Fact]
+    public void TrySend_ShouldFailClosed_WhenBothSlideshowsAreAmbiguous()
+    {
+        var context = new OverlayPresentationCommandRouteContext(
+            ForegroundType: OverlayPresentationRouteType.None,
+            CurrentPresentationType: OverlayPresentationRouteType.None,
+            WpsSlideshow: true,
+            OfficeSlideshow: true,
+            WpsFullscreen: false,
+            OfficeFullscreen: false);
+        var wpsCalls = 0;
+        var officeCalls = 0;
+
+        var result = OverlayPresentationCommandRouter.TrySend(
+            context,
+            _ =>
+            {
+                wpsCalls++;
+                return true;
+            },
+            _ =>
+            {
+                officeCalls++;
+                return true;
+            });
+
+        result.Should().BeFalse();
+        wpsCalls.Should().Be(0);
+        officeCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public void TrySend_ShouldNotCrossChannels_WhenForegroundRouteFails()
+    {
+        var context = new OverlayPresentationCommandRouteContext(
+            ForegroundType: OverlayPresentationRouteType.Wps,
+            CurrentPresentationType: OverlayPresentationRouteType.None,
+            WpsSlideshow: true,
+            OfficeSlideshow: true,
+            WpsFullscreen: false,
+            OfficeFullscreen: false);
+        var wpsCalls = new List<bool>();
+        var officeCalls = new List<bool>();
+
+        var result = OverlayPresentationCommandRouter.TrySend(
+            context,
+            allowBackground =>
+            {
+                wpsCalls.Add(allowBackground);
+                return false;
+            },
+            allowBackground =>
+            {
+                officeCalls.Add(allowBackground);
+                return true;
+            });
+
+        result.Should().BeFalse();
+        wpsCalls.Should().Equal(false);
+        officeCalls.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void TrySend_ShouldNotCrossChannels_WhenCurrentRouteFails()
+    {
+        var context = new OverlayPresentationCommandRouteContext(
+            ForegroundType: OverlayPresentationRouteType.None,
+            CurrentPresentationType: OverlayPresentationRouteType.Office,
+            WpsSlideshow: true,
+            OfficeSlideshow: true,
+            WpsFullscreen: false,
+            OfficeFullscreen: false);
+        var wpsCalls = 0;
+        var officeCalls = 0;
+
+        var result = OverlayPresentationCommandRouter.TrySend(
+            context,
+            _ =>
+            {
+                wpsCalls++;
+                return true;
+            },
+            _ =>
+            {
+                officeCalls++;
+                return false;
+            });
+
+        result.Should().BeFalse();
+        wpsCalls.Should().Be(0);
+        officeCalls.Should().Be(1);
+    }
+
+    [Fact]
     public void TrySend_ShouldReturnFalse_WhenNoRouteCanSend()
     {
         var context = new OverlayPresentationCommandRouteContext(

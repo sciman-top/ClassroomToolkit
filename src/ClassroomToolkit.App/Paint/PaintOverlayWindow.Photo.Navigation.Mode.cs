@@ -16,6 +16,7 @@ using ClassroomToolkit.App.Session;
 using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.App.Paint.Brushes;
+using ClassroomToolkit.Interop.Presentation;
 using IoPath = System.IO.Path;
 using MediaBrush = System.Windows.Media.Brush;
 using MediaBrushes = System.Windows.Media.Brushes;
@@ -72,12 +73,18 @@ public partial class PaintOverlayWindow
         var wasPresentationFullscreen = false;
         if (!_photoModeActive && (_presentationOptions.AllowOffice || _presentationOptions.AllowWps))
         {
-            var target = _presentationResolver.ResolvePresentationTarget(
-                _presentationClassifier,
-                _presentationOptions.AllowWps,
-                _presentationOptions.AllowOffice,
-                _currentProcessId);
-            wasPresentationFullscreen = IsFullscreenPresentationWindow(target);
+            if (_presentationOptions.AllowWps)
+            {
+                wasPresentationFullscreen |= IsFullscreenPresentationWindow(
+                    ResolveWpsTarget(),
+                    PresentationType.Wps);
+            }
+            if (_presentationOptions.AllowOffice)
+            {
+                wasPresentationFullscreen |= IsFullscreenPresentationWindow(
+                    ResolveOfficeTarget(),
+                    PresentationType.Office);
+            }
         }
         if (_photoModeActive)
         {

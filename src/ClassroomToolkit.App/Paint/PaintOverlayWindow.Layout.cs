@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Session;
 using ClassroomToolkit.App.Windowing;
+using ClassroomToolkit.Interop.Presentation;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -80,12 +81,13 @@ public partial class PaintOverlayWindow
             return (false, false);
         }
 
-        var target = _presentationResolver.ResolvePresentationTarget(
-            _presentationClassifier,
-            _presentationOptions.AllowWps,
-            _presentationOptions.AllowOffice,
-            _currentProcessId);
-        var presentationTargetValid = target.IsValid;
+        var wpsTarget = _presentationOptions.AllowWps
+            ? ResolveWpsTarget()
+            : PresentationTarget.Empty;
+        var officeTarget = _presentationOptions.AllowOffice
+            ? ResolveOfficeTarget()
+            : PresentationTarget.Empty;
+        var presentationTargetValid = wpsTarget.IsValid || officeTarget.IsValid;
         if (!WpsRawFallbackTargetPolicy.ShouldResolveWpsRawTarget(
                 presentationTargetValid,
                 _presentationOptions.AllowWps))
@@ -93,10 +95,10 @@ public partial class PaintOverlayWindow
             return (presentationTargetValid, false);
         }
 
-        var wpsTarget = ResolveWpsTarget();
+        var wpsFallbackTarget = ResolveWpsTarget();
         var wpsRawTargetValid = WpsRawFallbackTargetPolicy.IsValid(
-            wpsTarget.IsValid,
-            ResolveWpsSendMode(wpsTarget));
+            wpsFallbackTarget.IsValid,
+            ResolveWpsSendMode(wpsFallbackTarget));
         return (presentationTargetValid, wpsRawTargetValid);
     }
 

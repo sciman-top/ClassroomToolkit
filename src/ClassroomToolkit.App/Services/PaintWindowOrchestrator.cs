@@ -201,6 +201,7 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
 
         ToolbarWindow.Closed += OnToolbarWindowClosed;
         ToolbarWindow.LocationChanged += OnToolbarWindowLocationChanged;
+        ToolbarWindow.IsVisibleChanged += OnToolbarWindowVisibilityChanged;
     }
 
     private void UnwireToolbarWindowEvents(PaintToolbarWindow? toolbarWindow)
@@ -212,6 +213,7 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
 
         toolbarWindow.Closed -= OnToolbarWindowClosed;
         toolbarWindow.LocationChanged -= OnToolbarWindowLocationChanged;
+        toolbarWindow.IsVisibleChanged -= OnToolbarWindowVisibilityChanged;
     }
 
     private void WireToolbarBehaviorEvents()
@@ -323,6 +325,11 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
         }
 
         ToolbarWindow = null;
+        // Closed is the last lifecycle callback in which the old toolbar HWND
+        // can still be present in the hook's authorization set.  Clear it now;
+        // waiting for the next visibility transition leaves a handle-reuse
+        // window in which toolbar input can be consumed as presentation input.
+        OverlayWindow?.RefreshPresentationInputOwnership();
         UpdateToggleButtons();
     }
 
@@ -332,6 +339,11 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
         {
             CaptureToolbarPosition(_currentSettings, save: false);
         }
+    }
+
+    private void OnToolbarWindowVisibilityChanged(object? sender, DependencyPropertyChangedEventArgs e)
+    {
+        OverlayWindow?.RefreshPresentationInputOwnership();
     }
 
     private void OnToolbarModeChanged(PaintToolMode mode)

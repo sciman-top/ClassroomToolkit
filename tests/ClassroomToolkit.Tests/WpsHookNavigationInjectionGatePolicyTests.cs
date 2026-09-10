@@ -11,7 +11,7 @@ public sealed class WpsHookNavigationInjectionGatePolicyTests
     {
         var suppressed = WpsHookNavigationInjectionGatePolicy.ShouldSuppressInjection(
             targetIsForeground: true,
-            foregroundOwnedByCurrentProcess: false,
+            foregroundInputAuthorized: false,
             wheelSource: false,
             wheelAsKeyEnabled: false);
 
@@ -24,7 +24,7 @@ public sealed class WpsHookNavigationInjectionGatePolicyTests
     {
         var suppressed = WpsHookNavigationInjectionGatePolicy.ShouldSuppressInjection(
             targetIsForeground: false,
-            foregroundOwnedByCurrentProcess: false,
+            foregroundInputAuthorized: false,
             wheelSource: false,
             wheelAsKeyEnabled: false);
 
@@ -37,7 +37,7 @@ public sealed class WpsHookNavigationInjectionGatePolicyTests
     {
         var suppressed = WpsHookNavigationInjectionGatePolicy.ShouldSuppressInjection(
             targetIsForeground: false,
-            foregroundOwnedByCurrentProcess: true,
+            foregroundInputAuthorized: true,
             wheelSource: false,
             wheelAsKeyEnabled: false);
 
@@ -46,16 +46,16 @@ public sealed class WpsHookNavigationInjectionGatePolicyTests
     }
 
     [Fact]
-    public void ShouldSuppressInjection_ShouldReturnFalse_WhenForegroundWheelNeedsKeyMapping()
+    public void ShouldSuppressInjection_ShouldReturnTrue_WhenForegroundWheelMappingWouldDuplicateNativeInput()
     {
         var suppressed = WpsHookNavigationInjectionGatePolicy.ShouldSuppressInjection(
             targetIsForeground: true,
-            foregroundOwnedByCurrentProcess: false,
+            foregroundInputAuthorized: false,
             wheelSource: true,
             wheelAsKeyEnabled: true);
 
-        // WheelAsKey：放映端不响应原生滚轮，前台也必须注入映射按键。
-        suppressed.Should().BeFalse();
+        // WheelAsKey 仅桥接后台目标；WPS 已前台时保留原生滚轮，避免双翻页。
+        suppressed.Should().BeTrue();
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public sealed class WpsHookNavigationInjectionGatePolicyTests
     {
         var suppressed = WpsHookNavigationInjectionGatePolicy.ShouldSuppressInjection(
             targetIsForeground: true,
-            foregroundOwnedByCurrentProcess: true,
+            foregroundInputAuthorized: true,
             wheelSource: false,
             wheelAsKeyEnabled: true);
 

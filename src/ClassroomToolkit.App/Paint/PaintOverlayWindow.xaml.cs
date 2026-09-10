@@ -135,6 +135,8 @@ public partial class PaintOverlayWindow : Window
         _presentationService = presentationRuntime.Service;
         _presentationOptions = presentationRuntime.Options;
         _presentationInputPipeline = presentationRuntime.InputPipeline;
+        _presentationTargetSessionBinding = presentationRuntime.TargetBinding;
+        _presentationTargetAdmission = presentationRuntime.TargetAdmission;
         _presentationTargetSnapshotProvider = presentationRuntime.TargetSnapshotProvider;
         _presentationDispatchCoordinator = presentationRuntime.DispatchCoordinator;
         _wpsNavHook = presentationRuntime.WpsNavHook;
@@ -142,7 +144,7 @@ public partial class PaintOverlayWindow : Window
         _wpsNavHookClient = presentationRuntime.WpsNavHookClient;
         if (navHook.Available)
         {
-            navHook.NavigationRequested += OnWpsNavHookRequested;
+            navHook.NavigationRequestCaptured += OnWpsNavigationRequestCaptured;
         }
         _sessionCoordinator = new SessionCoordinator(
             new PaintOverlaySessionEffectRunner(

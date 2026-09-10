@@ -34,9 +34,37 @@ public sealed class PresentationFullscreenTypeResolutionPolicyTests
         var resolved = PresentationFullscreenTypeResolutionPolicy.Resolve(
             wpsFullscreen: true,
             officeFullscreen: true,
-            currentPresentationType: PresentationType.Wps);
+            currentPresentationType: PresentationType.Wps,
+            foregroundType: PresentationType.Other,
+            foregroundIsFullscreen: true);
 
         resolved.Should().Be(PresentationType.Wps);
+    }
+
+    [Fact]
+    public void Resolve_ShouldPreferWps_WhenBothFullscreenAndForegroundIsWps()
+    {
+        var resolved = PresentationFullscreenTypeResolutionPolicy.Resolve(
+            wpsFullscreen: true,
+            officeFullscreen: true,
+            currentPresentationType: PresentationType.Office,
+            foregroundType: PresentationType.Wps,
+            foregroundIsFullscreen: true);
+
+        resolved.Should().Be(PresentationType.Wps);
+    }
+
+    [Fact]
+    public void Resolve_ShouldPreferOffice_WhenBothFullscreenAndForegroundIsOffice()
+    {
+        var resolved = PresentationFullscreenTypeResolutionPolicy.Resolve(
+            wpsFullscreen: true,
+            officeFullscreen: true,
+            currentPresentationType: PresentationType.Wps,
+            foregroundType: PresentationType.Office,
+            foregroundIsFullscreen: true);
+
+        resolved.Should().Be(PresentationType.Office);
     }
 
     [Fact]
@@ -45,7 +73,20 @@ public sealed class PresentationFullscreenTypeResolutionPolicyTests
         var resolved = PresentationFullscreenTypeResolutionPolicy.Resolve(
             wpsFullscreen: true,
             officeFullscreen: true,
-            currentPresentationType: PresentationType.None);
+            currentPresentationType: PresentationType.None,
+            foregroundType: PresentationType.None,
+            foregroundIsFullscreen: false);
+
+        resolved.Should().Be(PresentationType.None);
+    }
+
+    [Fact]
+    public void Resolve_ShouldReturnNone_WhenCurrentTypeIsNotAChannel()
+    {
+        var resolved = PresentationFullscreenTypeResolutionPolicy.Resolve(
+            wpsFullscreen: true,
+            officeFullscreen: true,
+            currentPresentationType: PresentationType.Other);
 
         resolved.Should().Be(PresentationType.None);
     }

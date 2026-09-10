@@ -95,4 +95,19 @@ public sealed class WpsHookInterceptPolicyTests
         decision.InterceptWheel.Should().BeFalse();
         decision.EmitWheelOnBlock.Should().BeFalse();
     }
+
+    [Fact]
+    public void Resolve_ShouldKeepNativeWheel_WhenWpsTargetIsForeground()
+    {
+        var decision = WpsHookInterceptPolicy.Resolve(
+            shouldEnable: true,
+            mode: PaintToolMode.Brush,
+            targetIsSlideshow: true,
+            targetForeground: true,
+            isRawSendMode: false,
+            wheelForward: true);
+
+        decision.InterceptWheel.Should().BeFalse();
+        decision.EmitWheelOnBlock.Should().BeFalse();
+    }
 }

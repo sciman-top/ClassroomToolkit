@@ -73,6 +73,8 @@ public sealed partial class WpsSlideshowNavigationHook
         _interceptKeyboard = true;
         _interceptWheel = true;
         _emitWheelOnBlock = true;
+        _consumeAuthorizedInput = false;
+        SetAuthorizedInputWindows(null);
         SetSuppressedKeyboardKeys(null);
         Interlocked.Increment(ref _dispatchGeneration);
 
@@ -123,6 +125,7 @@ public sealed partial class WpsSlideshowNavigationHook
             if (!IsActive)
             {
                 NavigationRequested = null;
+                NavigationRequestCaptured = null;
                 GC.SuppressFinalize(this);
                 return;
             }
@@ -132,6 +135,7 @@ public sealed partial class WpsSlideshowNavigationHook
         }
 
         NavigationRequested = null;
+        NavigationRequestCaptured = null;
         Debug.WriteLine($"[WpsNavHook] Dispose deferred; residual hook remains active error={LastError}");
     }
 }

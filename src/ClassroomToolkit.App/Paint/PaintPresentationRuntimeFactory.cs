@@ -25,12 +25,35 @@ internal static class PaintPresentationRuntimeFactory
         var mapper = new PresentationCommandMapper();
         var inputSender = new Win32InputSender();
         var resolver = new Win32PresentationResolver();
+        var targetValidator = new Win32PresentationWindowValidator();
+        var targetBinding = new PresentationTargetSessionBinding();
+        bool IsAdmittedTarget(PresentationTarget target, PresentationType? expectedType)
+        {
+            if (!target.IsValid || !targetValidator.IsWindowValid(target.Handle))
+            {
+                return false;
+            }
+
+            var activeClassifier = classifierAccessor() ?? classifier;
+            var check = resolver.CheckWindow(target.Handle, activeClassifier);
+            return PresentationTargetAdmissionPolicy.IsFreshIdentityMatch(
+                target,
+                check,
+                activeClassifier,
+                expectedType);
+        }
+        bool IsAdmittedChannelTarget(PresentationTarget target, PresentationType expectedType)
+        {
+            return IsAdmittedTarget(target, expectedType);
+        }
+
         var service = new PresentationControlService(
             planner,
             mapper,
             inputSender,
             resolver,
-            new Win32PresentationWindowValidator());
+            targetValidator,
+            targetAdmission: target => IsAdmittedTarget(target, expectedType: null));
         var options = CreateDefaultOptions();
         var inputPipeline = new PresentationInputPipeline(
             service,
@@ -40,13 +63,18 @@ internal static class PaintPresentationRuntimeFactory
             resolver,
             classifierAccessor,
             isFullscreenWindow,
-            currentProcessId);
+            currentProcessId,
+            targetBinding,
+            targetValidator.IsWindowValid,
+            IsAdmittedChannelTarget);
         var dispatchCoordinator = new OverlayPresentationDispatchCoordinator(targetSnapshotProvider);
         var wpsNavHook = new WpsSlideshowNavigationHook();
 
         return new PaintPresentationRuntime(
             classifier,
             resolver,
+            targetBinding,
+            IsAdmittedChannelTarget,
             service,
             options,
             inputPipeline,
@@ -82,6 +110,8 @@ internal sealed class PaintPresentationRuntime
     internal PaintPresentationRuntime(
         PresentationClassifier classifier,
         Win32PresentationResolver resolver,
+        PresentationTargetSessionBinding targetBinding,
+        Func<PresentationTarget, PresentationType, bool> targetAdmission,
         PresentationControlService service,
         PresentationControlOptions options,
         PresentationInputPipeline inputPipeline,
@@ -92,6 +122,8 @@ internal sealed class PaintPresentationRuntime
     {
         Classifier = classifier ?? throw new ArgumentNullException(nameof(classifier));
         Resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        TargetBinding = targetBinding ?? throw new ArgumentNullException(nameof(targetBinding));
+        TargetAdmission = targetAdmission ?? throw new ArgumentNullException(nameof(targetAdmission));
         Service = service ?? throw new ArgumentNullException(nameof(service));
         Options = options ?? throw new ArgumentNullException(nameof(options));
         InputPipeline = inputPipeline ?? throw new ArgumentNullException(nameof(inputPipeline));
@@ -103,6 +135,8 @@ internal sealed class PaintPresentationRuntime
 
     internal PresentationClassifier Classifier { get; }
     internal Win32PresentationResolver Resolver { get; }
+    internal PresentationTargetSessionBinding TargetBinding { get; }
+    internal Func<PresentationTarget, PresentationType, bool> TargetAdmission { get; }
     internal PresentationControlService Service { get; }
     internal PresentationControlOptions Options { get; }
     internal PresentationInputPipeline InputPipeline { get; }

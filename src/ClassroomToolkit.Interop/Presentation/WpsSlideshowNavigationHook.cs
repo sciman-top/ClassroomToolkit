@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using ClassroomToolkit.Interop;
 using ClassroomToolkit.Interop.Utilities;
 
 namespace ClassroomToolkit.Interop.Presentation;
@@ -18,14 +19,17 @@ public sealed partial class WpsSlideshowNavigationHook : IDisposable
     private readonly HookProc _mouseProc;
     private readonly Action<string, Action, Action<Exception>?> _queueBackgroundWork;
     private readonly object _suppressedKeyboardKeysSync = new();
+    private readonly object _authorizedInputWindowsSync = new();
     private IntPtr _keyboardHook;
     private IntPtr _mouseHook;
     private HashSet<VirtualKey> _suppressedKeyboardKeys = [];
+    private HashSet<IntPtr> _authorizedInputWindows = [];
     private bool _interceptEnabled;
     private bool _blockOnly;
     private bool _interceptKeyboard = true;
     private bool _interceptWheel = true;
     private bool _emitWheelOnBlock = true;
+    private volatile bool _consumeAuthorizedInput;
     private int _callbackExceptionCount;
     private long _lastExceptionLogTick;
     private int _dispatchGeneration;
@@ -58,6 +62,9 @@ public sealed partial class WpsSlideshowNavigationHook : IDisposable
     [SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based event is part of the existing hook adapter contract.")]
     public event Action<int, string>? NavigationRequested;
 
+    [SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based event is part of the existing hook adapter contract.")]
+    public event Action<WpsNavigationRequest>? NavigationRequestCaptured;
+
     [SuppressMessage(
         "Performance",
         "CA1822:Mark members as static",
@@ -75,6 +82,19 @@ public sealed partial class WpsSlideshowNavigationHook : IDisposable
 
     public void SetEmitWheelOnBlock(bool enabled) => _emitWheelOnBlock = enabled;
 
+    public void SetConsumeAuthorizedInput(bool enabled) => _consumeAuthorizedInput = enabled;
+
+    public void SetAuthorizedInputWindows(IEnumerable<IntPtr>? windows)
+    {
+        lock (_authorizedInputWindowsSync)
+        {
+            _authorizedInputWindows = windows?
+                .Where(window => window != IntPtr.Zero)
+                .ToHashSet()
+                ?? [];
+        }
+    }
+
     public void SetSuppressedKeyboardKeys(IEnumerable<VirtualKey>? keys)
     {
         lock (_suppressedKeyboardKeysSync)
@@ -91,6 +111,25 @@ public sealed partial class WpsSlideshowNavigationHook : IDisposable
         lock (_suppressedKeyboardKeysSync)
         {
             return _suppressedKeyboardKeys.Contains(key);
+        }
+    }
+
+    private bool IsAuthorizedInputForeground()
+    {
+        if (!_consumeAuthorizedInput || !OperatingSystem.IsWindows())
+        {
+            return false;
+        }
+
+        var foregroundWindow = NativeMethods.GetForegroundWindow();
+        if (foregroundWindow == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        lock (_authorizedInputWindowsSync)
+        {
+            return _authorizedInputWindows.Contains(foregroundWindow);
         }
     }
 }

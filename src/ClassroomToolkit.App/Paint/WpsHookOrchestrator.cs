@@ -26,7 +26,8 @@ internal sealed class WpsHookOrchestrator
     public WpsHookRuntimeState ApplyEnabled(
         IWpsNavHookClient? hookClient,
         WpsHookInterceptDecision decision,
-        bool currentActive)
+        bool currentActive,
+        IEnumerable<IntPtr>? authorizedInputWindows = null)
     {
         if (hookClient == null)
         {
@@ -39,6 +40,8 @@ internal sealed class WpsHookOrchestrator
 
         try
         {
+            hookClient.SetAuthorizedInputWindows(authorizedInputWindows ?? []);
+            hookClient.SetConsumeAuthorizedInput(true);
             hookClient.SetInterceptEnabled(true);
             hookClient.SetBlockOnly(decision.BlockOnly);
             hookClient.SetInterceptKeyboard(decision.InterceptKeyboard);
@@ -82,6 +85,8 @@ internal sealed class WpsHookOrchestrator
             & TryApply(() => hookClient.SetInterceptKeyboard(true), "reset-keyboard-intercept")
             & TryApply(() => hookClient.SetInterceptWheel(true), "reset-wheel-intercept")
             & TryApply(() => hookClient.SetEmitWheelOnBlock(true), "reset-wheel-emission")
+            & TryApply(() => hookClient.SetConsumeAuthorizedInput(false), "reset-authorized-input-consumption")
+            & TryApply(() => hookClient.SetAuthorizedInputWindows([]), "clear-authorized-input-windows")
             & TryApply(() => hookClient.SetSuppressedKeyboardKeys([]), "clear-suppressed-keys")
             & TryApply(hookClient.Stop, "stop")
             & !hookClient.IsActive;

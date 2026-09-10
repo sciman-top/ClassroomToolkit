@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Interop;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.Interop.Presentation;
@@ -9,13 +11,59 @@ namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintOverlayWindow
 {
+    private const int MaxQueuedWpsRequestAgeMs = 500;
+
+    private void OnWpsNavigationRequestCaptured(WpsNavigationRequest request)
+    {
+        if (request.Direction == 0 || request.ForegroundWindow == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var ageMs = (Stopwatch.GetTimestamp() - request.CapturedTimestampTicks)
+            * 1000.0 / Stopwatch.Frequency;
+        if (ageMs < 0 || ageMs > MaxQueuedWpsRequestAgeMs)
+        {
+            Debug.WriteLine($"[WpsNavHook] ignored stale request source={request.Source} ageMs={ageMs:0.##}");
+            return;
+        }
+
+        var currentForeground = _presentationResolver.ResolveForeground();
+        if (!currentForeground.IsValid || currentForeground.Handle != request.ForegroundWindow)
+        {
+            Debug.WriteLine($"[WpsNavHook] ignored focus-changed request source={request.Source}");
+            return;
+        }
+
+        OnWpsNavHookRequested(
+            request.Direction,
+            request.Source,
+            request.ForegroundWindow);
+    }
+
     private void OnWpsNavHookRequested(int direction, string source)
+    {
+        OnWpsNavHookRequested(direction, source, capturedForegroundWindow: null);
+    }
+
+    private void OnWpsNavHookRequested(
+        int direction,
+        string source,
+        IntPtr? capturedForegroundWindow)
     {
         void ExecuteHookRequest()
         {
             if (!_presentationOptions.AllowWps)
             {
                 Debug.WriteLine($"[WpsNavHook] ignored allow=false source={source} dir={direction}");
+                return;
+            }
+            var currentForeground = _presentationResolver.ResolveForeground();
+            if (capturedForegroundWindow.HasValue
+                && (!currentForeground.IsValid
+                    || currentForeground.Handle != capturedForegroundWindow.Value))
+            {
+                Debug.WriteLine($"[WpsNavHook] ignored dispatch-focus-changed source={source} dir={direction}");
                 return;
             }
             MarkWpsHookInput();
@@ -37,13 +85,26 @@ public partial class PaintOverlayWindow
             }
             if (WpsHookNavigationInjectionGatePolicy.ShouldSuppressInjection(
                     targetIsForeground: IsTargetForeground(target),
-                    foregroundOwnedByCurrentProcess: IsForegroundOwnedByCurrentProcess(),
+                    foregroundInputAuthorized: IsPresentationInputFocusAuthorized(
+                        capturedForegroundWindow ?? currentForeground.Handle),
                     wheelSource: source == "wheel",
                     wheelAsKeyEnabled: _presentationOptions.WheelAsKey))
             {
                 // 真实输入已直达前台放映窗（hook 不吞键），再注入必然双翻页；
                 // 外来应用前台时注入会把无关输入误转为翻页。
                 Debug.WriteLine($"[WpsNavHook] injection-suppressed source={source} dir={direction}");
+                return;
+            }
+            var allowBackground = IsTargetForeground(target)
+                                  || IsPresentationInputFocusAuthorized(
+                                      capturedForegroundWindow ?? currentForeground.Handle);
+            if (!CanSendPresentationNavigation(
+                    allowChannel: _presentationOptions.AllowWps,
+                    target,
+                    allowBackground,
+                    expectedType: PresentationType.Wps))
+            {
+                Debug.WriteLine($"[WpsNavHook] admission-failed source={source} dir={direction}");
                 return;
             }
             if (ShouldSuppressWpsNav(direction, target.Handle))
@@ -109,7 +170,8 @@ public partial class PaintOverlayWindow
         if (!CanSendPresentationNavigation(
                 allowChannel: _presentationOptions.AllowWps,
                 target,
-                allowBackground))
+                allowBackground,
+                expectedType: PresentationType.Wps))
         {
             return false;
         }
@@ -173,7 +235,7 @@ public partial class PaintOverlayWindow
             shouldEnable = WpsHookEnableGatePolicy.ShouldEnableWithTarget(
                 shouldEnable,
                 target.IsValid,
-                IsPresentationSlideshow(target));
+                IsPresentationSlideshow(target, PresentationType.Wps));
         }
         var sendMode = InputStrategy.Message;
         var wheelForward = false;
@@ -195,7 +257,8 @@ public partial class PaintOverlayWindow
             var runtimeState = _wpsHookOrchestrator.ApplyEnabled(
                 _wpsNavHookClient,
                 decision,
-                _wpsNavHookActive);
+                _wpsNavHookActive,
+                ResolveAuthorizedPresentationInputWindows());
             ApplyWpsHookRuntimeState(runtimeState);
             if (!runtimeState.ConfigurationApplied)
             {
@@ -256,11 +319,83 @@ public partial class PaintOverlayWindow
 
     private PresentationTarget ResolveWpsTarget()
     {
-        return _presentationResolver.ResolvePresentationTarget(
-            _presentationClassifier,
-            allowWps: true,
-            allowOffice: false,
-            _currentProcessId);
+        return _presentationTargetSessionBinding.Resolve(
+            PresentationType.Wps,
+            resolveCandidate: () => _presentationResolver.ResolvePresentationTarget(
+                _presentationClassifier,
+                allowWps: true,
+                allowOffice: false,
+                _currentProcessId),
+            isAdmitted: target =>
+                IsAdmittedWpsTarget(target));
+    }
+
+    private bool IsAdmittedWpsTarget(PresentationTarget target)
+    {
+        return _presentationTargetAdmission(target, PresentationType.Wps);
+    }
+
+    private bool IsPresentationInputFocusAuthorized(IntPtr foregroundWindow)
+    {
+        return PresentationInputFocusPolicy.IsAuthorizedForeground(
+            foregroundWindow,
+            _hwnd,
+            ResolveToolbarWindowHandle());
+    }
+
+    private static IntPtr ResolveToolbarWindowHandle()
+    {
+        var windows = System.Windows.Application.Current?.Windows;
+        if (windows == null)
+        {
+            return IntPtr.Zero;
+        }
+
+        foreach (Window window in windows)
+        {
+            if (window is not PaintToolbarWindow toolbar || !toolbar.IsVisible)
+            {
+                continue;
+            }
+
+            if (PresentationSource.FromVisual(toolbar) is HwndSource source
+                && source.Handle != IntPtr.Zero)
+            {
+                return source.Handle;
+            }
+        }
+
+        return IntPtr.Zero;
+    }
+
+    private List<IntPtr> ResolveAuthorizedPresentationInputWindows()
+    {
+        var windows = new List<IntPtr>(capacity: 2);
+        if (_hwnd != IntPtr.Zero && IsVisible)
+        {
+            windows.Add(_hwnd);
+        }
+
+        var toolbarHandle = ResolveToolbarWindowHandle();
+        if (toolbarHandle != IntPtr.Zero && !windows.Contains(toolbarHandle))
+        {
+            windows.Add(toolbarHandle);
+        }
+
+        return windows;
+    }
+
+    public void RefreshPresentationInputOwnership()
+    {
+        if (_wpsNavHookClient == null)
+        {
+            return;
+        }
+
+        SafeActionExecutionExecutor.TryExecute(
+            () => _wpsNavHookClient.SetAuthorizedInputWindows(ResolveAuthorizedPresentationInputWindows()),
+            ex => Debug.WriteLine(
+                $"[WpsNavHook] authorized-window refresh failed: {ex.GetType().Name} - {ex.Message}"));
     }
 
     private InputStrategy ResolveWpsSendMode(

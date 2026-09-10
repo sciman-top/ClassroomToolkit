@@ -14,6 +14,12 @@ internal static class Program
     [STAThread]
     public static void Main()
     {
+        // This project also uses WinForms screen/dialog APIs. Apply the
+        // generated SDK high-DPI defaults before WPF or any WinForms type is
+        // initialized. The project property is the sole DPI configuration
+        // source; .NET 9+ WFO0003 rejects duplicate manifest DPI settings.
+        ApplicationConfiguration.Initialize();
+
         // Velopack 更新钩子先于全局异常处理与日志器执行，钩子内异常不允许直接崩溃进程
         //（更新业务可降级，失败原因尽力落盘）。
         try

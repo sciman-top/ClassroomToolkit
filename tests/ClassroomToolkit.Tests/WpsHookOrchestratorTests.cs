@@ -240,6 +240,8 @@ public sealed class WpsHookOrchestratorTests
         public bool InterceptKeyboard { get; private set; } = true;
         public bool InterceptWheel { get; private set; } = true;
         public bool EmitWheelOnBlock { get; private set; } = true;
+        public bool ConsumeAuthorizedInput { get; private set; }
+        public IReadOnlyList<IntPtr> AuthorizedInputWindows { get; private set; } = [];
         public bool StopCalled { get; private set; }
         public bool StartCalled { get; private set; }
         public bool StartResult { get; set; } = true;
@@ -275,6 +277,18 @@ public sealed class WpsHookOrchestratorTests
         {
             ThrowIfConfigurationRequested();
             EmitWheelOnBlock = enabled;
+        }
+
+        public void SetConsumeAuthorizedInput(bool enabled)
+        {
+            ThrowIfConfigurationRequested();
+            ConsumeAuthorizedInput = enabled;
+        }
+
+        public void SetAuthorizedInputWindows(IEnumerable<IntPtr> windows)
+        {
+            ThrowIfConfigurationRequested();
+            AuthorizedInputWindows = windows.ToArray();
         }
 
         public void SetSuppressedKeyboardKeys(IEnumerable<VirtualKey> keys)

@@ -84,6 +84,30 @@ public sealed class PresentationControlPlannerTests
     }
 
     [Fact]
+    public void UpdateClassifier_ShouldApplyNewPresentationRules()
+    {
+        var planner = new PresentationControlPlanner(new PresentationClassifier());
+        var info = new PresentationWindowInfo(789, "custom-presentation.exe", new[] { "custom-wps-show" });
+        var options = new PresentationControlOptions { Strategy = InputStrategy.Message, AllowWps = true };
+
+        planner.Plan(info, options, PresentationCommand.Next).Should().BeNull();
+
+        planner.UpdateClassifier(
+            new PresentationClassifier(
+                new PresentationClassifierOverrides(
+                    AdditionalWpsClassTokens: ["custom-wps-show"],
+                    AdditionalOfficeClassTokens: [],
+                    AdditionalSlideshowClassTokens: [],
+                    AdditionalWpsProcessTokens: [],
+                    AdditionalOfficeProcessTokens: [])));
+
+        var plan = planner.Plan(info, options, PresentationCommand.Next);
+
+        plan.Should().NotBeNull();
+        plan!.TargetType.Should().Be(PresentationType.Wps);
+    }
+
+    [Fact]
     public void OtherWindowType_ShouldReturnNull()
     {
         var classifier = new PresentationClassifier();

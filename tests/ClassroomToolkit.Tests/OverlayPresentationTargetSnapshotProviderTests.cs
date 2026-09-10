@@ -132,6 +132,30 @@ public sealed class OverlayPresentationTargetSnapshotProviderTests
     }
 
     [Fact]
+    public void Resolve_ShouldNotTreatNormalPresentationEditorAsForegroundSlideshow()
+    {
+        var wpsTarget = BuildTarget(4401, 44, "wpspresentation.exe", "wpsshowframe");
+        var officeTarget = BuildTarget(5501, 55, "powerpnt.exe", "screenclass");
+        var foregroundTarget = BuildTarget(6601, 66, "powerpnt.exe", "powerpntframeclass");
+        var resolver = new FakeResolver
+        {
+            WpsTarget = wpsTarget,
+            OfficeTarget = officeTarget,
+            ForegroundTarget = foregroundTarget
+        };
+        var provider = new OverlayPresentationTargetSnapshotProvider(
+            resolver,
+            () => new PresentationClassifier(),
+            _ => false,
+            currentProcessId: 100,
+            isWindowValid: _ => true);
+
+        var snapshot = provider.Resolve(allowWps: true, allowOffice: true);
+
+        snapshot.ForegroundType.Should().Be(PresentationType.None);
+    }
+
+    [Fact]
     public void Resolve_ShouldReturnEmptySnapshot_WhenResolverThrowsNonFatal()
     {
         var resolver = new ThrowingResolver(new InvalidOperationException("non-fatal"));
@@ -177,6 +201,30 @@ public sealed class OverlayPresentationTargetSnapshotProviderTests
 
         resolver.LastExcludeProcessId.Should().NotBeNull();
         resolver.LastExcludeProcessId.Should().NotBe(0u);
+    }
+
+    [Fact]
+    public void Resolve_ShouldRebind_WhenFreshAdmissionRejectsPreviouslyBoundHandle()
+    {
+        var oldTarget = BuildTarget(7700, 77, "wpspresentation.exe", "wpsshowframe");
+        var newTarget = BuildTarget(8800, 88, "wpspresentation.exe", "wpsshowframe");
+        var resolver = new FakeResolver { WpsTarget = oldTarget };
+        var admittedHandle = oldTarget.Handle;
+        var provider = new OverlayPresentationTargetSnapshotProvider(
+            resolver,
+            () => new PresentationClassifier(),
+            _ => false,
+            currentProcessId: 100,
+            targetAdmission: (target, expectedType) =>
+                expectedType == PresentationType.Wps && target.Handle == admittedHandle,
+            isWindowValid: _ => true);
+
+        provider.Resolve(allowWps: true, allowOffice: false).WpsTarget.Should().Be(oldTarget);
+
+        admittedHandle = newTarget.Handle;
+        resolver.WpsTarget = newTarget;
+
+        provider.Resolve(allowWps: true, allowOffice: false).WpsTarget.Should().Be(newTarget);
     }
 
     private static PresentationTarget BuildTarget(long hwnd, uint processId, string processName, params string[] classNames)

@@ -12,6 +12,7 @@ namespace ClassroomToolkit.App.Paint;
 public partial class PaintOverlayWindow
 {
     private const int WmDisplayChange = 0x007E;
+    private const int WmDpiChanged = 0x02E0;
     private void OnOverlayLoaded(object sender, RoutedEventArgs e)
     {
         WindowPlacementHelper.EnsureVisible(this);
@@ -88,9 +89,10 @@ public partial class PaintOverlayWindow
 
     private IntPtr OnOverlayHwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
-        if (msg == WmDisplayChange)
+        if (msg == WmDisplayChange || msg == WmDpiChanged)
         {
-            // 投影仪热插拔/分辨率变化后覆盖层几何会过期，按当前模式重铺。
+            // 投影仪热插拔、分辨率或每显示器 DPI 变化后覆盖层几何和栅格
+            // surface 都可能过期，统一按当前模式延迟重铺。
             var scheduled = TryBeginInvoke(RecoverAfterDisplaySettingsChange, DispatcherPriority.Background);
             if (!scheduled && Dispatcher.CheckAccess())
             {
@@ -109,9 +111,11 @@ public partial class PaintOverlayWindow
         if (IsPhotoFullscreenActive)
         {
             ApplyPhotoWindowBounds(fullscreen: true);
+            EnsureRasterSurface();
             return;
         }
         RecoverOverlayFullscreenBounds();
+        EnsureRasterSurface();
     }
 
     private void OnOverlayDeactivated(object? sender, EventArgs e)
@@ -121,6 +125,7 @@ public partial class PaintOverlayWindow
 
     private void OnOverlayClosed(object? sender, EventArgs e)
     {
+        ReleasePointerInput();
         CancelPendingBrushPreview();
         Interlocked.Exchange(ref _overlayClosed, 1);
         _overlayLifecycleCancellation.Cancel();
@@ -190,7 +195,7 @@ public partial class PaintOverlayWindow
         StopWpsNavHook();
         if (_wpsNavHook != null && _wpsNavHook.Available)
         {
-            _wpsNavHook.NavigationRequested -= OnWpsNavHookRequested;
+            _wpsNavHook.NavigationRequestCaptured -= OnWpsNavigationRequestCaptured;
             _wpsNavHook.Dispose();
         }
         _wpsNavHookStateGate.Dispose();

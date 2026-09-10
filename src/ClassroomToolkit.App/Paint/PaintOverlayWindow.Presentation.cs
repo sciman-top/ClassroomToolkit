@@ -19,20 +19,56 @@ public partial class PaintOverlayWindow
         _currentPresentationType = PresentationType.None;
     }
 
+    private PresentationTarget ResolvePresentationTargetForChannel(PresentationType type)
+    {
+        return type switch
+        {
+            PresentationType.Wps => ResolveWpsTarget(),
+            PresentationType.Office => ResolveOfficeTarget(),
+            _ => PresentationTarget.Empty
+        };
+    }
+
+    private PresentationTarget ResolveOfficeTarget()
+    {
+        return _presentationTargetSessionBinding.Resolve(
+            PresentationType.Office,
+            resolveCandidate: () => _presentationResolver.ResolvePresentationTarget(
+                _presentationClassifier,
+                allowWps: false,
+                allowOffice: true,
+                _currentProcessId),
+            isAdmitted: target => _presentationTargetAdmission(target, PresentationType.Office));
+    }
+
+    private PresentationTarget ResolvePresentationFocusTarget(out PresentationType selectedType)
+    {
+        var foreground = _presentationResolver.ResolveForeground();
+        var foregroundHasInfo = foreground.IsValid && foreground.Info != null;
+        var foregroundType = foregroundHasInfo
+            ? _presentationClassifier.Classify(foreground.Info!)
+            : PresentationType.None;
+        var foregroundIsFullscreen = foregroundHasInfo
+                                     && IsFullscreenPresentationWindow(foreground);
+        selectedType = PresentationTargetChannelSelectionPolicy.ResolveForFocus(
+            foregroundType,
+            foregroundIsFullscreen,
+            _currentPresentationType,
+            _presentationOptions.AllowWps,
+            _presentationOptions.AllowOffice);
+        return ResolvePresentationTargetForChannel(selectedType);
+    }
+
     public bool RestorePresentationFocusIfNeeded(bool requireFullscreen = false)
     {
         var sessionState = _sessionCoordinator.CurrentState;
         var presentationAllowed = PresentationChannelAvailabilityPolicy.IsAnyChannelEnabled(
             _presentationOptions.AllowOffice,
             _presentationOptions.AllowWps);
-        var target = _presentationResolver.ResolvePresentationTarget(
-            _presentationClassifier,
-            _presentationOptions.AllowWps,
-            _presentationOptions.AllowOffice,
-            _currentProcessId);
+        var target = ResolvePresentationFocusTarget(out var targetType);
         var targetIsValid = target.IsValid;
-        var targetIsSlideshow = targetIsValid && _presentationClassifier.IsSlideshowWindow(target.Info);
-        var targetIsFullscreen = targetIsValid && IsFullscreenPresentationWindow(target);
+        var targetIsSlideshow = targetIsValid && IsPresentationSlideshow(target, targetType);
+        var targetIsFullscreen = targetIsValid && IsFullscreenPresentationWindow(target, targetType);
         var force = ShouldForcePresentationForeground(target);
         var foregroundOwned = IsForegroundOwnedByCurrentProcess();
         if (!PresentationFocusRestorePolicy.CanRestore(
@@ -149,7 +185,7 @@ public partial class PaintOverlayWindow
             _foregroundPresentationActive = false;
             return;
         }
-        if (!IsFullscreenPresentationWindow(target))
+        if (!IsFullscreenPresentationWindow(target, type))
         {
             _foregroundPresentationActive = false;
             return;
@@ -305,11 +341,14 @@ public partial class PaintOverlayWindow
     private PresentationType ResolveForegroundPresentationType()
     {
         var target = _presentationResolver.ResolveForeground();
-        if (!target.IsValid || target.Info == null)
+        if (!TryGetCurrentPresentationWindowCheck(target, expectedType: null, out var check))
         {
             return PresentationType.None;
         }
-        return _presentationClassifier.Classify(target.Info);
+
+        return check!.ClassMatch || check.IsFullscreen
+            ? check.Type
+            : PresentationType.None;
     }
 
     private void TryFollowPresentationMonitor()
@@ -322,12 +361,8 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        var target = _presentationResolver.ResolvePresentationTarget(
-            _presentationClassifier,
-            _presentationOptions.AllowWps,
-            _presentationOptions.AllowOffice,
-            _currentProcessId);
-        if (!IsFullscreenPresentationWindow(target))
+        var target = ResolvePresentationTargetForChannel(_currentPresentationType);
+        if (!IsFullscreenPresentationWindow(target, _currentPresentationType))
         {
             return;
         }
@@ -429,7 +464,9 @@ public partial class PaintOverlayWindow
         }
 
         _presentationClassifier = new PresentationClassifier(overrides);
+        _presentationService.UpdateClassifier(_presentationClassifier);
         _presentationResolver.UpdateScoringOptions(scoringOptions);
+        _presentationTargetSessionBinding.InvalidateAll();
         _presentationInputPipeline.ResetAutoFallbacks();
         if (hasParseError)
         {
@@ -499,8 +536,13 @@ public partial class PaintOverlayWindow
     {
         _presentationOptions.AllowOffice = allowOffice;
         _presentationOptions.AllowWps = allowWps;
+        if (!allowOffice)
+        {
+            _presentationTargetSessionBinding.Invalidate(PresentationType.Office);
+        }
         if (!allowWps)
         {
+            _presentationTargetSessionBinding.Invalidate(PresentationType.Wps);
             _presentationInputPipeline.ResetWpsHookFallback();
             WpsHookUnavailableNotificationPolicy.Reset(ref _wpsHookUnavailableNotifiedState);
         }
@@ -550,7 +592,8 @@ public partial class PaintOverlayWindow
         if (!CanSendPresentationNavigation(
                 allowChannel: _presentationOptions.AllowOffice,
                 target,
-                allowBackground))
+                allowBackground,
+                expectedType: PresentationType.Office))
         {
             return false;
         }
@@ -574,10 +617,11 @@ public partial class PaintOverlayWindow
     private bool CanSendPresentationNavigation(
         bool allowChannel,
         PresentationTarget target,
-        bool allowBackground)
+        bool allowBackground,
+        PresentationType expectedType)
     {
         var targetHasInfo = target.Info != null;
-        var targetIsSlideshow = targetHasInfo && IsPresentationSlideshow(target);
+        var targetIsSlideshow = targetHasInfo && IsPresentationSlideshow(target, expectedType);
         var targetForeground = target.IsValid && IsTargetForeground(target);
         return PresentationNavigationAdmissionPolicy.ShouldAttempt(
             allowChannel: allowChannel,
@@ -589,12 +633,18 @@ public partial class PaintOverlayWindow
             targetForeground: targetForeground);
     }
 
-    private bool IsPresentationSlideshow(PresentationTarget target)
+    private bool IsPresentationSlideshow(
+        PresentationTarget target,
+        PresentationType? expectedType = null)
     {
-        return PresentationSlideshowDetectionPolicy.IsSlideshow(
-            target,
-            _presentationClassifier,
-            IsFullscreenWindow);
+        if (!TryGetCurrentPresentationWindowCheck(target, expectedType, out var check))
+        {
+            return false;
+        }
+
+        // BuildWindowCheck already contains the current class/fullscreen facts;
+        // never derive slideshow admission from the cached target metadata.
+        return check!.ClassMatch || check.IsFullscreen;
     }
 
     private PresentationType ResolveFullscreenPresentationType()
@@ -612,7 +662,7 @@ public partial class PaintOverlayWindow
         if (_presentationOptions.AllowWps)
         {
             var wpsTarget = ResolveWpsTarget();
-            var hasFullscreenCandidate = IsFullscreenPresentationWindow(wpsTarget);
+            var hasFullscreenCandidate = IsFullscreenPresentationWindow(wpsTarget, PresentationType.Wps);
             wpsFullscreen = WpsFullscreenExitPolicy.ShouldTreatAsActiveFullscreen(
                 hasFullscreenCandidate,
                 foregroundType,
@@ -621,17 +671,15 @@ public partial class PaintOverlayWindow
         }
         if (_presentationOptions.AllowOffice)
         {
-            var officeTarget = _presentationResolver.ResolvePresentationTarget(
-                _presentationClassifier,
-                allowWps: false,
-                allowOffice: true,
-                _currentProcessId);
-            officeFullscreen = IsFullscreenPresentationWindow(officeTarget);
+            var officeTarget = ResolveOfficeTarget();
+            officeFullscreen = IsFullscreenPresentationWindow(officeTarget, PresentationType.Office);
         }
         return PresentationFullscreenTypeResolutionPolicy.Resolve(
             wpsFullscreen,
             officeFullscreen,
-            _currentPresentationType);
+            _currentPresentationType,
+            foregroundType,
+            foregroundIsFullscreen);
     }
 
     private bool ShouldSuppressPresentationWheelFromRecentInkInput()
@@ -663,26 +711,44 @@ public partial class PaintOverlayWindow
         return IsFullscreenWindow(target.Handle);
     }
 
-    private bool IsFullscreenPresentationWindow(PresentationTarget target)
+    private bool IsFullscreenPresentationWindow(
+        PresentationTarget target,
+        PresentationType? expectedType = null)
     {
-        if (!target.IsValid || target.Info == null)
+        if (!TryGetCurrentPresentationWindowCheck(target, expectedType, out var check))
         {
             return false;
         }
 
-        var fullscreen = IsFullscreenWindow(target.Handle);
-        var slideshowClassMatch = _presentationClassifier.IsSlideshowWindow(target.Info);
-        var classifiedType = _presentationClassifier.Classify(target.Info);
+        var classifiedType = check!.Type;
         var dedicatedWpsRuntime = classifiedType == PresentationType.Wps
                                   && WpsPresentationRuntimePolicy.IsDedicatedSlideshowRuntime(
-                                      target.Info.ProcessName);
+                                      check.ProcessName);
         return PresentationFullscreenWindowAdmissionPolicy.ShouldTreatAsPresentationFullscreen(
             target.IsValid,
-            targetHasInfo: true,
-            fullscreen,
-            slideshowClassMatch,
+            targetHasInfo: target.Info != null,
+            check.IsFullscreen,
+            check.ClassMatch,
             classifiesAsOffice: classifiedType == PresentationType.Office,
             classifiesAsDedicatedWpsRuntime: dedicatedWpsRuntime);
+    }
+
+    private bool TryGetCurrentPresentationWindowCheck(
+        PresentationTarget target,
+        PresentationType? expectedType,
+        out PresentationWindowCheck? check)
+    {
+        check = null;
+        if (!target.IsValid
+            || target.Info == null
+            || !PresentationWindowFocus.IsWindowValid(target.Handle))
+        {
+            return false;
+        }
+
+        check = _presentationResolver.CheckWindow(target.Handle, _presentationClassifier);
+        return check != null
+               && (!expectedType.HasValue || check.Type == expectedType.Value);
     }
 
     private bool IsFullscreenWindow(IntPtr hwnd)

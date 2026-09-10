@@ -43,8 +43,8 @@ public sealed class Win32InputSender : IInputSender
 
     private static bool SendKeyMessage(IntPtr hwnd, VirtualKey key, KeyModifiers modifiers, bool keyDownOnly)
     {
-        var downParam = BuildKeyLParam(isKeyUp: false);
-        var upParam = BuildKeyLParam(isKeyUp: true);
+        var downParam = BuildKeyLParam(key, isKeyUp: false);
+        var upParam = BuildKeyLParam(key, isKeyUp: true);
         var appliedModifiers = new List<VirtualKey>();
         var modifiersApplied = SendModifiers(hwnd, modifiers, true, appliedModifiers);
         try
@@ -123,7 +123,7 @@ public sealed class Win32InputSender : IInputSender
         foreach (var mod in EnumerateModifiers(modifiers))
         {
             var msg = isKeyDown ? NativeMethods.WmKeyDown : NativeMethods.WmKeyUp;
-            if (!NativeMethods.PostMessage(hwnd, msg, (IntPtr)mod, BuildKeyLParam(!isKeyDown)))
+            if (!NativeMethods.PostMessage(hwnd, msg, (IntPtr)mod, BuildKeyLParam(mod, !isKeyDown)))
             {
                 Debug.WriteLine($"[Win32InputSender] PostMessage modifier failed: hwnd={hwnd}, key={mod}, isDown={isKeyDown}, lastError={Marshal.GetLastWin32Error()}");
                 return false;
@@ -138,7 +138,7 @@ public sealed class Win32InputSender : IInputSender
         foreach (var mod in modifiers)
         {
             var msg = isKeyDown ? NativeMethods.WmKeyDown : NativeMethods.WmKeyUp;
-            if (!NativeMethods.PostMessage(hwnd, msg, (IntPtr)mod, BuildKeyLParam(!isKeyDown)))
+            if (!NativeMethods.PostMessage(hwnd, msg, (IntPtr)mod, BuildKeyLParam(mod, !isKeyDown)))
             {
                 Debug.WriteLine($"[Win32InputSender] PostMessage applied modifier release failed: hwnd={hwnd}, key={mod}, isDown={isKeyDown}, lastError={Marshal.GetLastWin32Error()}");
                 return false;
@@ -204,17 +204,36 @@ public sealed class Win32InputSender : IInputSender
         return sent == array.Length;
     }
 
-    private static IntPtr BuildKeyLParam(bool isKeyUp)
+    private static IntPtr BuildKeyLParam(VirtualKey key, bool isKeyUp)
     {
+        const int repeatCount = 1;
+        const int scanCodeShift = 16;
+        const int extendedKey = 1 << 24;
         const int previousState = 1 << 30;
         const int transitionState = 1 << 31;
-        var flags = isKeyUp ? previousState | transitionState : 0;
+        var scanCode = (int)NativeMethods.MapVirtualKey((uint)key, 0);
+        var flags = repeatCount | (scanCode << scanCodeShift);
+        if (IsExtendedKey(key))
+        {
+            flags |= extendedKey;
+        }
+        if (isKeyUp)
+        {
+            flags |= previousState | transitionState;
+        }
         return (IntPtr)flags;
     }
 
-    private static bool IsExtendedKey(VirtualKey key)
+    internal static bool IsExtendedKey(VirtualKey key)
     {
-        return key == VirtualKey.PageDown || key == VirtualKey.PageUp;
+        return key is VirtualKey.PageDown
+            or VirtualKey.PageUp
+            or VirtualKey.Home
+            or VirtualKey.End
+            or VirtualKey.Left
+            or VirtualKey.Up
+            or VirtualKey.Right
+            or VirtualKey.Down;
     }
 
     private static IntPtr BuildWheelWParam(int delta)

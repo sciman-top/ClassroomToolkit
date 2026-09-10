@@ -33,6 +33,14 @@ internal static class OverlayPresentationCommandRouter
             return true;
         }
 
+        if (context.ForegroundType == OverlayPresentationRouteType.Wps
+            && context.WpsSlideshow)
+        {
+            // A known foreground channel is authoritative.  Do not let a
+            // failed send fall through to another application's slideshow.
+            return false;
+        }
+
         if (context.ForegroundType == OverlayPresentationRouteType.Office
             && context.OfficeSlideshow
             && TrySendSafe(trySendOffice, false))
@@ -40,33 +48,42 @@ internal static class OverlayPresentationCommandRouter
             return true;
         }
 
+        if (context.ForegroundType == OverlayPresentationRouteType.Office
+            && context.OfficeSlideshow)
+        {
+            // A known foreground channel is authoritative.  Do not let a
+            // failed send fall through to another application's slideshow.
+            return false;
+        }
+
         if (context.WpsSlideshow && context.OfficeSlideshow)
         {
-            if (context.CurrentPresentationType == OverlayPresentationRouteType.Wps
-                && TrySendSafe(trySendWps, true))
+            if (context.CurrentPresentationType == OverlayPresentationRouteType.Wps)
             {
-                return true;
+                return TrySendSafe(trySendWps, true);
             }
 
-            if (context.CurrentPresentationType == OverlayPresentationRouteType.Office
-                && TrySendSafe(trySendOffice, true))
+            if (context.CurrentPresentationType == OverlayPresentationRouteType.Office)
             {
-                return true;
+                return TrySendSafe(trySendOffice, true);
             }
 
             if (context.WpsFullscreen
-                && !context.OfficeFullscreen
-                && TrySendSafe(trySendWps, true))
+                && !context.OfficeFullscreen)
             {
-                return true;
+                return TrySendSafe(trySendWps, true);
             }
 
             if (context.OfficeFullscreen
-                && !context.WpsFullscreen
-                && TrySendSafe(trySendOffice, true))
+                && !context.WpsFullscreen)
             {
-                return true;
+                return TrySendSafe(trySendOffice, true);
             }
+
+            // Both channels are available, but no evidence identifies the
+            // intended slideshow.  A deterministic WPS-first fallback would
+            // turn an ambiguous input into a wrong-app page turn.
+            return false;
         }
 
         if (context.WpsSlideshow && TrySendSafe(trySendWps, true))

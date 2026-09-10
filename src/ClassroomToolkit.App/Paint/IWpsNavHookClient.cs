@@ -11,6 +11,8 @@ internal interface IWpsNavHookClient
     void SetInterceptKeyboard(bool enabled);
     void SetInterceptWheel(bool enabled);
     void SetEmitWheelOnBlock(bool enabled);
+    void SetConsumeAuthorizedInput(bool enabled);
+    void SetAuthorizedInputWindows(IEnumerable<IntPtr> windows);
     void SetSuppressedKeyboardKeys(IEnumerable<VirtualKey> keys);
     Task<bool> StartAsync();
     void Stop();
@@ -33,6 +35,9 @@ internal sealed class WpsNavHookClient : IWpsNavHookClient
     public void SetInterceptKeyboard(bool enabled) => _hook.SetInterceptKeyboard(enabled);
     public void SetInterceptWheel(bool enabled) => _hook.SetInterceptWheel(enabled);
     public void SetEmitWheelOnBlock(bool enabled) => _hook.SetEmitWheelOnBlock(enabled);
+    public void SetConsumeAuthorizedInput(bool enabled) => _hook.SetConsumeAuthorizedInput(enabled);
+    public void SetAuthorizedInputWindows(IEnumerable<IntPtr> windows) =>
+        _hook.SetAuthorizedInputWindows(windows);
     public void SetSuppressedKeyboardKeys(IEnumerable<VirtualKey> keys) =>
         _hook.SetSuppressedKeyboardKeys(keys);
     public Task<bool> StartAsync() => _hook.StartAsync();

@@ -57,7 +57,10 @@ public static class PresentationWindowFocus
         {
             return false;
         }
-        return NativeMethods.IsWindow(hwnd);
+        // A slideshow handle can outlive the visual session after WPS/PPT
+        // hides its presentation surface.  Existence alone would let the
+        // session binding keep routing input to that stale HWND.
+        return NativeMethods.IsWindow(hwnd) && NativeMethods.IsWindowVisible(hwnd);
     }
 
     private sealed class ForegroundSuppression : IDisposable

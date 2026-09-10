@@ -72,6 +72,8 @@ public partial class PaintOverlayWindow : Window
     private readonly ClassroomToolkit.Services.Presentation.PresentationControlService _presentationService;
     private readonly ClassroomToolkit.Services.Presentation.PresentationControlOptions _presentationOptions;
     private readonly PresentationInputPipeline _presentationInputPipeline;
+    private readonly PresentationTargetSessionBinding _presentationTargetSessionBinding;
+    private readonly Func<PresentationTarget, PresentationType, bool> _presentationTargetAdmission;
     private readonly IOverlayPresentationTargetSnapshotProvider _presentationTargetSnapshotProvider;
     private readonly OverlayPresentationDispatchCoordinator _presentationDispatchCoordinator;
     private PresentationClassifier _presentationClassifier;

@@ -18,8 +18,12 @@ internal static class WpsHookInterceptPolicy
     {
         var blockOnly = false;
         var interceptKeyboard = true;
-        var interceptWheel = wheelForward;
-        var emitWheelOnBlock = wheelForward;
+        // When WPS already owns the foreground, keep its native wheel path and
+        // do not also inject a key from the hook.  Wheel mapping is only a
+        // background-target bridge; this removes the native-wheel + injected-key
+        // double channel that debounce cannot prove away.
+        var interceptWheel = wheelForward && !targetForeground;
+        var emitWheelOnBlock = interceptWheel;
 
         if (!shouldEnable)
         {

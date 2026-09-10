@@ -10,7 +10,13 @@ public sealed class PresentationControlPlanner
         Classifier = classifier;
     }
 
-    public PresentationClassifier Classifier { get; }
+    public PresentationClassifier Classifier { get; private set; }
+
+    public void UpdateClassifier(PresentationClassifier classifier)
+    {
+        ArgumentNullException.ThrowIfNull(classifier);
+        Classifier = classifier;
+    }
 
     public PresentationControlPlan? Plan(
         PresentationWindowInfo info,
