@@ -69,6 +69,14 @@ public partial class PaintOverlayWindow
         {
             WindowPlacementHelper.EnsureVisible(this);
         }
+        else
+        {
+            // Hide() is also valid while the overlay is not the foreground
+            // window.  In that case WPF may not raise Deactivated, so do not
+            // leave manipulation/inertia or pointer capture alive for the
+            // next presentation/photo session.
+            HandlePointerCaptureLoss("overlay-hidden");
+        }
 
         // Update the native authorization set synchronously.  The async hook
         // state refresh remains the lifecycle owner, but hidden HWNDs must not
