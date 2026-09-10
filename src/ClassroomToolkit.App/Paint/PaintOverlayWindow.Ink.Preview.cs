@@ -19,10 +19,17 @@ public partial class PaintOverlayWindow
         }
 
         var previous = _lastBrushPredictionSample.Value;
+        var previousVelocity = _lastBrushVelocityDipPerSec;
         _lastBrushVelocityDipPerSec = BrushPredictionVelocityPolicy.Resolve(
             _lastBrushVelocityDipPerSec,
             previous,
             input);
+        _lastBrushAccelerationDipPerSecSq = BrushPredictionVelocityPolicy.ResolveAcceleration(
+            _lastBrushAccelerationDipPerSecSq,
+            previous,
+            input,
+            previousVelocity,
+            _lastBrushVelocityDipPerSec);
         _lastBrushPredictionSample = input;
     }
 
@@ -62,6 +69,7 @@ public partial class PaintOverlayWindow
 
     private void RenderBrushPreview()
     {
+        BrushInputLatencyTelemetry.RecordPresentedTick(Environment.TickCount);
         if (_activeRenderer == null)
         {
             return;
@@ -117,12 +125,13 @@ public partial class PaintOverlayWindow
             1.0 - (speed / BrushPredictionPreviewDefaults.DampingSpeedReference),
             BrushPredictionPreviewDefaults.DampingMin,
             1.0);
-        var lead1 = _lastBrushVelocityDipPerSec
-            * ((horizonMs * BrushPredictionPreviewDefaults.FirstLeadHorizonRatio) / 1000.0)
-            * damping;
-        var lead2 = _lastBrushVelocityDipPerSec
-            * ((horizonMs * BrushPredictionPreviewDefaults.SecondLeadHorizonRatio) / 1000.0)
-            * damping;
+        double firstLeadSeconds = (horizonMs * BrushPredictionPreviewDefaults.FirstLeadHorizonRatio) / 1000.0;
+        double secondLeadSeconds = (horizonMs * BrushPredictionPreviewDefaults.SecondLeadHorizonRatio) / 1000.0;
+        double accelerationGain = damping * BrushPredictionPreviewDefaults.AccelerationLeadGain;
+        var lead1 = (_lastBrushVelocityDipPerSec * firstLeadSeconds * damping)
+            + (_lastBrushAccelerationDipPerSecSq * (0.5 * firstLeadSeconds * firstLeadSeconds) * accelerationGain);
+        var lead2 = (_lastBrushVelocityDipPerSec * secondLeadSeconds * damping)
+            + (_lastBrushAccelerationDipPerSecSq * (0.5 * secondLeadSeconds * secondLeadSeconds) * accelerationGain);
 
         if (lead1.Length > BrushPredictionMaxDistanceDip * BrushPredictionPreviewDefaults.FirstLeadDistanceRatio)
         {

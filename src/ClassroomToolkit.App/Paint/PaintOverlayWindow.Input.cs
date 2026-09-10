@@ -86,6 +86,7 @@ public partial class PaintOverlayWindow
         {
             // Some classroom all-in-one touch devices report fixed 0/1 pseudo-pressure.
             // Treat as unavailable to keep velocity model stable.
+            BrushInputLatencyTelemetry.CountStylusPressureSample(pressureAvailable: false);
             return BrushInputSample.CreatePointer(
                 position,
                 timestampTicks,
@@ -95,6 +96,7 @@ public partial class PaintOverlayWindow
                 orientation.TiltYRadians);
         }
 
+        BrushInputLatencyTelemetry.CountStylusPressureSample(pressureAvailable: true);
         pressure = _stylusPressureCalibrator.Calibrate(pressure, _stylusPressureAnalyzer.Profile);
         if (_stylusDeviceAdaptiveProfiler.Observe(timestampTicks, _stylusPressureAnalyzer.Profile))
         {

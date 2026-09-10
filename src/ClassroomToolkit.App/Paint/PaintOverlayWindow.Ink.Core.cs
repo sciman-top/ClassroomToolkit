@@ -85,6 +85,7 @@ public partial class PaintOverlayWindow
     private bool _suppressCrossPageVisualSync;
     private bool _brushPreviewRenderingAttached;
     private Vector _lastBrushVelocityDipPerSec = new Vector(0, 0);
+    private Vector _lastBrushAccelerationDipPerSecSq = new Vector(0, 0);
     private int _brushPredictionHorizonMs = 8;
     private const double BrushPredictionMaxDistanceDip = InkPredictionDefaults.MaxDistanceDip;
 

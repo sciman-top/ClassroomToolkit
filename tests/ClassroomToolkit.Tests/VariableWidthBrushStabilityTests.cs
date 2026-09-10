@@ -263,7 +263,9 @@ public sealed class VariableWidthBrushStabilityTests
 
         var points = renderer.GetLastStrokePoints();
         points.Should().NotBeNull();
-        points!.Count.Should().BeLessThanOrEqualTo(config.MaxRawPointCount + 1);
+        // 摊销裁剪：触发点之前允许滞后块大小的超量，最终仍收敛到上限。
+        points!.Count.Should().BeLessThanOrEqualTo(
+            VariableWidthBrushRenderer.ResolveRawPointTrimTriggerCount(config.MaxRawPointCount) + 1);
         renderer.LastResampledPointCount.Should().BeLessThanOrEqualTo(config.MaxResampledPointCount);
     }
 

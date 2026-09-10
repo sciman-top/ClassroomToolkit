@@ -52,6 +52,9 @@ public partial class PaintOverlayWindow
             stroke.InkFlow = calligraphyRenderer.LastInkFlow;
             stroke.StrokeDirectionX = calligraphyRenderer.LastStrokeDirection.X;
             stroke.StrokeDirectionY = calligraphyRenderer.LastStrokeDirection.Y;
+            var wetness = calligraphyRenderer.LastStrokeWetnessSummary;
+            stroke.WetnessStart = wetness.Start;
+            stroke.WetnessEnd = wetness.End;
         }
         else
         {

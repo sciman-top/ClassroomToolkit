@@ -25,6 +25,7 @@ public partial class PaintOverlayWindow
         _lastBrushInputSample = input;
         _lastBrushPredictionSample = input;
         _lastBrushVelocityDipPerSec = new Vector(0, 0);
+        _lastBrushAccelerationDipPerSecSq = new Vector(0, 0);
         RenderBrushPreview();
         _lastCalligraphyPreviewUtc = GetCurrentUtcTimestamp();
         _lastCalligraphyPreviewPoint = position;
@@ -47,6 +48,7 @@ public partial class PaintOverlayWindow
         _lastBrushInputSample = input;
         _lastBrushPredictionSample = input;
         _lastBrushVelocityDipPerSec = new Vector(0, 0);
+        _lastBrushAccelerationDipPerSecSq = new Vector(0, 0);
         if (renderInitialPreview)
         {
             RenderBrushPreview();
@@ -135,6 +137,7 @@ public partial class PaintOverlayWindow
         _lastBrushInputSample = null;
         _lastBrushPredictionSample = null;
         _lastBrushVelocityDipPerSec = new Vector(0, 0);
+        _lastBrushAccelerationDipPerSecSq = new Vector(0, 0);
         _lastCalligraphyPreviewPoint = null;
         var photoInkModeActive = IsPhotoInkModeActive();
         if (!_suppressImmediatePhotoInkRedraw

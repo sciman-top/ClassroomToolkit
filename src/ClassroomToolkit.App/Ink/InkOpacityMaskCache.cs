@@ -34,6 +34,29 @@ internal sealed class InkOpacityMaskCache
         int textureVariant,
         Func<DrawingBrush?> factory)
     {
+        return GetOrCreate(
+            bounds,
+            inkFlow,
+            strokeDirection,
+            brushSize,
+            seed,
+            wetnessStart: null,
+            wetnessEnd: null,
+            textureVariant: textureVariant,
+            factory: factory);
+    }
+
+    internal DrawingBrush? GetOrCreate(
+        Rect bounds,
+        double inkFlow,
+        Vector? strokeDirection,
+        double brushSize,
+        int seed,
+        double? wetnessStart,
+        double? wetnessEnd,
+        int textureVariant,
+        Func<DrawingBrush?> factory)
+    {
         ArgumentNullException.ThrowIfNull(factory);
         if (bounds.IsEmpty)
         {
@@ -46,6 +69,8 @@ internal sealed class InkOpacityMaskCache
             strokeDirection,
             brushSize,
             seed,
+            wetnessStart,
+            wetnessEnd,
             textureVariant);
         if (_entries.TryGetValue(key, out var cached))
         {
@@ -78,14 +103,20 @@ internal sealed class InkOpacityMaskCache
         long DirectionXBits,
         long DirectionYBits,
         long BrushSizeBits,
-        int Seed)
+        int Seed,
+        long WetnessStartBits,
+        long WetnessEndBits)
     {
+        private const long NullBits = long.MinValue;
+
         internal static InkOpacityMaskCacheKey Create(
             Rect bounds,
             double inkFlow,
             Vector? strokeDirection,
             double brushSize,
             int seed,
+            double? wetnessStart,
+            double? wetnessEnd,
             int textureVariant)
         {
             var direction = NormalizeDirection(strokeDirection);
@@ -96,7 +127,14 @@ internal sealed class InkOpacityMaskCache
                 BitConverter.DoubleToInt64Bits(direction.X),
                 BitConverter.DoubleToInt64Bits(direction.Y),
                 BitConverter.DoubleToInt64Bits(brushSize),
-                seed);
+                seed,
+                EncodeNullable(wetnessStart),
+                EncodeNullable(wetnessEnd));
+        }
+
+        private static long EncodeNullable(double? value)
+        {
+            return value.HasValue ? BitConverter.DoubleToInt64Bits(value.Value) : NullBits;
         }
 
         private static Vector NormalizeDirection(Vector? strokeDirection)

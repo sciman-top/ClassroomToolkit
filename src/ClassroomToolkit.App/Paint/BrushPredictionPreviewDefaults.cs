@@ -8,6 +8,12 @@ internal static class BrushPredictionPreviewDefaults
     internal const double MinSpeedDipPerSec = 12.0;
     internal const double DampingSpeedReference = 2600.0;
     internal const double DampingMin = 0.72;
+    // 二阶外推（加速度项）：预测 lead = v·t·damping + ½a·t²·accelGain，
+    // 加速度由平滑速度差分再 EMA 得到，并钳制幅值避免转向时甩尖。
+    internal const double AccelerationKeepFactor = 0.72;
+    internal const double AccelerationApplyFactor = 0.28;
+    internal const double MaxAccelerationDipPerSecSq = 16000.0;
+    internal const double AccelerationLeadGain = 0.85;
     internal const double FirstLeadHorizonRatio = 0.45;
     internal const double SecondLeadHorizonRatio = 0.95;
     internal const double FirstLeadDistanceRatio = 0.7;

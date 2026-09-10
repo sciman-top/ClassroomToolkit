@@ -1,4 +1,5 @@
 using System;
+using System.Windows;
 using ClassroomToolkit.App.Paint.Brushes;
 using MediaColor = System.Windows.Media.Color;
 
@@ -133,7 +134,15 @@ public partial class PaintOverlayWindow
 
         ClassroomWritingModeTuner.ApplyToCalligraphyConfig(config, _classroomWritingMode);
         StylusDeviceAdaptiveProfiler.ApplyToCalligraphyConfig(config, _stylusDeviceAdaptiveProfiler.CurrentProfile);
+        BrushSpeedReferenceScaler.ApplyToCalligraphyConfig(config, ResolveBrushSpeedReferenceScale());
         return config;
+    }
+
+    private double ResolveBrushSpeedReferenceScale()
+    {
+        double width = (ActualWidth > 100.0) ? ActualWidth : SystemParameters.WorkArea.Width;
+        double height = (ActualHeight > 100.0) ? ActualHeight : SystemParameters.WorkArea.Height;
+        return BrushSpeedReferenceScaler.ResolveScale(new Vector(width, height).Length);
     }
 
     private static CalligraphyRenderMode ResolveCalligraphyRenderMode(CalligraphyBrushPreset preset)

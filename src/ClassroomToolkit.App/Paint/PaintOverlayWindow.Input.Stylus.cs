@@ -12,6 +12,7 @@ public partial class PaintOverlayWindow
 {
     private void OnStylusDown(object sender, StylusDownEventArgs e)
     {
+        BrushInputLatencyTelemetry.RecordInputEventTick(e.Timestamp);
         if (ShouldIgnorePromotedTouchStylus(e.StylusDevice))
         {
             return;
@@ -58,6 +59,7 @@ public partial class PaintOverlayWindow
 
     private void OnStylusMove(object sender, StylusEventArgs e)
     {
+        BrushInputLatencyTelemetry.RecordInputEventTick(e.Timestamp);
         if (ShouldIgnorePromotedTouchStylus(e.StylusDevice))
         {
             return;
@@ -151,6 +153,7 @@ public partial class PaintOverlayWindow
 
     private void OnStylusUp(object sender, StylusEventArgs e)
     {
+        BrushInputLatencyTelemetry.RecordInputEventTick(e.Timestamp);
         if (ShouldIgnorePromotedTouchStylus(e.StylusDevice))
         {
             return;

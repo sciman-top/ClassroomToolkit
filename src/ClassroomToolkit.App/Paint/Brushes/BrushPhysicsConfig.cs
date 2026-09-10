@@ -59,6 +59,13 @@ internal class BrushPhysicsConfig
     public double TaperEasePower { get; set; } = 1.0;
     // 倾斜→宽度基线：0 关闭；>0 时笔杆越压平（altitude 越小）笔画越宽（0.35 ≈ 最大 +35%）。
     public double TiltWidthInfluence { get; set; }
+    // 压感优先宽度混合：0 = 旧行为（速度为主、压力仅末端 ±20% 微调）；
+    // >0 时在有真压感的采样上把目标宽度向“压力主曲线”混合（0.65 ≈ 压力主导）。
+    // 只对 HasPressure 的输入生效，鼠标/伪压感设备自动回落纯速度模型。
+    public double PressurePrimaryWidthBlend { get; set; }
+    // 折角按笔上限：转角处允许的相对中段最大增宽（×baseSize）。
+    // 默认 0.48 维持旧行为；毛笔预设放宽到 0.7 让“折”能按笔变厚。
+    public double CornerGrowthCapMaxFactor { get; set; } = 0.48;
     public TaperCapStyle StartTaperStyle { get; set; } = TaperCapStyle.Hidden;
     public TaperCapStyle EndTaperStyle { get; set; } = TaperCapStyle.Hidden;
     // Dot-like head blend cap: larger => stronger head taper participation; smaller => thicker head.
@@ -184,7 +191,6 @@ internal class BrushPhysicsConfig
             RenderModeTag = "InkFeel",
             StartCapLength = 0.08,
             MinStrokeWidthPx = 2.5,
-            MaxStrokeWidthMultiplier = 2.45,
             WidthSmoothing = 0.95,
             WidthLowPassMinAlpha = 0.76,
             WidthLowPassMaxAlpha = 0.95,
@@ -208,12 +214,21 @@ internal class BrushPhysicsConfig
             TaperStrength = 0.88,
             StartTaperStyle = TaperCapStyle.Exposed,
             EndTaperStyle = TaperCapStyle.Exposed,
+            // 毛笔手感包：放宽宽度动态范围，让慢速重按/顿笔能明显变粗，
+            // 快笔仍由速度曲线收细；Clarity/Balanced/Sharp 保持课堂基线不动。
+            MinWidthFactor = 0.16,
+            MaxWidthFactor = 2.1,
+            MaxStrokeWidthMultiplier = 3.0,
+            LowSpeedWidthMaxFactor = 2.6,
+            DunBiMaxAccumulation = 1.5,
+            StartBurstMaxWidthFactor = 1.15,
+            StartBurstAccumulationCap = 0.4,
+            PressurePrimaryWidthBlend = 0.65,
+            CornerGrowthCapMaxFactor = 0.7,
+            TaperEasePower = 1.15,
             SpeedFloorPxPerMs = 0.08,
-            LowSpeedWidthMaxFactor = 2.25,
             StartVelocityRampUpPoints = 13,
             StartBurstSuppressPoints = 4,
-            StartBurstMaxWidthFactor = 1.08,
-            StartBurstAccumulationCap = 0.32,
             VelocityWidthFactor = 0.53,
             EndTaperStartProgress = 0.78,
             EndVelocityDecoupleStart = 0.86,
@@ -322,10 +337,11 @@ internal class BrushPhysicsConfig
         config.DotLikeHeadMixCap = 0.55;
         config.DotLikeTailSharpMin = 0.86;
         config.SpeedFloorPxPerMs = 0.08;
-        config.LowSpeedWidthMaxFactor = 2.25;
+        config.LowSpeedWidthMaxFactor = 2.6;
+        config.TaperEasePower = 1.25;
         config.EndTaperStartProgress = Math.Min(config.EndTaperStartProgress, 0.72);
         config.TaperMinWidthFactor = Math.Min(config.TaperMinWidthFactor, 0.58);
-        config.DunBiMaxAccumulation = Math.Max(config.DunBiMaxAccumulation, 1.16);
+        config.DunBiMaxAccumulation = Math.Max(config.DunBiMaxAccumulation, 1.5);
         config.DunBiSpreadRate = Math.Max(config.DunBiSpreadRate, 0.62);
         return config;
     }

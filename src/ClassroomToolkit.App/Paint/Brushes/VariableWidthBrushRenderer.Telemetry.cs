@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
+using System.Text;
 
 namespace ClassroomToolkit.App.Paint.Brushes;
 
@@ -26,6 +28,61 @@ internal readonly record struct BrushMoveTelemetrySnapshot(
 
 internal partial class VariableWidthBrushRenderer
 {
+    // env 门控目录：设置 CTOOLKIT_BRUSH_WIDTH_PROFILE_DIR 后每笔落盘
+    // width-vs-弧长 CSV，供参数调优做数据驱动对比；未设置时零开销。
+    private static readonly string? WidthProfileDirectory = ResolveWidthProfileDirectoryFromEnvironment();
+
+    private static string? ResolveWidthProfileDirectoryFromEnvironment()
+    {
+        var raw = Environment.GetEnvironmentVariable("CTOOLKIT_BRUSH_WIDTH_PROFILE_DIR");
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        var directory = raw.Trim();
+        return Directory.Exists(directory) ? directory : null;
+    }
+
+    private void WriteWidthProfileCsvIfEnabled()
+    {
+        var directory = WidthProfileDirectory;
+        if (directory == null || _points.Count < 2)
+        {
+            return;
+        }
+
+        try
+        {
+            var samples = BuildCenterlineSamplesFinal();
+            if (samples.Count < 2)
+            {
+                return;
+            }
+
+            var builder = new StringBuilder(samples.Count * 32);
+            builder.AppendLine("arclength_dip,width_dip,speed_px_per_ms");
+            builder.AppendLine(string.Create(
+                CultureInfo.InvariantCulture,
+                $"0,{samples[0].Width:F4},{samples[0].Speed:F4}"));
+            double cumulative = 0.0;
+            for (int i = 1; i < samples.Count; i++)
+            {
+                cumulative += (samples[i].Position - samples[i - 1].Position).Length;
+                builder.AppendLine(string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"{cumulative:F3},{samples[i].Width:F4},{samples[i].Speed:F4}"));
+            }
+
+            var fileName = $"brush-width-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{_config.PresetName}.csv";
+            File.WriteAllText(Path.Combine(directory, fileName), builder.ToString());
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            // 诊断输出失败绝不影响笔画收口。
+        }
+    }
+
     internal bool TryGetMoveTelemetrySnapshotForDiagnostics(out BrushMoveTelemetrySnapshot snapshot)
     {
         return _moveTelemetry.TryGetLastSnapshot(out snapshot);

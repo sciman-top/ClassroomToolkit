@@ -46,6 +46,10 @@ public sealed class InkStrokeData
     public CalligraphyRenderMode CalligraphyRenderMode { get; set; } = CalligraphyRenderMode.Clarity;
     public double ReferenceWidth { get; set; }
     public double ReferenceHeight { get; set; }
+    // 附加式可选字段：旧 payload 反序列化为 null，行为与旧版一致。
+    // 记录单笔干湿（起/收），供 Ink 渲染模式的 mask 做沿笔分层纹理。
+    public double? WetnessStart { get; set; }
+    public double? WetnessEnd { get; set; }
     public List<InkRibbonData> Ribbons { get; set; } = new();
     public List<InkBloomData> Blooms { get; set; } = new();
 

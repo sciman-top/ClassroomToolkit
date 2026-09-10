@@ -151,8 +151,17 @@ internal sealed class InkStrokeRenderer
                 strokeDirection,
                 stroke.BrushSize,
                 stroke.MaskSeed,
+                stroke.WetnessStart,
+                stroke.WetnessEnd,
                 InkOpacityMaskCache.ExportTextureVariant,
-                () => BuildInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection, stroke.BrushSize, stroke.MaskSeed));
+                () => BuildInkOpacityMask(
+                    geometry.Bounds,
+                    inkFlow,
+                    strokeDirection,
+                    stroke.BrushSize,
+                    stroke.MaskSeed,
+                    stroke.WetnessStart,
+                    stroke.WetnessEnd));
         }
 
         if (coreMask != null)
@@ -262,14 +271,37 @@ internal sealed class InkStrokeRenderer
         return bounds.Width >= minSize && bounds.Height >= minSize;
     }
 
-    private static DrawingBrush? BuildInkOpacityMask(Rect bounds, double inkFlow, Vector strokeDirection, double brushSize, int seed)
+    /// <summary>
+    /// 单笔有效干燥度：InkFlow 基线 + 起收湿感差分（越写越干的笔画获得更强纹理变化）。
+    /// 湿感字段为附加式可选；旧数据（null）保持旧行为。
+    /// </summary>
+    internal static double ResolveInkDryFactor(double inkFlow, double? wetnessStart, double? wetnessEnd)
+    {
+        double baseDry = Math.Clamp(1.0 - inkFlow, 0, 1);
+        if (!wetnessStart.HasValue || !wetnessEnd.HasValue)
+        {
+            return baseDry;
+        }
+
+        double wetnessDrop = Math.Clamp(wetnessStart.Value - wetnessEnd.Value, 0.0, 1.0);
+        return Math.Clamp(baseDry + (wetnessDrop * 0.35), 0.0, 1.0);
+    }
+
+    private static DrawingBrush? BuildInkOpacityMask(
+        Rect bounds,
+        double inkFlow,
+        Vector strokeDirection,
+        double brushSize,
+        int seed,
+        double? wetnessStart,
+        double? wetnessEnd)
     {
         if (bounds.IsEmpty)
         {
             return null;
         }
         int tileSize = (int)Math.Round(Math.Clamp(brushSize * 2.2, 18, 90));
-        double dryFactor = Math.Clamp(1.0 - inkFlow, 0, 1);
+        double dryFactor = ResolveInkDryFactor(inkFlow, wetnessStart, wetnessEnd);
         double baseAlpha = Lerp(0.68, 0.96, inkFlow);
         double variation = Lerp(0.08, 0.24, dryFactor);
         int effectiveSeed = seed == 0 ? 17 : seed;

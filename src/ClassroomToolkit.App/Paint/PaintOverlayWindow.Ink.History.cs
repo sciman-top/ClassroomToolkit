@@ -205,6 +205,7 @@ public partial class PaintOverlayWindow
         _lastBrushInputSample = null;
         _lastBrushPredictionSample = null;
         _lastBrushVelocityDipPerSec = new Vector(0, 0);
+        _lastBrushAccelerationDipPerSecSq = new Vector(0, 0);
         _inkStrokes.Clear();
         ResetInkHistory();
         ClearSurface();
@@ -225,6 +226,7 @@ public partial class PaintOverlayWindow
         _lastBrushInputSample = null;
         _lastBrushPredictionSample = null;
         _lastBrushVelocityDipPerSec = new Vector(0, 0);
+        _lastBrushAccelerationDipPerSecSq = new Vector(0, 0);
         _inkStrokes.Clear();
         _hasDrawing = false;
         ResetInkHistory();

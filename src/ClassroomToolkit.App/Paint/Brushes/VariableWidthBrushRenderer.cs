@@ -91,6 +91,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
     private double _lastInkFlow = 1.0;
     private Vector _lastStrokeDirection = new Vector(1, 0);
     private double _releaseSpeedNorm;
+    private StrokeWetnessSummary _lastStrokeWetness = new(0.62, 0.62, 0.62);
     private bool _cacheDirty = true;
     private List<RibbonGeometry>? _cachedRibbons;
     private Geometry? _cachedCoreGeometry;
@@ -121,6 +122,11 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
     public Vector LastStrokeDirection => _lastStrokeDirection;
     public int LastResampledPointCount => _lastResampledPointCount;
     public double LastEffectiveEndTaperLengthDip { get; private set; }
+
+    /// <summary>单笔湿感摘要：起笔/收笔/最低含水量，供提交后 Ink mask 做分层纹理。</summary>
+    internal readonly record struct StrokeWetnessSummary(double Start, double End, double Min);
+
+    internal StrokeWetnessSummary LastStrokeWetnessSummary => _lastStrokeWetness;
 
     public VariableWidthBrushRenderer()
         : this(BrushPhysicsConfig.DefaultSmooth)
@@ -172,6 +178,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         _pressureFilter.Reset();
         _strokeNoisePhase = 0;
         _inkWetness = Math.Clamp(_config.InitialInkWetness, 0.0, 1.0);
+        _lastStrokeWetness = new StrokeWetnessSummary(_inkWetness, _inkWetness, _inkWetness);
         _previewBaseGeometry = null;
         _previewBasePointCount = 0;
         _previewTailStartGlobalLength = 0.0;
@@ -307,6 +314,14 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
                 resolvedPressure,
                 _config.PressureSmoothWindow);
             double targetWidth = CalculateTargetWidth(smoothVelocity, _pointCount);
+            // 压感优先混合：有真压感时把目标宽度向压力主曲线靠拢，
+            // 速度曲线退化为调制项；伪压感/鼠标（HasPressure=false）不受影响。
+            double pressurePrimaryBlend = Math.Clamp(_config.PressurePrimaryWidthBlend, 0.0, 1.0);
+            if (input.HasPressure && pressurePrimaryBlend > 0.0)
+            {
+                double pressureWidth = CalculatePressureTargetWidth(smoothedPressure);
+                targetWidth = Lerp(targetWidth, pressureWidth, pressurePrimaryBlend);
+            }
 
             // 倾斜→宽度基线（默认关闭）：笔杆越压平笔画越宽，模拟扁锋着纸面。
             if (_config.TiltWidthInfluence > 0.0 && input.AltitudeRadians.HasValue)
@@ -338,6 +353,10 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
             double normalizedSpeed = Math.Clamp((smoothVelocity - speedFloor) /
                                                 Math.Max(0.001, _config.VelocityThreshold - speedFloor), 0, 1);
             UpdateWetness(smoothedPressure, normalizedSpeed, dtSeconds);
+            _lastStrokeWetness = new StrokeWetnessSummary(
+                _lastStrokeWetness.Start,
+                _inkWetness,
+                Math.Min(_lastStrokeWetness.Min, _inkWetness));
             double absorption = Math.Clamp(_config.PaperAbsorption, 0.0, 1.0);
             bool inStartSuppressionWindow = _pointCount < Math.Max(0, _config.StartBurstSuppressPoints);
             double turnAttenuation = 1.0;
@@ -396,7 +415,8 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
             }
             if (turnSharpness > 0.2)
             {
-                double cornerGrowthCap = Lerp(_baseSize * 0.48, _baseSize * 0.24, turnSharpness);
+                double cornerGrowthCapMax = _baseSize * Math.Clamp(_config.CornerGrowthCapMaxFactor, 0.1, 1.0);
+                double cornerGrowthCap = Lerp(cornerGrowthCapMax, _baseSize * 0.24, turnSharpness);
                 effectiveWidth = Math.Min(effectiveWidth, _smoothedWidth + cornerGrowthCap);
             }
             if (overlapAttenuation < 0.92)
@@ -536,6 +556,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         }
         UpdateInkFlow();
         MarkGeometryDirty();
+        WriteWidthProfileCsvIfEnabled();
         _isActive = false;
     }
 
@@ -560,6 +581,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         _pressureFilter.Reset();
         _strokeNoisePhase = 0;
         _inkWetness = Math.Clamp(_config.InitialInkWetness, 0.0, 1.0);
+        _lastStrokeWetness = new StrokeWetnessSummary(_inkWetness, _inkWetness, _inkWetness);
         _previewBaseGeometry = null;
         _previewBasePointCount = 0;
         _previewTailStartGlobalLength = 0.0;
@@ -815,6 +837,20 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         return angle;
     }
 
+    /// <summary>
+    /// 压感主宽度曲线：压力 [0,1] 经 gamma 映射到 [MinWidthFactor, MaxWidthFactor]×baseSize，
+    /// 与速度主曲线共用同一个输出区间，保证混合后仍受 ClampWidth 约束。
+    /// </summary>
+    private double CalculatePressureTargetWidth(double pressure)
+    {
+        double clamped = Math.Clamp(pressure, 0.0, 1.0);
+        double gamma = Math.Clamp(_config.WidthGamma, 0.55, 2.4);
+        double curved = Math.Pow(clamped, 1.0 / gamma);
+        double range = _config.MaxWidthFactor - _config.MinWidthFactor;
+        double width = _baseSize * (_config.MinWidthFactor + (range * curved));
+        return ClampWidth(width);
+    }
+
     private double CalculateTargetWidth(double velocity, int pointIndex)
     {
         // 起笔阶段：逐渐增加速度影响
@@ -915,10 +951,26 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         return Math.Clamp(Math.Max(baseLimit, expandedByDt), baseLimit, hardCap);
     }
 
+    /// <summary>
+    /// 原始点裁剪的滞后触发块：超过上限后不逐点全量重排（旧实现每 move O(n)），
+    /// 而是再多积累 chunk 个点才裁一次、一次裁回上限，摊销后每次追加点 O(1)。
+    /// </summary>
+    internal const int RawPointTrimChunkMin = 64;
+
+    internal static int ResolveRawPointTrimChunk(int maxRawPoints)
+    {
+        return Math.Max(RawPointTrimChunkMin, Math.Max(1, maxRawPoints / 8));
+    }
+
+    internal static int ResolveRawPointTrimTriggerCount(int maxRawPoints)
+    {
+        return Math.Max(256, maxRawPoints) + ResolveRawPointTrimChunk(maxRawPoints);
+    }
+
     private void TrimRawPointsIfNeeded()
     {
         int maxRawPoints = Math.Max(256, _config.MaxRawPointCount);
-        if (_points.Count <= maxRawPoints)
+        if (_points.Count <= ResolveRawPointTrimTriggerCount(maxRawPoints))
         {
             return;
         }
