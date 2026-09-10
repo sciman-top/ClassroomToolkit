@@ -262,6 +262,8 @@ public partial class PaintOverlayWindow
             return;
         }
 
+        StopActivePhotoManipulation(reason);
+
         if (PointerCaptureCleanupPolicy.ShouldDeferCleanup(
                 reason,
                 OverlayRoot.IsMouseCaptured,

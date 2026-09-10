@@ -22,6 +22,7 @@ public partial class PaintOverlayWindow
 
     private void SetPhotoWindowMode(bool fullscreen)
     {
+        StopActivePhotoManipulation("photo-window-mode-switch");
         var wasFullscreen = _photoFullscreen;
         _photoFullscreen = fullscreen;
         var fullscreenChanged = wasFullscreen != _photoFullscreen;

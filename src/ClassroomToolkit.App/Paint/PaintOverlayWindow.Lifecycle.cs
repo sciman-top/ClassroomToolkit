@@ -7,7 +7,6 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Windowing;
-using ClassroomToolkit.Interop;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -99,9 +98,9 @@ public partial class PaintOverlayWindow
         {
             // WM_DPICHANGED 的 lParam 只在当前消息回调期间有效；先复制物理像素
             // suggested RECT，再切回 UI 队列应用，避免异步回调读到失效指针。
-            NativeMethods.NativeRect suggestedBounds = default;
+            DpiSuggestedBounds suggestedBounds = default;
             var hasSuggestedBounds = msg == WmDpiChanged
-                && TryCopyDpiSuggestedBounds(lParam, out suggestedBounds);
+                && DpiSuggestedBoundsInterop.TryCopy(lParam, out suggestedBounds);
             Action recovery = hasSuggestedBounds
                 ? () => RecoverAfterDisplaySettingsChange(suggestedBounds)
                 : () => RecoverAfterDisplaySettingsChange();
@@ -117,37 +116,8 @@ public partial class PaintOverlayWindow
         return IntPtr.Zero;
     }
 
-    private static bool TryCopyDpiSuggestedBounds(
-        IntPtr lParam,
-        out NativeMethods.NativeRect suggestedBounds)
-    {
-        suggestedBounds = default;
-        if (lParam == IntPtr.Zero)
-        {
-            return false;
-        }
-
-        try
-        {
-            suggestedBounds = System.Runtime.InteropServices.Marshal
-                .PtrToStructure<NativeMethods.NativeRect>(lParam);
-        }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
-        {
-            Debug.WriteLine($"[PaintOverlay] WM_DPICHANGED RECT read failed: {ex.GetType().Name} - {ex.Message}");
-            return false;
-        }
-
-        var width = (long)suggestedBounds.Right - suggestedBounds.Left;
-        var height = (long)suggestedBounds.Bottom - suggestedBounds.Top;
-        return width > 0
-            && width <= int.MaxValue
-            && height > 0
-            && height <= int.MaxValue;
-    }
-
     private void RecoverAfterDisplaySettingsChange(
-        NativeMethods.NativeRect? suggestedBounds = null)
+        DpiSuggestedBounds? suggestedBounds = null)
     {
         if (ShouldIgnoreLifecycleTick() || !IsVisible)
         {
@@ -155,23 +125,35 @@ public partial class PaintOverlayWindow
         }
         if (IsPhotoFullscreenActive)
         {
+            // A true fullscreen photo surface owns the complete target monitor.
+            // WM_DPICHANGED's suggested RECT preserves a normal window's logical
+            // size, but it can leave a fullscreen overlay with uncovered edges.
+            ApplyPhotoWindowBounds(fullscreen: true);
+            EnsureRasterSurface();
+            return;
+        }
+        if (_photoModeActive)
+        {
+            // The non-fullscreen photo mode is the only windowed overlay state;
+            // use the OS suggestion when available and retain the current mode
+            // when display topology changes without a DPI suggestion.
             var positioned = suggestedBounds.HasValue
                 && TryApplyDpiSuggestedBounds(suggestedBounds.Value);
             if (!positioned)
             {
-                ApplyPhotoWindowBounds(fullscreen: true);
+                ApplyPhotoWindowBounds(fullscreen: false);
             }
-            EnsureRasterSurface();
-            return;
         }
-        if (!suggestedBounds.HasValue || !TryApplyDpiSuggestedBounds(suggestedBounds.Value))
+        else
         {
+            // Board/presentation overlay remains monitor-bound even when WPF's
+            // DPI suggestion describes a smaller logical window.
             RecoverOverlayFullscreenBounds();
         }
         EnsureRasterSurface();
     }
 
-    private bool TryApplyDpiSuggestedBounds(NativeMethods.NativeRect suggestedBounds)
+    private bool TryApplyDpiSuggestedBounds(DpiSuggestedBounds suggestedBounds)
     {
         var width = (long)suggestedBounds.Right - suggestedBounds.Left;
         var height = (long)suggestedBounds.Bottom - suggestedBounds.Top;

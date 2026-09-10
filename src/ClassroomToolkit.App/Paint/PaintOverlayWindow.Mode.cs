@@ -12,6 +12,7 @@ public partial class PaintOverlayWindow
         if (mode != _mode)
         {
             var reason = $"mode-switch:{_mode}->{mode}";
+            StopActivePhotoManipulation(reason);
             if (_strokeInProgress)
             {
                 ResetInterruptedBrushState();

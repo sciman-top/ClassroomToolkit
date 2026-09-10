@@ -31,6 +31,30 @@ public sealed class PaintOverlayDrawingStateContractTests
         source.Should().Contain("DiscardActiveInkOperationHistory();");
         source.Should().Contain("ResetInterruptedBrushState();");
 
+        var manipulation = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Input.Manipulation.cs");
+        manipulation.Should().Contain("Manipulation.IsManipulationActive(OverlayRoot)");
+        manipulation.Should().Contain("Manipulation.CompleteManipulation(OverlayRoot)");
+        manipulation.Should().Contain("StopActivePhotoManipulation(\"manipulation-inertia-admission-rejected\")");
+        manipulation.Should().Contain("!wasPhotoManipulating || !TryAdmitPhotoManipulation");
+
+        var mode = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Mode.cs"));
+        mode.Should().Contain("StopActivePhotoManipulation(reason);");
+
+        var photoMode = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Photo.Navigation.Mode.cs"));
+        photoMode.Should().Contain("StopActivePhotoManipulation(\"photo-mode-exit\");");
+
         var history = ContractSourceAggregateLoader.LoadByPattern(
             "src",
             "ClassroomToolkit.App",
@@ -94,13 +118,25 @@ public sealed class PaintOverlayDrawingStateContractTests
 
         lifecycle.Should().Contain("private const int WmDpiChanged = 0x02E0;");
         lifecycle.Should().Contain("msg == WmDisplayChange || msg == WmDpiChanged");
-        lifecycle.Should().Contain("TryCopyDpiSuggestedBounds(lParam, out suggestedBounds)");
-        lifecycle.Should().Contain("Marshal");
+        lifecycle.Should().Contain("DpiSuggestedBoundsInterop.TryCopy(lParam, out suggestedBounds)");
         lifecycle.Should().Contain("TryApplyDpiSuggestedBounds(suggestedBounds.Value)");
+        lifecycle.Should().Contain("if (IsPhotoFullscreenActive)");
+        lifecycle.Should().Contain("ApplyPhotoWindowBounds(fullscreen: true);");
+        lifecycle.Should().Contain("if (_photoModeActive)");
+        lifecycle.Should().Contain("ApplyPhotoWindowBounds(fullscreen: false);");
+        lifecycle.Should().Contain("RecoverOverlayFullscreenBounds();");
         lifecycle.Should().Contain("WindowPlacementExecutor.TryApplyBoundsNoActivateNoZOrder(");
         lifecycle.Should().Contain("HandlePointerCaptureLoss(\"overlay-deactivated\")");
         lifecycle.Should().Contain("HandlePointerCaptureLoss(\"overlay-closed\")");
         lifecycle.Should().Contain("EnsureRasterSurface();");
+
+        var dpiInterop = ContractSourceAggregateLoader.LoadByPattern(
+            "src",
+            "ClassroomToolkit.App",
+            "Windowing",
+            "DpiSuggestedBoundsInterop.cs");
+        dpiInterop.Should().Contain("Marshal.PtrToStructure<NativeMethods.NativeRect>(lParam)");
+        dpiInterop.Should().Contain("DpiSuggestedBounds(");
 
         var program = ContractSourceAggregateLoader.LoadByPattern(
             "src",

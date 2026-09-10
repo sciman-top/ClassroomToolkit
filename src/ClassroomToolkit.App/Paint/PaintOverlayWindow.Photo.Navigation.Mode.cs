@@ -197,6 +197,7 @@ public partial class PaintOverlayWindow
         {
             return;
         }
+        StopActivePhotoManipulation("photo-mode-exit");
         StopPhotoZoomRendering();
         ResetCrossPageReplayState();
         _crossPageUpdateDeferredByInkInput = false;

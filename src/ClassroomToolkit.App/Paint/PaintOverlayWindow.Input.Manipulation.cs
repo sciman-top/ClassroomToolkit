@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Input;
 using System.Linq;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -25,6 +27,7 @@ public partial class PaintOverlayWindow
         var interactionState = CaptureInputInteractionState();
         if (!TryAdmitPhotoManipulation(e, interactionState))
         {
+            StopActivePhotoManipulation("manipulation-inertia-admission-rejected");
             return;
         }
         _photoManipulating = true;
@@ -39,7 +42,7 @@ public partial class PaintOverlayWindow
         var interactionState = CaptureInputInteractionState();
         if (!TryAdmitPhotoManipulation(e, interactionState))
         {
-            _photoManipulating = false;
+            StopActivePhotoManipulation("manipulation-delta-admission-rejected");
             return;
         }
         _photoManipulating = true;
@@ -112,8 +115,9 @@ public partial class PaintOverlayWindow
 
     private void OnManipulationCompleted(object? sender, ManipulationCompletedEventArgs e)
     {
+        var wasPhotoManipulating = _photoManipulating;
         _photoManipulating = false;
-        if (!TryAdmitPhotoManipulation(e, CaptureInputInteractionState()))
+        if (!wasPhotoManipulating || !TryAdmitPhotoManipulation(e, CaptureInputInteractionState()))
         {
             return;
         }
@@ -137,6 +141,24 @@ public partial class PaintOverlayWindow
             }
         }
         SchedulePhotoTransformSave(userAdjusted: true);
+    }
+
+    private void StopActivePhotoManipulation(string reason)
+    {
+        _photoManipulating = false;
+        _ = SafeActionExecutionExecutor.TryExecute(
+            () =>
+            {
+                if (Manipulation.IsManipulationActive(OverlayRoot))
+                {
+                    // CompleteManipulation stops WPF inertia without promoting
+                    // the interrupted touch stream into mouse/stylus drawing.
+                    Manipulation.CompleteManipulation(OverlayRoot);
+                }
+            },
+            ex => Debug.WriteLine(
+                $"[PaintOverlay] manipulation cleanup failed: reason={reason}; " +
+                $"{ex.GetType().Name} - {ex.Message}"));
     }
 
     private bool TryAdmitPhotoManipulation(
