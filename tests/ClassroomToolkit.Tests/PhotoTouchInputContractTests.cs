@@ -22,4 +22,20 @@ public sealed class PhotoTouchInputContractTests
         source.Should().Contain("BeginPhotoPan(");
         source.Should().Contain("PhotoPanPointerKind.Touch");
     }
+
+    [Fact]
+    public void PhotoTouchInput_ShouldGatePhotoControlsBeforeTouchCaptureStateChanges()
+    {
+        var source = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Input.Touch.cs"));
+
+        var gateIndex = source.IndexOf("if (!ShouldContinuePointerInput(e))", StringComparison.Ordinal);
+        var touchStateIndex = source.IndexOf("_photoActiveTouchIds.Add", StringComparison.Ordinal);
+
+        gateIndex.Should().BeGreaterThanOrEqualTo(0);
+        touchStateIndex.Should().BeGreaterThan(gateIndex);
+    }
 }

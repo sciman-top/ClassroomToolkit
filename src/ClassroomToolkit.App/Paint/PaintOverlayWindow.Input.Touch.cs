@@ -6,6 +6,11 @@ public partial class PaintOverlayWindow
 {
     private void OnTouchDown(object? sender, TouchEventArgs e)
     {
+        if (!ShouldContinuePointerInput(e))
+        {
+            return;
+        }
+
         _photoActiveTouchIds.Add(e.TouchDevice.Id);
         StopPhotoPanInertia(flushTransformSave: false, resetInkPanCompensation: false);
 
