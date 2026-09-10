@@ -22,6 +22,12 @@ internal static class InkExportFingerprintUtilities
         AppendHashToken(hash, stroke.InkFlow.ToString("G17", System.Globalization.CultureInfo.InvariantCulture));
         AppendHashToken(hash, stroke.StrokeDirectionX.ToString("G17", System.Globalization.CultureInfo.InvariantCulture));
         AppendHashToken(hash, stroke.StrokeDirectionY.ToString("G17", System.Globalization.CultureInfo.InvariantCulture));
+        AppendHashToken(hash, stroke.WetnessStart.HasValue
+            ? stroke.WetnessStart.Value.ToString("G17", System.Globalization.CultureInfo.InvariantCulture)
+            : null);
+        AppendHashToken(hash, stroke.WetnessEnd.HasValue
+            ? stroke.WetnessEnd.Value.ToString("G17", System.Globalization.CultureInfo.InvariantCulture)
+            : null);
         AppendHashField(hash, stroke.GeometryPath);
 
         foreach (var ribbon in stroke.Ribbons)

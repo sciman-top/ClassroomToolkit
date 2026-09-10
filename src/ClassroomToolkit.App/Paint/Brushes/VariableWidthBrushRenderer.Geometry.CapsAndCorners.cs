@@ -51,7 +51,13 @@ internal partial class VariableWidthBrushRenderer
         int count = samples.Count;
         if (count < 2)
         {
-            return new CapData(samples[0].Position, ClampWidth(samples[0].Width), 0);
+            var nib = ResolveEndpointNibState(samples, isEnd);
+            return new CapData(
+                samples[0].Position,
+                ClampWidth(samples[0].Width),
+                0,
+                nib.AngleRadians,
+                nib.Strength);
         }
 
         int lastIndex = count - 1;
@@ -79,12 +85,21 @@ internal partial class VariableWidthBrushRenderer
         }
 
         var normal = new Vector(-dir.Y, dir.X);
-        double brushAngle = _config.BrushAngleDegrees * Math.PI / 180.0;
+        var nibState = ResolveEndpointNibState(samples, isEnd);
+        double brushAngle = nibState.AngleRadians;
         var brushDir = new Vector(Math.Cos(brushAngle), Math.Sin(brushAngle));
         double dot = Math.Clamp(Vector.Multiply(dir, brushDir), -1.0, 1.0);
         double angleDiff = Math.Acos(dot);
         double skewSign = Math.Sign((dir.X * brushDir.Y) - (dir.Y * brushDir.X));
-        double skew = Math.Sin(angleDiff) * ClampWidth(samples[isEnd ? lastIndex : 0].Width) * 0.32 * skewSign;
+        double nibStrengthFactor = Lerp(
+            0.72,
+            1.28,
+            Math.Clamp((nibState.Strength - 0.2) / 1.8, 0.0, 1.0));
+        double skew = Math.Sin(angleDiff)
+                    * ClampWidth(samples[isEnd ? lastIndex : 0].Width)
+                    * 0.32
+                    * nibStrengthFactor
+                    * skewSign;
 
         double width = Math.Clamp(
             isEnd ? samples[lastIndex].Width : samples[0].Width,
@@ -127,7 +142,55 @@ internal partial class VariableWidthBrushRenderer
         tipPoint += normal * skew;
 
         double dropRate = ComputePressureDropRate(samples, isEnd);
-        return new CapData(tipPoint, width, dropRate);
+        return new CapData(tipPoint, width, dropRate, nibState.AngleRadians, nibState.Strength);
+    }
+
+    private (double AngleRadians, double Strength) ResolveEndpointNibState(
+        List<StrokePoint> samples,
+        bool isEnd)
+    {
+        int endpointIndex = isEnd ? samples.Count - 1 : 0;
+        double fallbackAngle = _config.BrushAngleDegrees * Math.PI / 180.0;
+        double endpointAngle = samples[endpointIndex].NibAngleRadians;
+        if (!double.IsFinite(endpointAngle))
+        {
+            endpointAngle = fallbackAngle;
+        }
+
+        int window = Math.Clamp(4 + (samples.Count / 20), 3, 12);
+        double sumX = 0.0;
+        double sumY = 0.0;
+        double strengthSum = 0.0;
+        double weightSum = 0.0;
+        for (int offset = 0; offset < window; offset++)
+        {
+            int index = isEnd
+                ? Math.Max(0, endpointIndex - offset)
+                : Math.Min(samples.Count - 1, endpointIndex + offset);
+            double angle = samples[index].NibAngleRadians;
+            if (!double.IsFinite(angle))
+            {
+                angle = endpointAngle;
+            }
+
+            // 端点权重更高，但仍保留一个小窗口，避免最后一个抖动样本
+            // 单独决定端帽偏转；cos/sin 平均跨越 ±π 接缝不跳变。
+            double recency = 1.0 - (offset / (double)Math.Max(1, window - 1));
+            double weight = 1.0 + (recency * 1.5);
+            sumX += Math.Cos(angle) * weight;
+            sumY += Math.Sin(angle) * weight;
+            strengthSum += Math.Clamp(samples[index].NibStrength, 0.2, 2.0) * weight;
+            weightSum += weight;
+        }
+
+        double angleMagnitude = Math.Sqrt((sumX * sumX) + (sumY * sumY));
+        double averagedAngle = angleMagnitude > 1e-6
+            ? Math.Atan2(sumY, sumX)
+            : endpointAngle;
+        double strength = weightSum > 1e-6
+            ? strengthSum / weightSum
+            : Math.Clamp(samples[endpointIndex].NibStrength, 0.2, 2.0);
+        return (NormalizeAngle(averagedAngle), Math.Clamp(strength, 0.2, 2.0));
     }
 
     private static double ClampTipLength(double width)
@@ -166,7 +229,10 @@ internal partial class VariableWidthBrushRenderer
         CapData cap,
         bool isEnd)
     {
-        double sharpThreshold = _baseSize * 0.2;
+        double sharpThreshold = _baseSize * Lerp(
+            0.23,
+            0.17,
+            Math.Clamp((cap.NibStrength - 0.2) / 1.8, 0.0, 1.0));
         double dropThreshold = Lerp(2.4, 3.2, _lastInkFlow);
 
         double normalizedDrop = cap.PressureDropRate / Math.Max(_baseSize, 0.001);
@@ -335,6 +401,11 @@ internal partial class VariableWidthBrushRenderer
         if (normal.LengthSquared < 0.0001)
         {
             return safeBase;
+        }
+
+        if (!double.IsFinite(nibAngleRadians))
+        {
+            nibAngleRadians = 0.0;
         }
 
         normal.Normalize();

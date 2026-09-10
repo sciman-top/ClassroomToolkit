@@ -56,6 +56,64 @@ public sealed class BrushPressurePrimaryWidthTests
         inkFeelDelta.Should().BeGreaterThan(2.0);
     }
 
+    [Fact]
+    public void PressurePrimaryWidth_ShouldEnterTheDirectWidthCurveOnlyOnce()
+    {
+        var config = BrushPhysicsConfig.CreateCalligraphyInkFeel();
+        config.EnableRdpSimplify = false;
+        config.PressurePrimaryWidthBlend = 1.0;
+        config.RealPressureWidthInfluence = 0.0;
+        config.WetnessPressureInfluence = 0.0;
+        config.WetnessSlowSpeedBoost = 0.0;
+        config.DunBiSpreadRate = 0.0;
+
+        const double baseSize = 12.0;
+        foreach (var pressure in new[] { 0.12, 0.46, 0.82 })
+        {
+            var width = ReplayBodyWidth(config, pressure);
+            var gamma = Math.Clamp(config.WidthGamma, 0.55, 2.4);
+            var expected = baseSize * (
+                config.MinWidthFactor
+                + ((config.MaxWidthFactor - config.MinWidthFactor)
+                    * Math.Pow(pressure, 1.0 / gamma)));
+
+            width.Should().BeApproximately(expected, 0.18,
+                "constant pressure {0:F2} should be applied by the single final pressure stage", pressure);
+        }
+    }
+
+    [Fact]
+    public void Renderer_ShouldIgnoreNonFinitePressureSample_WithoutPoisoningTheStroke()
+    {
+        var config = BrushPhysicsConfig.CreateCalligraphyInkFeel();
+        config.EnableRdpSimplify = false;
+        var renderer = new VariableWidthBrushRenderer(config);
+        renderer.Initialize(Colors.Black, baseSize: 12.0, opacity: 255);
+
+        long timestamp = Stopwatch.GetTimestamp();
+        long stepTicks = Math.Max(1, Stopwatch.Frequency / 120);
+        renderer.OnDown(new BrushInputSample(
+            new Point(40, 200), timestamp, double.NaN, true));
+
+        timestamp += stepTicks;
+        renderer.OnMove(new BrushInputSample(
+            new Point(100, 200), timestamp, 0.82, true));
+        timestamp += stepTicks;
+        renderer.OnUp(new BrushInputSample(
+            new Point(160, 200), timestamp, 0.82, true));
+
+        var points = renderer.GetLastStrokePoints();
+        points.Should().NotBeNull();
+        points!.Count.Should().BeGreaterThanOrEqualTo(2);
+        points.Should().AllSatisfy(point =>
+        {
+            double.IsFinite(point.Width).Should().BeTrue();
+            double.IsFinite(point.Position.X).Should().BeTrue();
+            double.IsFinite(point.Position.Y).Should().BeTrue();
+        });
+        renderer.GetLastCoreGeometry().Should().NotBeNull();
+    }
+
     private static (double LightBodyWidth, double HeavyBodyWidth) ReplayPressurePair(BrushPhysicsConfig config)
     {
         config.EnableRdpSimplify = false;

@@ -108,6 +108,56 @@ public sealed class BrushQualityRegressionTests
         (output[^1].Position - input[^1]).Length.Should().BeLessThan(18.0);
     }
 
+    [Fact]
+    public void CalligraphyRenderer_ShouldPreserveDynamicWidthTransition_OnCollinearPressureTrace()
+    {
+        var renderer = new VariableWidthBrushRenderer(BrushPhysicsConfig.CreateCalligraphyInkFeel());
+        renderer.Initialize(Colors.Black, baseSize: 12, opacity: 255);
+
+        long now = Stopwatch.GetTimestamp();
+        long step = Math.Max(1, Stopwatch.Frequency / 120);
+        const int transitionIndex = 32;
+        for (int i = 0; i <= 64; i++)
+        {
+            var pressure = i < transitionIndex ? 0.16 : 0.92;
+            var input = BrushInputSample.CreateStylus(
+                new Point(20 + (i * 4.0), 180),
+                now,
+                pressure);
+            if (i == 0)
+            {
+                renderer.OnDown(input);
+            }
+            else if (i == 64)
+            {
+                renderer.OnUp(input);
+            }
+            else
+            {
+                renderer.OnMove(input);
+            }
+
+            now += step;
+        }
+
+        var output = renderer.GetLastStrokePoints();
+        output.Should().NotBeNull();
+        output!.Should().Contain(point => point.Position.X > 120 && point.Position.X < 160,
+            "a straight stroke must retain an anchor near a sharp pressure transition");
+
+        var before = output
+            .Where(point => point.Position.X >= 80 && point.Position.X < 120)
+            .Select(point => point.Width)
+            .DefaultIfEmpty()
+            .Average();
+        var after = output
+            .Where(point => point.Position.X >= 170 && point.Position.X < 220)
+            .Select(point => point.Width)
+            .DefaultIfEmpty()
+            .Average();
+        after.Should().BeGreaterThan(before + 1.0);
+    }
+
     private static List<Point> BuildNoisyLine()
     {
         var points = new List<Point>();

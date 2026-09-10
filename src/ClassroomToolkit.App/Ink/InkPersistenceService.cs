@@ -632,6 +632,8 @@ public sealed class InkPersistenceService
                 InkFlow = stroke.InkFlow,
                 StrokeDirectionX = stroke.StrokeDirectionX,
                 StrokeDirectionY = stroke.StrokeDirectionY,
+                WetnessStart = stroke.WetnessStart,
+                WetnessEnd = stroke.WetnessEnd,
                 CalligraphyRenderMode = stroke.CalligraphyRenderMode,
                 CalligraphyInkBloomEnabled = stroke.CalligraphyInkBloomEnabled,
                 CalligraphySealEnabled = stroke.CalligraphySealEnabled,

@@ -40,6 +40,23 @@ public sealed class InkWetnessMaskTests
         InkStrokeRenderer.ResolveInkDryFactor(1.0, 0.0, 1.0).Should().BeGreaterThanOrEqualTo(0.0);
     }
 
+    [Theory]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(double.NegativeInfinity)]
+    public void ResolveInkFlow_ShouldUseFiniteNeutralFallback(double invalidInkFlow)
+    {
+        InkStrokeRenderer.ResolveInkFlow(invalidInkFlow).Should().Be(0.5);
+    }
+
+    [Theory]
+    [InlineData(-1.0, 0.0)]
+    [InlineData(2.0, 1.0)]
+    public void ResolveInkFlow_ShouldClampFiniteValues(double inkFlow, double expected)
+    {
+        InkStrokeRenderer.ResolveInkFlow(inkFlow).Should().Be(expected);
+    }
+
     [Fact]
     public void Renderer_ShouldTrackStrokeWetnessSummary_AlongSlowStroke()
     {

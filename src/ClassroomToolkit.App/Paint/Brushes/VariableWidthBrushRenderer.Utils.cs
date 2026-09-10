@@ -91,18 +91,17 @@ internal partial class VariableWidthBrushRenderer
         int count = _points.Count;
         var keep = new bool[count];
         var anchorMask = new bool[count];
-        MarkAnchor(anchorMask, 0);
-        MarkAnchor(anchorMask, 1);
-        MarkAnchor(anchorMask, count - 2);
-        MarkAnchor(anchorMask, count - 1);
+        var cumulativeLengths = BuildCumulativePointLengths();
+        MarkProtectedEndpointBand(anchorMask, epsilon);
         double cornerThreshold = Math.Clamp(_config.RdpCornerPreserveAngleDegrees, 12.0, 160.0);
         for (int i = 1; i < count - 1; i++)
         {
             if (IsCornerCandidate(i, cornerThreshold))
             {
-                MarkAnchor(anchorMask, i);
+                MarkAnchorWithProtectionBand(anchorMask, i);
             }
         }
+        MarkDynamicAttributeAnchors(anchorMask, cumulativeLengths, epsilon);
 
         var anchors = new List<int>(count);
         for (int i = 0; i < count; i++)
@@ -120,7 +119,7 @@ internal partial class VariableWidthBrushRenderer
         double epsSq = epsilon * epsilon;
         for (int i = 0; i < anchors.Count - 1; i++)
         {
-            RdpRecursive(anchors[i], anchors[i + 1], epsSq, keep);
+            RdpRecursive(anchors[i], anchors[i + 1], epsSq, keep, cumulativeLengths);
         }
 
         var simplified = new List<StrokePoint>();
@@ -139,11 +138,78 @@ internal partial class VariableWidthBrushRenderer
             InvalidatePolylineLengthCache();
         }
 
+        void MarkProtectedEndpointBand(bool[] mask, double protectionEpsilon)
+        {
+            int band = Math.Clamp(
+                1 + (int)Math.Ceiling(protectionEpsilon / Math.Max(_baseSize * 0.45, 1.0)),
+                2,
+                6);
+            for (int i = 0; i <= band; i++)
+            {
+                MarkAnchor(mask, i);
+                MarkAnchor(mask, count - 1 - i);
+            }
+        }
+
         static void MarkAnchor(bool[] mask, int index)
         {
             if ((uint)index < (uint)mask.Length)
             {
                 mask[index] = true;
+            }
+        }
+
+        void MarkAnchorWithProtectionBand(bool[] mask, int index)
+        {
+            MarkAnchor(mask, index - 1);
+            MarkAnchor(mask, index);
+            MarkAnchor(mask, index + 1);
+        }
+    }
+
+    private double[] BuildCumulativePointLengths()
+    {
+        var cumulative = new double[_points.Count];
+        for (int i = 1; i < _points.Count; i++)
+        {
+            cumulative[i] = cumulative[i - 1] + (_points[i].Position - _points[i - 1].Position).Length;
+        }
+
+        return cumulative;
+    }
+
+    private void MarkDynamicAttributeAnchors(
+        bool[] anchorMask,
+        double[] cumulativeLengths,
+        double epsilon)
+    {
+        if (_points.Count < 3)
+        {
+            return;
+        }
+
+        double localThreshold = Math.Max(epsilon * 0.82, _baseSize * 0.045);
+        for (int i = 1; i < _points.Count - 1; i++)
+        {
+            double localError = ResolveDynamicAttributeError(i, i - 1, i + 1, cumulativeLengths);
+            if (localError > localThreshold)
+            {
+                // Keep a one-point protection band around the transition. This
+                // preserves a pressure/wetness/nib change through later arc-length
+                // resampling instead of leaving only one isolated spike.
+                MarkAnchorWithProtectionBand(anchorMask, i);
+            }
+        }
+
+        void MarkAnchorWithProtectionBand(bool[] mask, int index)
+        {
+            for (int offset = -1; offset <= 1; offset++)
+            {
+                int candidate = index + offset;
+                if ((uint)candidate < (uint)mask.Length)
+                {
+                    mask[candidate] = true;
+                }
             }
         }
     }
@@ -177,7 +243,12 @@ internal partial class VariableWidthBrushRenderer
         return angle >= thresholdDegrees;
     }
 
-    private void RdpRecursive(int start, int end, double epsSq, bool[] keep)
+    private void RdpRecursive(
+        int start,
+        int end,
+        double epsSq,
+        bool[] keep,
+        double[] cumulativeLengths)
     {
         if (end <= start + 1)
         {
@@ -193,9 +264,11 @@ internal partial class VariableWidthBrushRenderer
         {
             var p = _points[i].Position;
             double distSq = DistanceToSegmentSquared(p, a, b);
-            if (distSq > maxDistSq)
+            double dynamicError = ResolveDynamicAttributeError(i, start, end, cumulativeLengths);
+            double scoreSq = Math.Max(distSq, dynamicError * dynamicError);
+            if (scoreSq > maxDistSq)
             {
-                maxDistSq = distSq;
+                maxDistSq = scoreSq;
                 maxIndex = i;
             }
         }
@@ -203,9 +276,57 @@ internal partial class VariableWidthBrushRenderer
         if (maxIndex >= 0 && maxDistSq > epsSq)
         {
             keep[maxIndex] = true;
-            RdpRecursive(start, maxIndex, epsSq, keep);
-            RdpRecursive(maxIndex, end, epsSq, keep);
+            RdpRecursive(start, maxIndex, epsSq, keep, cumulativeLengths);
+            RdpRecursive(maxIndex, end, epsSq, keep, cumulativeLengths);
         }
+    }
+
+    private double ResolveDynamicAttributeError(
+        int index,
+        int start,
+        int end,
+        double[] cumulativeLengths)
+    {
+        if (index <= start || index >= end || (uint)end >= (uint)cumulativeLengths.Length)
+        {
+            return 0.0;
+        }
+
+        double span = cumulativeLengths[end] - cumulativeLengths[start];
+        double t = span > 0.0001
+            ? Math.Clamp((cumulativeLengths[index] - cumulativeLengths[start]) / span, 0.0, 1.0)
+            : (index - start) / (double)Math.Max(1, end - start);
+
+        var startPoint = _points[start];
+        var currentPoint = _points[index];
+        var endPoint = _points[end];
+        double maxSpeed = Math.Max(_maxVelocity, 0.001);
+
+        double widthError = Math.Abs(currentPoint.Width - Lerp(startPoint.Width, endPoint.Width, t));
+        double speedError = Math.Abs(currentPoint.Speed - Lerp(startPoint.Speed, endPoint.Speed, t))
+            / maxSpeed * _baseSize * 0.72;
+        double accumulationError = Math.Abs(
+                currentPoint.AccumulatedWidth
+                - Lerp(startPoint.AccumulatedWidth, endPoint.AccumulatedWidth, t))
+            / Math.Max(_baseSize, 0.001) * _baseSize * 0.58;
+        double wetnessError = Math.Abs(
+                currentPoint.Wetness
+                - Lerp(startPoint.Wetness, endPoint.Wetness, t))
+            * _baseSize * 0.72;
+        double angleError = Math.Abs(NormalizeAngle(
+                currentPoint.NibAngleRadians
+                - LerpAngle(startPoint.NibAngleRadians, endPoint.NibAngleRadians, t)))
+            / Math.PI * _baseSize * 0.7;
+        double strengthError = Math.Abs(
+                currentPoint.NibStrength
+                - Lerp(startPoint.NibStrength, endPoint.NibStrength, t))
+            * _baseSize * 0.45;
+
+        return Math.Max(
+            Math.Max(widthError, speedError),
+            Math.Max(
+                Math.Max(accumulationError, wetnessError),
+                Math.Max(angleError, strengthError)));
     }
 
     private static double DistanceToSegmentSquared(WpfPoint p, WpfPoint a, WpfPoint b)

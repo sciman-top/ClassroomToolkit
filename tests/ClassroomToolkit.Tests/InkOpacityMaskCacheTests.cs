@@ -80,6 +80,46 @@ public sealed class InkOpacityMaskCacheTests
     }
 
     [Fact]
+    public void GetOrCreate_ShouldSeparateEntries_WhenWetnessChanges()
+    {
+        var cache = new InkOpacityMaskCache(capacity: 4);
+        var factoryCalls = 0;
+
+        var wet = cache.GetOrCreate(
+            new Rect(0, 0, 40, 40),
+            0.7,
+            new Vector(1, 0),
+            10,
+            17,
+            wetnessStart: 0.9,
+            wetnessEnd: 0.8,
+            textureVariant: InkOpacityMaskCache.PaintTextureVariant,
+            factory: () =>
+            {
+                factoryCalls++;
+                return new DrawingBrush();
+            });
+        var dry = cache.GetOrCreate(
+            new Rect(0, 0, 40, 40),
+            0.7,
+            new Vector(1, 0),
+            10,
+            17,
+            wetnessStart: 0.9,
+            wetnessEnd: 0.4,
+            textureVariant: InkOpacityMaskCache.PaintTextureVariant,
+            factory: () =>
+            {
+                factoryCalls++;
+                return new DrawingBrush();
+            });
+
+        factoryCalls.Should().Be(2);
+        ReferenceEquals(wet, dry).Should().BeFalse();
+        cache.Count.Should().Be(2);
+    }
+
+    [Fact]
     public void GetOrCreate_ShouldBoundRetainedEntries()
     {
         var cache = new InkOpacityMaskCache(capacity: 2);

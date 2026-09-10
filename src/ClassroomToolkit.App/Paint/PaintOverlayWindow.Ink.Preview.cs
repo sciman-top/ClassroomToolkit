@@ -84,10 +84,11 @@ public partial class PaintOverlayWindow
                     out var p2,
                     out var w0,
                     out var w1,
-                    out var w2))
+                    out var w2,
+                    out var predictionState))
             {
                 var previewColor = EffectiveBrushColor();
-                DrawPredictedBrushSegment(dc, previewColor, p0, p1, p2, w0, w1, w2);
+                DrawPredictedBrushSegment(dc, previewColor, p0, p1, p2, w0, w1, w2, predictionState);
             }
         });
     }
@@ -98,7 +99,8 @@ public partial class PaintOverlayWindow
         out WpfPoint p2,
         out double w0,
         out double w1,
-        out double w2)
+        out double w2,
+        out VariableWidthBrushRenderer.BrushPredictionState predictionState)
     {
         p0 = new WpfPoint();
         p1 = new WpfPoint();
@@ -108,6 +110,7 @@ public partial class PaintOverlayWindow
             _brushSize * BrushPredictionPreviewDefaults.InitialBaseWidthFactor);
         w1 = Math.Max(BrushPredictionPreviewDefaults.MinMidWidthDip, w0 * BrushPredictionPreviewDefaults.MidWidthRatio);
         w2 = Math.Max(BrushPredictionPreviewDefaults.MinTipWidthDip, w1 * BrushPredictionPreviewDefaults.InitialTipWidthRatio);
+        predictionState = default;
 
         if (!_strokeInProgress || !_lastBrushInputSample.HasValue)
         {
@@ -150,16 +153,24 @@ public partial class PaintOverlayWindow
         p0 = origin;
         p1 = origin + lead1;
         p2 = origin + lead2;
-        double speedFactor = Math.Clamp(
-            (speed - BrushPredictionPreviewDefaults.MinSpeedDipPerSec) / BrushPredictionPreviewDefaults.SpeedFactorRange,
-            0.0,
-            1.0);
-        var baseWidth = Math.Max(
-            BrushPredictionPreviewDefaults.MinBaseWidthDip,
-            _brushSize * (BrushPredictionPreviewDefaults.BaseWidthFactor + speedFactor * BrushPredictionPreviewDefaults.SpeedWidthGainFactor));
-        w0 = baseWidth;
-        w1 = Math.Max(BrushPredictionPreviewDefaults.MinMidWidthDip, baseWidth * BrushPredictionPreviewDefaults.MidWidthRatio);
-        w2 = Math.Max(BrushPredictionPreviewDefaults.MinTipWidthDip, baseWidth * BrushPredictionPreviewDefaults.TipWidthRatio);
+        if (_activeRenderer is VariableWidthBrushRenderer calligraphyRenderer
+            && calligraphyRenderer.TryGetPredictionState(out predictionState))
+        {
+            calligraphyRenderer.ResolvePredictionWidths(predictionState, speed, out w0, out w1, out w2);
+        }
+        else
+        {
+            double speedFactor = Math.Clamp(
+                (speed - BrushPredictionPreviewDefaults.MinSpeedDipPerSec) / BrushPredictionPreviewDefaults.SpeedFactorRange,
+                0.0,
+                1.0);
+            var baseWidth = Math.Max(
+                BrushPredictionPreviewDefaults.MinBaseWidthDip,
+                _brushSize * (BrushPredictionPreviewDefaults.BaseWidthFactor + speedFactor * BrushPredictionPreviewDefaults.SpeedWidthGainFactor));
+            w0 = baseWidth;
+            w1 = Math.Max(BrushPredictionPreviewDefaults.MinMidWidthDip, baseWidth * BrushPredictionPreviewDefaults.MidWidthRatio);
+            w2 = Math.Max(BrushPredictionPreviewDefaults.MinTipWidthDip, baseWidth * BrushPredictionPreviewDefaults.TipWidthRatio);
+        }
         return true;
     }
 
@@ -171,7 +182,8 @@ public partial class PaintOverlayWindow
         WpfPoint p2,
         double w0,
         double w1,
-        double w2)
+        double w2,
+        VariableWidthBrushRenderer.BrushPredictionState predictionState)
     {
         byte a0 = (byte)Math.Clamp(
             color.A * BrushPredictionPreviewDefaults.PrimaryAlphaMultiplier,
@@ -201,6 +213,7 @@ public partial class PaintOverlayWindow
                 w0,
                 w1,
                 w2,
+                predictionState,
                 includeEndCap: false);
             if (predictionGeometry != null)
             {
@@ -210,6 +223,7 @@ public partial class PaintOverlayWindow
                     p2,
                     w1,
                     w2,
+                    predictionState,
                     includeEndCap: true);
                 if (tailGeometry != null)
                 {

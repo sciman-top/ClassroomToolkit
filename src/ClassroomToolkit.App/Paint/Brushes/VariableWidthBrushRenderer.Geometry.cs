@@ -34,12 +34,21 @@ internal partial class VariableWidthBrushRenderer
         public WpfPoint TipPoint;
         public double Width;
         public double PressureDropRate;
+        public double NibAngleRadians;
+        public double NibStrength;
 
-        public CapData(WpfPoint tipPoint, double width, double pressureDropRate)
+        public CapData(
+            WpfPoint tipPoint,
+            double width,
+            double pressureDropRate,
+            double nibAngleRadians,
+            double nibStrength)
         {
             TipPoint = tipPoint;
             Width = width;
             PressureDropRate = pressureDropRate;
+            NibAngleRadians = nibAngleRadians;
+            NibStrength = nibStrength;
         }
     }
 

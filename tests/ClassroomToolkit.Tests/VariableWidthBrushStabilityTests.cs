@@ -298,6 +298,66 @@ public sealed class VariableWidthBrushStabilityTests
     }
 
     [Fact]
+    public void PredictionState_ShouldStartAtVisibleWidth_AndCarryPressureMaterialAndNib()
+    {
+        var config = BrushPhysicsConfig.CreateCalligraphyInkFeel();
+        config.EnableRdpSimplify = false;
+        var renderer = new VariableWidthBrushRenderer(config);
+        renderer.Initialize(Colors.Black, baseSize: 12, opacity: 255);
+
+        long timestamp = Stopwatch.GetTimestamp();
+        long step = Math.Max(1, Stopwatch.Frequency / 120);
+        renderer.OnDown(BrushInputSample.CreateStylus(
+            new Point(40, 180), timestamp, 0.82, azimuthRadians: 2.8, altitudeRadians: 0.45));
+        timestamp += step;
+        renderer.OnMove(BrushInputSample.CreateStylus(
+            new Point(58, 180), timestamp, 0.74, azimuthRadians: 2.95, altitudeRadians: 0.45));
+
+        renderer.TryGetPredictionState(out var state).Should().BeTrue();
+        var visibleWidth = renderer.GetLastStrokePoints()!.Last().Width;
+        state.Width.Should().BeApproximately(visibleWidth, 0.0001);
+        state.Pressure.Should().BeApproximately(0.74, 0.0001);
+        state.HasPressure.Should().BeTrue();
+        state.Wetness.Should().BeInRange(0.08, 1.0);
+        state.NibAngleRadians.Should().BeInRange(-Math.PI, Math.PI);
+        state.NibStrength.Should().BeInRange(0.2, 2.0);
+
+        renderer.ResolvePredictionWidths(state, speedDipPerSec: 900, out var w0, out var w1, out var w2);
+        w0.Should().BeApproximately(visibleWidth, 0.0001);
+        w1.Should().BeInRange(Math.Min(w0, w2), Math.Max(w0, w2));
+        w2.Should().BeGreaterThan(0.0);
+    }
+
+    [Fact]
+    public void PredictionWidths_ShouldNotDriftTowardSyntheticPressure_ForPointerInput()
+    {
+        var config = BrushPhysicsConfig.CreateCalligraphyInkFeel();
+        config.EnableRdpSimplify = false;
+        var renderer = new VariableWidthBrushRenderer(config);
+        renderer.Initialize(Colors.Black, baseSize: 12, opacity: 255);
+
+        long timestamp = Stopwatch.GetTimestamp();
+        long step = Math.Max(1, Stopwatch.Frequency / 120);
+        renderer.OnDown(BrushInputSample.CreatePointer(new Point(40, 180), timestamp));
+        for (int i = 1; i <= 20; i++)
+        {
+            timestamp += step;
+            renderer.OnMove(BrushInputSample.CreatePointer(
+                new Point(40 + (i * 8), 180),
+                timestamp));
+        }
+
+        renderer.TryGetPredictionState(out var state).Should().BeTrue();
+        state.HasPressure.Should().BeFalse();
+        renderer.ResolvePredictionWidths(state, speedDipPerSec: 960, out var w0, out _, out var w2);
+
+        w2.Should().BeApproximately(
+            w0,
+            0.001,
+            "pointer input has no real pressure and must not be forecast toward the synthetic 0.5 pressure target");
+    }
+
+    [Fact]
     public void OnUp_ShouldProduceSharperTips_WhenUsingExposedTaperStyle()
     {
         var config = BrushPhysicsConfig.CreateCalligraphyInkFeel();

@@ -42,4 +42,41 @@ internal static class StylusInterpolationPolicy
 
         return maxSegments;
     }
+
+    internal static double? LerpNullableAngle(double? a, double? b, double t)
+    {
+        if (!a.HasValue && !b.HasValue)
+        {
+            return null;
+        }
+
+        double from = NormalizeAngle(a ?? b ?? 0.0);
+        double to = NormalizeAngle(b ?? a ?? 0.0);
+        return LerpAngle(from, to, t);
+    }
+
+    internal static double LerpAngle(double start, double end, double t)
+    {
+        double delta = NormalizeAngle(end - start);
+        if (delta > Math.PI)
+        {
+            delta -= Math.PI * 2.0;
+        }
+
+        return NormalizeAngle(start + (delta * Math.Clamp(t, 0.0, 1.0)));
+    }
+
+    private static double NormalizeAngle(double angle)
+    {
+        while (angle <= -Math.PI)
+        {
+            angle += Math.PI * 2.0;
+        }
+        while (angle > Math.PI)
+        {
+            angle -= Math.PI * 2.0;
+        }
+
+        return angle;
+    }
 }

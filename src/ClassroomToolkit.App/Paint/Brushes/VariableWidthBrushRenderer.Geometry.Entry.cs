@@ -147,13 +147,14 @@ internal partial class VariableWidthBrushRenderer
         double w0,
         double w1,
         double w2,
+        BrushPredictionState state,
         bool includeEndCap = true)
     {
         var samples = new List<StrokePoint>(3)
         {
-            new(p0, ClampWidth(w0), progress: 0.0, wetness: _inkWetness),
-            new(p1, ClampWidth(w1), progress: 0.5, wetness: _inkWetness),
-            new(p2, ClampWidth(w2), progress: 1.0, wetness: _inkWetness)
+            new(p0, ClampWidth(w0), progress: 0.0, wetness: state.Wetness, nibAngleRadians: state.NibAngleRadians, nibStrength: state.NibStrength),
+            new(p1, ClampWidth(w1), progress: 0.5, wetness: state.Wetness, nibAngleRadians: state.NibAngleRadians, nibStrength: state.NibStrength),
+            new(p2, ClampWidth(w2), progress: 1.0, wetness: state.Wetness, nibAngleRadians: state.NibAngleRadians, nibStrength: state.NibStrength)
         };
         var ribbons = BuildRibbonGeometries(samples, includeStartCap: false, includeEndCap: includeEndCap);
         return CombineRibbonGeometries(ribbons);
@@ -164,12 +165,13 @@ internal partial class VariableWidthBrushRenderer
         WpfPoint p1,
         double w0,
         double w1,
+        BrushPredictionState state,
         bool includeEndCap)
     {
         var samples = new List<StrokePoint>(2)
         {
-            new(p0, ClampWidth(w0), progress: 0.0, wetness: _inkWetness),
-            new(p1, ClampWidth(w1), progress: 1.0, wetness: _inkWetness)
+            new(p0, ClampWidth(w0), progress: 0.0, wetness: state.Wetness, nibAngleRadians: state.NibAngleRadians, nibStrength: state.NibStrength),
+            new(p1, ClampWidth(w1), progress: 1.0, wetness: state.Wetness, nibAngleRadians: state.NibAngleRadians, nibStrength: state.NibStrength)
         };
         var ribbons = BuildRibbonGeometries(samples, includeStartCap: false, includeEndCap: includeEndCap);
         return CombineRibbonGeometries(ribbons);

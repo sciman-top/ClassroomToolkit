@@ -334,7 +334,7 @@ public partial class PaintOverlayWindow
             return BrushInputSample.CreatePointer(
                 position,
                 timestampTicks,
-                LerpNullable(previous.AzimuthRadians, current.AzimuthRadians, t),
+                StylusInterpolationPolicy.LerpNullableAngle(previous.AzimuthRadians, current.AzimuthRadians, t),
                 LerpNullable(previous.AltitudeRadians, current.AltitudeRadians, t),
                 LerpNullable(previous.TiltXRadians, current.TiltXRadians, t),
                 LerpNullable(previous.TiltYRadians, current.TiltYRadians, t));
@@ -345,7 +345,7 @@ public partial class PaintOverlayWindow
             position,
             timestampTicks,
             pressure,
-            LerpNullable(previous.AzimuthRadians, current.AzimuthRadians, t),
+            StylusInterpolationPolicy.LerpNullableAngle(previous.AzimuthRadians, current.AzimuthRadians, t),
             LerpNullable(previous.AltitudeRadians, current.AltitudeRadians, t),
             LerpNullable(previous.TiltXRadians, current.TiltXRadians, t),
             LerpNullable(previous.TiltYRadians, current.TiltYRadians, t));

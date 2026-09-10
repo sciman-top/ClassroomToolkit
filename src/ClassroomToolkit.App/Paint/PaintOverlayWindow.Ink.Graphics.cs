@@ -102,12 +102,17 @@ public partial class PaintOverlayWindow
         bool suppressOverlays = ShouldSuppressCalligraphyOverlays();
         double inkFlow = 1.0;
         Vector? strokeDirection = null;
+        double? wetnessStart = null;
+        double? wetnessEnd = null;
         if (isCalligraphy)
         {
             if (_activeRenderer is VariableWidthBrushRenderer calligraphyRenderer)
             {
                 inkFlow = calligraphyRenderer.LastInkFlow;
                 strokeDirection = calligraphyRenderer.LastStrokeDirection;
+                var wetness = calligraphyRenderer.LastStrokeWetnessSummary;
+                wetnessStart = wetness.Start;
+                wetnessEnd = wetness.End;
                 var coreGeometry = calligraphyRenderer.GetLastCoreGeometry();
                 if (coreGeometry != null)
                 {
@@ -118,6 +123,8 @@ public partial class PaintOverlayWindow
                         _brushSize,
                         inkFlow,
                         strokeDirection,
+                        wetnessStart,
+                        wetnessEnd,
                         _calligraphyRenderMode,
                         suppressOverlays,
                         maskSeed: null,
@@ -135,6 +142,8 @@ public partial class PaintOverlayWindow
                 _brushSize,
                 inkFlow,
                 strokeDirection,
+                wetnessStart,
+                wetnessEnd,
                 _calligraphyRenderMode,
                 suppressOverlays,
                 maskSeed: null,

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
@@ -72,10 +73,67 @@ public sealed class InkStrokeRendererCompositeTests
         ReadPixel(inkA, 96, 96)[3].Should().BeGreaterThan((byte)170);
     }
 
+    [Theory]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(double.NegativeInfinity)]
+    public void RenderPage_CalligraphyStroke_ShouldFailClosedForNonFiniteInkFlow(double inkFlow)
+    {
+        var renderer = new InkStrokeRenderer();
+        var geometryPath = InkGeometrySerializer.Serialize(new RectangleGeometry(new Rect(40, 40, 120, 120)));
+        var page = new InkPageData
+        {
+            PageIndex = 1,
+            Strokes = new List<InkStrokeData>
+            {
+                new()
+                {
+                    Type = InkStrokeType.Brush,
+                    BrushStyle = PaintBrushStyle.Calligraphy,
+                    GeometryPath = geometryPath,
+                    ColorHex = "#000000",
+                    BrushSize = 16.0,
+                    CalligraphyRenderMode = CalligraphyRenderMode.Ink,
+                    CalligraphyInkBloomEnabled = false,
+                    CalligraphySealEnabled = false,
+                    CalligraphyOverlayOpacityThreshold = 0,
+                    InkFlow = inkFlow,
+                    StrokeDirectionX = 1.0
+                }
+            }
+        };
+
+        Action render = () => renderer.RenderPage(page, 220, 220, 96, 96);
+        render.Should().NotThrow();
+    }
+
+    [Fact]
+    public void RenderPage_CalligraphyStroke_ShouldUseStableFallbackForNonFiniteInkFlow()
+    {
+        var invalid = RenderCalligraphyStroke(
+            includeOverlays: true,
+            mode: CalligraphyRenderMode.Ink,
+            inkFlow: double.NaN);
+        var fallback = RenderCalligraphyStroke(
+            includeOverlays: true,
+            mode: CalligraphyRenderMode.Ink,
+            inkFlow: 0.5);
+
+        foreach (var probe in new[] { (X: 52, Y: 52), (X: 96, Y: 96), (X: 148, Y: 112) })
+        {
+            var invalidPixel = ReadPixel(invalid, probe.X, probe.Y);
+            var fallbackPixel = ReadPixel(fallback, probe.X, probe.Y);
+            invalidPixel.Should().Equal(fallbackPixel);
+        }
+
+        ReadPixels(invalid).Should().Equal(ReadPixels(fallback));
+    }
+
     private static RenderTargetBitmap RenderCalligraphyStroke(
         bool includeOverlays,
         CalligraphyRenderMode mode,
-        byte strokeOpacity = 255)
+        byte strokeOpacity = 255,
+        double inkFlow = 0.72)
     {
         var renderer = new InkStrokeRenderer();
         var geometryPath = InkGeometrySerializer.Serialize(new RectangleGeometry(new Rect(40, 40, 120, 120)));
@@ -92,7 +150,7 @@ public sealed class InkStrokeRendererCompositeTests
             CalligraphySealEnabled = false,
             CalligraphyInkBloomEnabled = includeOverlays,
             CalligraphyOverlayOpacityThreshold = 0,
-            InkFlow = 0.72,
+            InkFlow = inkFlow,
             StrokeDirectionX = 1.0,
             StrokeDirectionY = 0.0
         };
@@ -132,5 +190,13 @@ public sealed class InkStrokeRendererCompositeTests
         var pixel = new byte[4];
         bitmap.CopyPixels(new Int32Rect(x, y, 1, 1), pixel, 4, 0);
         return pixel;
+    }
+
+    private static byte[] ReadPixels(BitmapSource bitmap)
+    {
+        int stride = bitmap.PixelWidth * 4;
+        var pixels = new byte[stride * bitmap.PixelHeight];
+        bitmap.CopyPixels(pixels, stride, 0);
+        return pixels;
     }
 }

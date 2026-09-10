@@ -31,6 +31,8 @@ internal static class BrushSpeedReferenceScaler
         ArgumentNullException.ThrowIfNull(config);
         double safeScale = Math.Clamp(scale, MinScale, MaxScale);
         config.VelocityThreshold = Math.Clamp(config.VelocityThreshold * safeScale, 0.2, 8.0);
+        config.SpeedFloorPxPerMs = Math.Clamp(config.SpeedFloorPxPerMs * safeScale, 0.02, 2.0);
+        config.MinVelocityClamp = Math.Clamp(config.MinVelocityClamp * safeScale, 0.05, 4.0);
         config.WidthLowPassSpeedReference = Math.Clamp(config.WidthLowPassSpeedReference * safeScale, 0.2, 12.0);
         config.PositionSmoothingSpeedReference = Math.Clamp(config.PositionSmoothingSpeedReference * safeScale, 0.2, 12.0);
         config.AdaptiveSamplingSpeedReference = Math.Clamp(config.AdaptiveSamplingSpeedReference * safeScale, 0.2, 12.0);

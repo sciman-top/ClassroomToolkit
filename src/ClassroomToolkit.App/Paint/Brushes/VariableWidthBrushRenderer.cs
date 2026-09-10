@@ -81,6 +81,8 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
     private readonly OneEuroFilter _pressureFilter = new OneEuroFilter(1.5, 0.02, 1.0);
     private double _strokeNoisePhase;
     private double _inkWetness;
+    private double _lastPressure = 0.5;
+    private bool _hasPressureSample;
 
     // v10: 用于速度归一化的范围跟踪
     private double _minVelocity = double.MaxValue;
@@ -126,6 +128,14 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
     /// <summary>单笔湿感摘要：起笔/收笔/最低含水量，供提交后 Ink mask 做分层纹理。</summary>
     internal readonly record struct StrokeWetnessSummary(double Start, double End, double Min);
 
+    internal readonly record struct BrushPredictionState(
+        double Width,
+        double Pressure,
+        double Wetness,
+        double NibAngleRadians,
+        double NibStrength,
+        bool HasPressure);
+
     internal StrokeWetnessSummary LastStrokeWetnessSummary => _lastStrokeWetness;
 
     public VariableWidthBrushRenderer()
@@ -145,6 +155,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         _smoothedWidth = ClampWidth(baseSize * 0.8);
         _smoothedPos = new WpfPoint(0, 0);
         _lastInkFlow = 1.0;
+        _lastPressure = 0.5;
         _cachedRenderBrush = null;
         _cachedRenderColorKey = int.MinValue;
     }
@@ -173,6 +184,8 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         _hasRawPoint = true;
         _lastInkFlow = 1.0;
         _lastStrokeDirection = new Vector(1, 0);
+        bool hasFinitePressure = input.HasPressure && double.IsFinite(input.Pressure);
+        _hasPressureSample = hasFinitePressure;
         MarkGeometryDirty();
         _positionFilter.Reset();
         _pressureFilter.Reset();
@@ -188,11 +201,15 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         _previewSliceBuffer.Clear();
 
         _smoothedWidth = ClampWidth(_baseSize * 0.5);
+        _lastPressure = hasFinitePressure
+            ? Math.Clamp(input.Pressure, 0.0, 1.0)
+            : 0.5;
         _smoothedPos = _positionFilter.Filter(point, 1.0 / 120.0);
-        double nibAngle = _config.BrushAngleDegrees * Math.PI / 180.0;
-        _points.Add(new StrokePoint(_smoothedPos, _smoothedWidth, 0, 0, 0, 0, _strokeNoisePhase, _inkWetness, nibAngle, 1.0));
+        double nibAngle = ResolveEffectiveBrushAngle(input);
+        double nibStrength = ResolveOrientationStrength(input);
+        _points.Add(new StrokePoint(_smoothedPos, _smoothedWidth, 0, 0, 0, 0, _strokeNoisePhase, _inkWetness, nibAngle, nibStrength));
         TrackAppendedPointLength();
-        if (input.HasPressure)
+        if (hasFinitePressure)
         {
             _pressureAverage.Push(Math.Clamp(input.Pressure, 0, 1), _config.PressureSmoothWindow);
         }
@@ -219,6 +236,13 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
                 double.IsInfinity(point.X) || double.IsInfinity(point.Y))
             {
                 return;
+            }
+
+            bool hasFinitePressure = input.HasPressure && double.IsFinite(input.Pressure);
+            if (hasFinitePressure)
+            {
+                _lastPressure = Math.Clamp(input.Pressure, 0.0, 1.0);
+                _hasPressureSample = true;
             }
 
             var rawNow = input.TimestampTicks > 0
@@ -308,25 +332,21 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
                 _releaseSpeedNorm,
                 Math.Clamp(smoothVelocity / Math.Max(_config.VelocityThreshold, 0.001), 0, 1),
                 0.45);
-            double resolvedPressure = input.HasPressure ? Math.Clamp(input.Pressure, 0, 1) : 0.5;
+            double resolvedPressure = hasFinitePressure
+                ? Math.Clamp(input.Pressure, 0, 1)
+                : (_hasPressureSample ? _lastPressure : 0.5);
             resolvedPressure = _pressureFilter.Filter(resolvedPressure, dtSeconds);
             double smoothedPressure = _pressureAverage.Push(
                 resolvedPressure,
                 _config.PressureSmoothWindow);
             double targetWidth = CalculateTargetWidth(smoothVelocity, _pointCount);
-            // 压感优先混合：有真压感时把目标宽度向压力主曲线靠拢，
-            // 速度曲线退化为调制项；伪压感/鼠标（HasPressure=false）不受影响。
-            double pressurePrimaryBlend = Math.Clamp(_config.PressurePrimaryWidthBlend, 0.0, 1.0);
-            if (input.HasPressure && pressurePrimaryBlend > 0.0)
-            {
-                double pressureWidth = CalculatePressureTargetWidth(smoothedPressure);
-                targetWidth = Lerp(targetWidth, pressureWidth, pressurePrimaryBlend);
-            }
 
             // 倾斜→宽度基线（默认关闭）：笔杆越压平笔画越宽，模拟扁锋着纸面。
-            if (_config.TiltWidthInfluence > 0.0 && input.AltitudeRadians.HasValue)
+            if (_config.TiltWidthInfluence > 0.0
+                && input.AltitudeRadians is double altitudeInput
+                && double.IsFinite(altitudeInput))
             {
-                double altitude = Math.Clamp(input.AltitudeRadians.Value, 0.0, Math.PI * 0.5);
+                double altitude = Math.Clamp(altitudeInput, 0.0, Math.PI * 0.5);
                 double tiltFactor = 1.0 - (altitude / (Math.PI * 0.5));
                 targetWidth = ClampWidth(targetWidth * (1.0 + (_config.TiltWidthInfluence * tiltFactor)));
             }
@@ -439,11 +459,6 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
                 0,
                 1);
             double maxStepDelta = Lerp(_baseSize * 0.28, _baseSize * 0.78, lowPassSpeedNorm);
-            if (input.HasPressure)
-            {
-                double pressureDelta = Math.Abs((Math.Clamp(smoothedPressure, 0, 1) - 0.5) * 2.0);
-                maxStepDelta *= 1.0 + (pressureDelta * 0.45);
-            }
             maxStepDelta = Math.Clamp(maxStepDelta, 0.9, _baseSize * 1.1);
             double desiredDelta = targetWidth - _smoothedWidth;
             targetWidth = _smoothedWidth + Math.Clamp(desiredDelta, -maxStepDelta, maxStepDelta);
@@ -452,16 +467,32 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
             dynamicWidthAlpha = Math.Clamp(dynamicWidthAlpha, 0.45, 0.95);
             double widthAlpha = Math.Clamp((_config.WidthSmoothing * 0.35) + (dynamicWidthAlpha * 0.65), 0.45, 0.96);
             _smoothedWidth = (_smoothedWidth * widthAlpha) + (targetWidth * (1.0 - widthAlpha));
-            // 压力只在这一处进入最终宽度曲线。先完成速度/顿笔/低通，
-            // 再施加受限的压力修正，避免同一个压力信号被多层重复放大。
-            if (input.HasPressure)
+            // 压力只在这一处进入直接宽度曲线。速度、顿笔和低通先确定
+            // 基线；有真压感时再一次性向压力曲线靠拢，避免同一信号在
+            // 目标宽度、步长和末端修正中重复放大。湿度仍是独立的材料
+            // 状态，其压力影响只用于计算含水量，不属于直接压力宽度通路。
+            if (hasFinitePressure)
             {
-                double centeredPressure = MapPressureSigned(Math.Clamp(smoothedPressure, 0, 1), 0.04, 1.12);
-                double pressureBoost = centeredPressure * _config.RealPressureWidthScale * 0.32;
-                pressureBoost = Math.Clamp(pressureBoost, -0.18, 0.24);
-                double pressureAdjustedWidth = ClampWidth(_smoothedWidth * (1.0 + pressureBoost));
-                double pressureBlend = Math.Clamp(_config.RealPressureWidthInfluence * 0.24, 0.04, 0.27);
-                _smoothedWidth = Lerp(_smoothedWidth, pressureAdjustedWidth, pressureBlend);
+                double pressurePrimaryBlend = Math.Clamp(_config.PressurePrimaryWidthBlend, 0.0, 1.0);
+                double pressureTargetWidth;
+                double pressureBlend;
+                if (pressurePrimaryBlend > 0.0)
+                {
+                    pressureTargetWidth = CalculatePressureTargetWidth(smoothedPressure);
+                    pressureBlend = pressurePrimaryBlend;
+                }
+                else
+                {
+                    // 保留旧预设的温和压力手感；它仍然是同一个最终阶段，
+                    // 只是没有启用压力主曲线。
+                    double centeredPressure = MapPressureSigned(Math.Clamp(smoothedPressure, 0, 1), 0.04, 1.12);
+                    double pressureBoost = centeredPressure * _config.RealPressureWidthScale * 0.32;
+                    pressureBoost = Math.Clamp(pressureBoost, -0.18, 0.24);
+                    pressureTargetWidth = ClampWidth(_smoothedWidth * (1.0 + pressureBoost));
+                    pressureBlend = Math.Clamp(_config.RealPressureWidthInfluence * 0.24, 0.04, 0.27);
+                }
+
+                _smoothedWidth = Lerp(_smoothedWidth, pressureTargetWidth, pressureBlend);
             }
             _smoothedWidth = ClampWidth(_smoothedWidth);
 
@@ -537,6 +568,12 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
             ? Math.Max(0.05, _config.TaperMinWidthFactor * 0.18)
             : Math.Max(0.08, _config.TaperMinWidthFactor * 0.28);
         var minWidth = Math.Clamp(_baseSize * tailFactor, Math.Max(0.14, _baseSize * 0.015), _baseSize * _config.MaxStrokeWidthMultiplier);
+        double nibAngle = input.HasAnyOrientation
+            ? ResolveEffectiveBrushAngle(input)
+            : last.NibAngleRadians;
+        double nibStrength = input.HasAnyOrientation
+            ? ResolveOrientationStrength(input)
+            : last.NibStrength;
         _points.Add(new StrokePoint(
             endPos,
             minWidth,
@@ -546,8 +583,8 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
             0,
             _strokeNoisePhase,
             _inkWetness,
-            last.NibAngleRadians,
-            last.NibStrength));
+            nibAngle,
+            nibStrength));
         TrackAppendedPointLength();
         if (_config.EnableRdpSimplify)
         {
@@ -581,6 +618,8 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         _pressureFilter.Reset();
         _strokeNoisePhase = 0;
         _inkWetness = Math.Clamp(_config.InitialInkWetness, 0.0, 1.0);
+        _lastPressure = 0.5;
+        _hasPressureSample = false;
         _lastStrokeWetness = new StrokeWetnessSummary(_inkWetness, _inkWetness, _inkWetness);
         _previewBaseGeometry = null;
         _previewBasePointCount = 0;
@@ -637,39 +676,6 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         foreach (var point in _points)
         {
             result.Add(new StrokePointData(point.Position, point.Width));
-        }
-        return result;
-    }
-
-    public bool TryGetTipPosition(out WpfPoint tip)
-    {
-        if (_points.Count == 0)
-        {
-            tip = default;
-            return false;
-        }
-
-        tip = _points[^1].Position;
-        return true;
-    }
-
-    internal List<StrokePointData>? GetLastResampledStrokePointsForDiagnostics()
-    {
-        if (_points.Count < 2)
-        {
-            return null;
-        }
-
-        var samples = BuildCenterlineSamplesFinal();
-        if (samples.Count < 2)
-        {
-            return null;
-        }
-
-        var result = new List<StrokePointData>(samples.Count);
-        foreach (var sample in samples)
-        {
-            result.Add(new StrokePointData(sample.Position, sample.Width));
         }
         return result;
     }
@@ -770,23 +776,43 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
 
     private double ResolveEffectiveBrushAngle(BrushInputSample input)
     {
-        double fallback = _config.BrushAngleDegrees * Math.PI / 180.0;
+        double fallback = double.IsFinite(_config.BrushAngleDegrees)
+            ? _config.BrushAngleDegrees * Math.PI / 180.0
+            : -Math.PI * 0.25;
+        if (!double.IsFinite(fallback))
+        {
+            fallback = -Math.PI * 0.25;
+        }
+
         if (!_config.EnableOrientationAnisotropy)
         {
             return fallback;
         }
 
         double? orientationAngle = null;
-        if (input.AzimuthRadians.HasValue)
+        if (input.AzimuthRadians is double azimuth && double.IsFinite(azimuth))
         {
-            orientationAngle = input.AzimuthRadians.Value + (_config.OrientationAngleOffsetDegrees * Math.PI / 180.0);
+            double offset = double.IsFinite(_config.OrientationAngleOffsetDegrees)
+                ? _config.OrientationAngleOffsetDegrees * Math.PI / 180.0
+                : 0.0;
+            double candidate = azimuth + offset;
+            if (double.IsFinite(candidate))
+            {
+                orientationAngle = candidate;
+            }
         }
-        else if (input.HasTiltOrientation)
+        else if (input.HasTiltOrientation
+            && double.IsFinite(input.TiltXRadians!.Value)
+            && double.IsFinite(input.TiltYRadians!.Value))
         {
-            orientationAngle = Math.Atan2(input.TiltYRadians!.Value, input.TiltXRadians!.Value);
+            double candidate = Math.Atan2(input.TiltYRadians.Value, input.TiltXRadians.Value);
+            if (double.IsFinite(candidate))
+            {
+                orientationAngle = candidate;
+            }
         }
 
-        if (!orientationAngle.HasValue)
+        if (!orientationAngle.HasValue || !double.IsFinite(orientationAngle.Value))
         {
             return fallback;
         }
@@ -797,14 +823,19 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
 
     private double ResolveOrientationStrength(BrushInputSample input)
     {
-        if (!_config.EnableOrientationAnisotropy || !input.HasAnyOrientation)
+        bool hasFiniteAzimuth = input.AzimuthRadians is double azimuth
+            && double.IsFinite(azimuth);
+        bool hasFiniteTilt = input.HasTiltOrientation
+            && double.IsFinite(input.TiltXRadians!.Value)
+            && double.IsFinite(input.TiltYRadians!.Value);
+        if (!_config.EnableOrientationAnisotropy || (!hasFiniteAzimuth && !hasFiniteTilt))
         {
             return 1.0;
         }
 
         double minStrength = Math.Max(_config.OrientationStrengthMin, 0.05);
         double maxStrength = Math.Max(_config.OrientationStrengthMax, minStrength);
-        if (!input.AltitudeRadians.HasValue)
+        if (!input.AltitudeRadians.HasValue || !double.IsFinite(input.AltitudeRadians.Value))
         {
             return Lerp(minStrength, maxStrength, 0.4);
         }
@@ -826,6 +857,11 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
 
     private static double NormalizeAngle(double angle)
     {
+        if (!double.IsFinite(angle))
+        {
+            return 0.0;
+        }
+
         while (angle <= -Math.PI)
         {
             angle += Math.PI * 2.0;

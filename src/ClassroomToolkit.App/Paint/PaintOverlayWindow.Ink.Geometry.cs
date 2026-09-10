@@ -133,6 +133,8 @@ public partial class PaintOverlayWindow
             InkFlow = stroke.InkFlow,
             StrokeDirectionX = stroke.StrokeDirectionX,
             StrokeDirectionY = stroke.StrokeDirectionY,
+            WetnessStart = stroke.WetnessStart,
+            WetnessEnd = stroke.WetnessEnd,
             CalligraphyRenderMode = stroke.CalligraphyRenderMode,
             ReferenceWidth = stroke.ReferenceWidth,
             ReferenceHeight = stroke.ReferenceHeight,

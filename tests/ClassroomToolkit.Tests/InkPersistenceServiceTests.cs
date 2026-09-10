@@ -64,6 +64,8 @@ public sealed class InkPersistenceServiceTests : IDisposable
                 ColorHex = "#111111",
                 BrushSize = 5.0,
                 GeometryPath = "M 0 0 L 20 20",
+                WetnessStart = 0.91,
+                WetnessEnd = 0.37,
                 Ribbons = new List<InkRibbonData>
                 {
                     new() { GeometryPath = "M 0 0 L 10 10", Opacity = 0.26, RibbonT = 0.0 },
@@ -85,6 +87,8 @@ public sealed class InkPersistenceServiceTests : IDisposable
         loaded.Ribbons[1].GeometryPath.Should().Be("M 0 1 L 10 11");
         loaded.Ribbons[1].Opacity.Should().BeApproximately(0.14, 0.0001);
         loaded.Ribbons[1].RibbonT.Should().BeApproximately(1.0, 0.0001);
+        loaded.WetnessStart.Should().BeApproximately(0.91, 0.0001);
+        loaded.WetnessEnd.Should().BeApproximately(0.37, 0.0001);
     }
 
     [Fact]

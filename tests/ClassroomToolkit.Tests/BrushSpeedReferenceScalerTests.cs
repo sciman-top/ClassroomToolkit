@@ -32,6 +32,8 @@ public sealed class BrushSpeedReferenceScalerTests
     {
         var config = BrushPhysicsConfig.CreateCalligraphyClarity();
         double velocityThreshold = config.VelocityThreshold;
+        double speedFloor = config.SpeedFloorPxPerMs;
+        double minVelocityClamp = config.MinVelocityClamp;
         double lowPass = config.WidthLowPassSpeedReference;
         double position = config.PositionSmoothingSpeedReference;
         double sampling = config.AdaptiveSamplingSpeedReference;
@@ -41,6 +43,8 @@ public sealed class BrushSpeedReferenceScalerTests
         BrushSpeedReferenceScaler.ApplyToCalligraphyConfig(config, 1.8);
 
         config.VelocityThreshold.Should().BeApproximately(velocityThreshold * 1.8, 0.001);
+        config.SpeedFloorPxPerMs.Should().BeApproximately(speedFloor * 1.8, 0.001);
+        config.MinVelocityClamp.Should().BeApproximately(minVelocityClamp * 1.8, 0.001);
         config.WidthLowPassSpeedReference.Should().BeApproximately(lowPass * 1.8, 0.001);
         config.PositionSmoothingSpeedReference.Should().BeApproximately(position * 1.8, 0.001);
         config.AdaptiveSamplingSpeedReference.Should().BeApproximately(sampling * 1.8, 0.001);
@@ -59,6 +63,8 @@ public sealed class BrushSpeedReferenceScalerTests
         BrushSpeedReferenceScaler.ApplyToCalligraphyConfig(reference, 2.0);
 
         scaled.VelocityThreshold.Should().Be(reference.VelocityThreshold);
+        scaled.SpeedFloorPxPerMs.Should().Be(reference.SpeedFloorPxPerMs);
+        scaled.MinVelocityClamp.Should().Be(reference.MinVelocityClamp);
         scaled.PositionSmoothingSpeedReference.Should().Be(reference.PositionSmoothingSpeedReference);
     }
 }

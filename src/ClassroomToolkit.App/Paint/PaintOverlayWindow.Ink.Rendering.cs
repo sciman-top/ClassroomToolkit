@@ -111,6 +111,8 @@ public partial class PaintOverlayWindow
             stroke.BrushSize,
             inkFlow,
             strokeDirection,
+            stroke.WetnessStart,
+            stroke.WetnessEnd,
             stroke.CalligraphyRenderMode,
             suppressOverlays,
             stroke.MaskSeed,
@@ -171,6 +173,8 @@ public partial class PaintOverlayWindow
         double brushSize,
         double inkFlow,
         Vector? strokeDirection,
+        double? wetnessStart,
+        double? wetnessEnd,
         CalligraphyRenderMode renderMode,
         bool suppressOverlays,
         int? maskSeed,
@@ -181,10 +185,18 @@ public partial class PaintOverlayWindow
         bool overlaysEnabled = !suppressOverlays
             && inkMode
             && (bloomEnabled || sealEnabled);
+        double safeInkFlow = InkStrokeRenderer.ResolveInkFlow(inkFlow);
         int seededMaskValue = maskSeed ?? ResolveDeterministicMaskSeed(geometry, color, brushSize, renderMode);
         bool maskEligible = inkMode && IsInkMaskEligible(geometry, brushSize);
         MediaBrush? coreMask = maskEligible
-            ? GetCachedInkOpacityMask(geometry.Bounds, inkFlow, strokeDirection, brushSize, seededMaskValue)
+            ? GetCachedInkOpacityMask(
+                geometry.Bounds,
+                safeInkFlow,
+                strokeDirection,
+                brushSize,
+                seededMaskValue,
+                wetnessStart,
+                wetnessEnd)
             : null;
         var commands = new List<DrawCommand>(overlaysEnabled ? 3 : 1)
         {
@@ -194,7 +206,7 @@ public partial class PaintOverlayWindow
         {
             if (bloomEnabled)
             {
-                double accumulationOpacity = Math.Clamp(Lerp(0.04, 0.1, Math.Clamp(inkFlow, 0.0, 1.0)), 0.03, 0.11);
+                double accumulationOpacity = Math.Clamp(Lerp(0.04, 0.1, safeInkFlow), 0.03, 0.11);
                 commands.Add(new DrawCommand(
                     geometry,
                     GetCachedSolidBrush(color, opacity: accumulationOpacity),

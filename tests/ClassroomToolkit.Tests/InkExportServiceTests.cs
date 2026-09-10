@@ -476,7 +476,9 @@ public sealed class InkExportServiceTests : IDisposable
             MaskSeed = 42,
             InkFlow = 0.67,
             StrokeDirectionX = 0.4,
-            StrokeDirectionY = -0.2
+            StrokeDirectionY = -0.2,
+            WetnessStart = 0.88,
+            WetnessEnd = 0.41
         };
         baseStroke.Ribbons.Add(new InkRibbonData
         {
@@ -500,8 +502,13 @@ public sealed class InkExportServiceTests : IDisposable
         changedMaskSeed.MaskSeed = 43;
         var fingerprintC = BuildExportFingerprintViaReflection(sourcePath, 1, new List<InkStrokeData> { changedMaskSeed }, options);
 
+        var changedWetness = CloneStrokeForFingerprint(baseStroke);
+        changedWetness.WetnessEnd = 0.22;
+        var fingerprintD = BuildExportFingerprintViaReflection(sourcePath, 1, new List<InkStrokeData> { changedWetness }, options);
+
         fingerprintB.Should().NotBe(fingerprintA);
         fingerprintC.Should().NotBe(fingerprintA);
+        fingerprintD.Should().NotBe(fingerprintA);
     }
 
     [Fact]
@@ -664,6 +671,8 @@ public sealed class InkExportServiceTests : IDisposable
             InkFlow = stroke.InkFlow,
             StrokeDirectionX = stroke.StrokeDirectionX,
             StrokeDirectionY = stroke.StrokeDirectionY,
+            WetnessStart = stroke.WetnessStart,
+            WetnessEnd = stroke.WetnessEnd,
             CalligraphyRenderMode = stroke.CalligraphyRenderMode,
             ReferenceWidth = stroke.ReferenceWidth,
             ReferenceHeight = stroke.ReferenceHeight,

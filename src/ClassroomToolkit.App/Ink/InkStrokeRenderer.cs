@@ -137,7 +137,7 @@ internal sealed class InkStrokeRenderer
             return;
         }
 
-        var inkFlow = stroke.InkFlow;
+        var inkFlow = ResolveInkFlow(stroke.InkFlow);
         var strokeDirection = new Vector(stroke.StrokeDirectionX, stroke.StrokeDirectionY);
         bool inkMode = stroke.CalligraphyRenderMode == CalligraphyRenderMode.Ink;
         var suppressOverlays = stroke.Opacity < stroke.CalligraphyOverlayOpacityThreshold;
@@ -277,14 +277,27 @@ internal sealed class InkStrokeRenderer
     /// </summary>
     internal static double ResolveInkDryFactor(double inkFlow, double? wetnessStart, double? wetnessEnd)
     {
-        double baseDry = Math.Clamp(1.0 - inkFlow, 0, 1);
-        if (!wetnessStart.HasValue || !wetnessEnd.HasValue)
+        double safeInkFlow = ResolveInkFlow(inkFlow);
+        double baseDry = 1.0 - safeInkFlow;
+        if (!wetnessStart.HasValue
+            || !wetnessEnd.HasValue
+            || !double.IsFinite(wetnessStart.Value)
+            || !double.IsFinite(wetnessEnd.Value))
         {
             return baseDry;
         }
 
-        double wetnessDrop = Math.Clamp(wetnessStart.Value - wetnessEnd.Value, 0.0, 1.0);
+        double wetnessDrop = Math.Clamp(
+            Math.Clamp(wetnessStart.Value, 0.0, 1.0)
+            - Math.Clamp(wetnessEnd.Value, 0.0, 1.0),
+            0.0,
+            1.0);
         return Math.Clamp(baseDry + (wetnessDrop * 0.35), 0.0, 1.0);
+    }
+
+    internal static double ResolveInkFlow(double inkFlow)
+    {
+        return double.IsFinite(inkFlow) ? Math.Clamp(inkFlow, 0.0, 1.0) : 0.5;
     }
 
     private static DrawingBrush? BuildInkOpacityMask(
@@ -300,6 +313,7 @@ internal sealed class InkStrokeRenderer
         {
             return null;
         }
+        inkFlow = ResolveInkFlow(inkFlow);
         int tileSize = (int)Math.Round(Math.Clamp(brushSize * 2.2, 18, 90));
         double dryFactor = ResolveInkDryFactor(inkFlow, wetnessStart, wetnessEnd);
         double baseAlpha = Lerp(0.68, 0.96, inkFlow);
