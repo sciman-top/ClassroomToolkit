@@ -6,6 +6,8 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Windowing;
+using ClassroomToolkit.Interop;
 
 namespace ClassroomToolkit.App.Paint;
 
@@ -91,18 +93,57 @@ public partial class PaintOverlayWindow
     {
         if (msg == WmDisplayChange || msg == WmDpiChanged)
         {
+            // WM_DPICHANGED 的 lParam 只在当前消息回调期间有效；先复制物理像素
+            // suggested RECT，再切回 UI 队列应用，避免异步回调读到失效指针。
+            NativeMethods.NativeRect suggestedBounds = default;
+            var hasSuggestedBounds = msg == WmDpiChanged
+                && TryCopyDpiSuggestedBounds(lParam, out suggestedBounds);
+            Action recovery = hasSuggestedBounds
+                ? () => RecoverAfterDisplaySettingsChange(suggestedBounds)
+                : () => RecoverAfterDisplaySettingsChange();
+
             // 投影仪热插拔、分辨率或每显示器 DPI 变化后覆盖层几何和栅格
             // surface 都可能过期，统一按当前模式延迟重铺。
-            var scheduled = TryBeginInvoke(RecoverAfterDisplaySettingsChange, DispatcherPriority.Background);
+            var scheduled = TryBeginInvoke(recovery, DispatcherPriority.Background);
             if (!scheduled && Dispatcher.CheckAccess())
             {
-                RecoverAfterDisplaySettingsChange();
+                recovery();
             }
         }
         return IntPtr.Zero;
     }
 
-    private void RecoverAfterDisplaySettingsChange()
+    private static bool TryCopyDpiSuggestedBounds(
+        IntPtr lParam,
+        out NativeMethods.NativeRect suggestedBounds)
+    {
+        suggestedBounds = default;
+        if (lParam == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        try
+        {
+            suggestedBounds = System.Runtime.InteropServices.Marshal
+                .PtrToStructure<NativeMethods.NativeRect>(lParam);
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[PaintOverlay] WM_DPICHANGED RECT read failed: {ex.GetType().Name} - {ex.Message}");
+            return false;
+        }
+
+        var width = (long)suggestedBounds.Right - suggestedBounds.Left;
+        var height = (long)suggestedBounds.Bottom - suggestedBounds.Top;
+        return width > 0
+            && width <= int.MaxValue
+            && height > 0
+            && height <= int.MaxValue;
+    }
+
+    private void RecoverAfterDisplaySettingsChange(
+        NativeMethods.NativeRect? suggestedBounds = null)
     {
         if (ShouldIgnoreLifecycleTick() || !IsVisible)
         {
@@ -110,12 +151,45 @@ public partial class PaintOverlayWindow
         }
         if (IsPhotoFullscreenActive)
         {
-            ApplyPhotoWindowBounds(fullscreen: true);
+            var positioned = suggestedBounds.HasValue
+                && TryApplyDpiSuggestedBounds(suggestedBounds.Value);
+            if (!positioned)
+            {
+                ApplyPhotoWindowBounds(fullscreen: true);
+            }
             EnsureRasterSurface();
             return;
         }
-        RecoverOverlayFullscreenBounds();
+        if (!suggestedBounds.HasValue || !TryApplyDpiSuggestedBounds(suggestedBounds.Value))
+        {
+            RecoverOverlayFullscreenBounds();
+        }
         EnsureRasterSurface();
+    }
+
+    private bool TryApplyDpiSuggestedBounds(NativeMethods.NativeRect suggestedBounds)
+    {
+        var width = (long)suggestedBounds.Right - suggestedBounds.Left;
+        var height = (long)suggestedBounds.Bottom - suggestedBounds.Top;
+        if (width <= 0 || width > int.MaxValue || height <= 0 || height > int.MaxValue)
+        {
+            return false;
+        }
+
+        var hwnd = ResolveOverlayWindowHandle();
+        if (hwnd == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        NormalizeOverlayWindowState(shouldNormalize: true);
+        return WindowPlacementExecutor.TryApplyBoundsNoActivateNoZOrder(
+            hwnd,
+            suggestedBounds.Left,
+            suggestedBounds.Top,
+            (int)width,
+            (int)height,
+            showWindow: true);
     }
 
     private void OnOverlayDeactivated(object? sender, EventArgs e)

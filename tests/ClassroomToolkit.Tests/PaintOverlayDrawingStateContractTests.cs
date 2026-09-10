@@ -94,6 +94,10 @@ public sealed class PaintOverlayDrawingStateContractTests
 
         lifecycle.Should().Contain("private const int WmDpiChanged = 0x02E0;");
         lifecycle.Should().Contain("msg == WmDisplayChange || msg == WmDpiChanged");
+        lifecycle.Should().Contain("TryCopyDpiSuggestedBounds(lParam, out suggestedBounds)");
+        lifecycle.Should().Contain("Marshal");
+        lifecycle.Should().Contain("TryApplyDpiSuggestedBounds(suggestedBounds.Value)");
+        lifecycle.Should().Contain("WindowPlacementExecutor.TryApplyBoundsNoActivateNoZOrder(");
         lifecycle.Should().Contain("HandlePointerCaptureLoss(\"overlay-deactivated\")");
         lifecycle.Should().Contain("HandlePointerCaptureLoss(\"overlay-closed\")");
         lifecycle.Should().Contain("EnsureRasterSurface();");
