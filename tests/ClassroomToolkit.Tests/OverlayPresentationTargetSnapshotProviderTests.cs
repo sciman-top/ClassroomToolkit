@@ -156,6 +156,32 @@ public sealed class OverlayPresentationTargetSnapshotProviderTests
     }
 
     [Fact]
+    public void Resolve_ShouldNotTreatGenericWpsEditorFullscreenAsForegroundSlideshow()
+    {
+        var foregroundTarget = BuildTarget(6602, 66, "wps-editor.exe", "randomclass");
+        var resolver = new FakeResolver
+        {
+            ForegroundTarget = foregroundTarget
+        };
+        var classifier = new PresentationClassifier(new PresentationClassifierOverrides(
+            AdditionalWpsClassTokens: [],
+            AdditionalOfficeClassTokens: [],
+            AdditionalSlideshowClassTokens: [],
+            AdditionalWpsProcessTokens: ["wps-editor"],
+            AdditionalOfficeProcessTokens: []));
+        var provider = new OverlayPresentationTargetSnapshotProvider(
+            resolver,
+            () => classifier,
+            _ => true,
+            currentProcessId: 100,
+            isWindowValid: _ => true);
+
+        var snapshot = provider.Resolve(allowWps: true, allowOffice: false);
+
+        snapshot.ForegroundType.Should().Be(PresentationType.None);
+    }
+
+    [Fact]
     public void Resolve_ShouldReturnEmptySnapshot_WhenResolverThrowsNonFatal()
     {
         var resolver = new ThrowingResolver(new InvalidOperationException("non-fatal"));

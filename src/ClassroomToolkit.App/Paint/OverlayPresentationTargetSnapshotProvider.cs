@@ -91,8 +91,16 @@ internal sealed class OverlayPresentationTargetSnapshotProvider : IOverlayPresen
         var officeTarget = allowOffice
             ? ResolveTarget(PresentationType.Office, classifier, IsFullscreenCached)
             : PresentationTarget.Empty;
-        var wpsAnalysis = AnalyzeTarget(wpsTarget, classifier, IsFullscreenCached);
-        var officeAnalysis = AnalyzeTarget(officeTarget, classifier, IsFullscreenCached);
+        var wpsAnalysis = AnalyzeTarget(
+            wpsTarget,
+            PresentationType.Wps,
+            classifier,
+            IsFullscreenCached);
+        var officeAnalysis = AnalyzeTarget(
+            officeTarget,
+            PresentationType.Office,
+            classifier,
+            IsFullscreenCached);
         var foregroundType = ResolveForegroundPresentationType(classifier, IsFullscreenCached);
 
         return new OverlayPresentationTargetSnapshot(
@@ -152,11 +160,13 @@ internal sealed class OverlayPresentationTargetSnapshotProvider : IOverlayPresen
         return PresentationSlideshowDetectionPolicy.IsSlideshow(
             target,
             classifier,
-            isFullscreenWindow);
+            isFullscreenWindow,
+            type);
     }
 
     private static (bool IsSlideshow, bool IsFullscreen) AnalyzeTarget(
         PresentationTarget target,
+        PresentationType type,
         PresentationClassifier classifier,
         Func<IntPtr, bool> isFullscreenWindow)
     {
@@ -166,7 +176,11 @@ internal sealed class OverlayPresentationTargetSnapshotProvider : IOverlayPresen
         }
 
         var isFullscreen = isFullscreenWindow(target.Handle);
-        var isSlideshow = PresentationSlideshowDetectionPolicy.IsSlideshow(target, classifier, _ => isFullscreen);
+        var isSlideshow = PresentationSlideshowDetectionPolicy.IsSlideshow(
+            target,
+            classifier,
+            _ => isFullscreen,
+            type);
         return (isSlideshow, isFullscreen);
     }
 
@@ -196,8 +210,11 @@ internal sealed class OverlayPresentationTargetSnapshotProvider : IOverlayPresen
             return PresentationType.None;
         }
 
-        return classifier.IsSlideshowWindow(target.Info)
-               || isFullscreenWindow(target.Handle)
+        return PresentationSlideshowDetectionPolicy.IsSlideshow(
+                target,
+                classifier,
+                isFullscreenWindow,
+                type)
             ? type
             : PresentationType.None;
     }

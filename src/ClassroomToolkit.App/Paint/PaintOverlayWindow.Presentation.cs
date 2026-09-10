@@ -346,8 +346,17 @@ public partial class PaintOverlayWindow
             return PresentationType.None;
         }
 
-        return check!.ClassMatch || check.IsFullscreen
-            ? check.Type
+        var currentCheck = check!;
+        var isPresentationFullscreen = PresentationFullscreenWindowAdmissionPolicy.ShouldTreatAsPresentationFullscreen(
+            targetIsValid: target.IsValid,
+            targetHasInfo: target.Info != null,
+            isFullscreen: currentCheck.IsFullscreen,
+            classifiesAsSlideshow: false,
+            classifiesAsOffice: currentCheck.Type == PresentationType.Office,
+            classifiesAsDedicatedWpsRuntime: currentCheck.Type == PresentationType.Wps
+                && WpsPresentationRuntimePolicy.IsDedicatedSlideshowRuntime(currentCheck.ProcessName));
+        return currentCheck.ClassMatch || isPresentationFullscreen
+            ? currentCheck.Type
             : PresentationType.None;
     }
 
@@ -646,7 +655,19 @@ public partial class PaintOverlayWindow
 
         // BuildWindowCheck already contains the current class/fullscreen facts;
         // never derive slideshow admission from the cached target metadata.
-        return check!.ClassMatch || check.IsFullscreen;
+        if (check!.ClassMatch)
+        {
+            return true;
+        }
+
+        return PresentationFullscreenWindowAdmissionPolicy.ShouldTreatAsPresentationFullscreen(
+            targetIsValid: target.IsValid,
+            targetHasInfo: target.Info != null,
+            isFullscreen: check.IsFullscreen,
+            classifiesAsSlideshow: false,
+            classifiesAsOffice: check.Type == PresentationType.Office,
+            classifiesAsDedicatedWpsRuntime: check.Type == PresentationType.Wps
+                && WpsPresentationRuntimePolicy.IsDedicatedSlideshowRuntime(check.ProcessName));
     }
 
     private PresentationType ResolveFullscreenPresentationType()
@@ -656,7 +677,7 @@ public partial class PaintOverlayWindow
         var foregroundType = foregroundHasInfo
             ? _presentationClassifier.Classify(foreground.Info!)
             : PresentationType.None;
-        var foregroundIsFullscreen = foregroundHasInfo && IsFullscreenWindow(foreground.Handle);
+        var foregroundIsFullscreen = foregroundHasInfo && IsFullscreenPresentationWindow(foreground);
         var foregroundOwnedByCurrentProcess = foregroundHasInfo && foreground.Info!.ProcessId == _currentProcessId;
 
         bool wpsFullscreen = false;

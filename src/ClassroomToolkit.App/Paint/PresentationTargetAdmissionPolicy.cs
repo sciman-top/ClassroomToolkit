@@ -50,7 +50,19 @@ internal static class PresentationTargetAdmissionPolicy
             return false;
         }
 
-        return currentCheck.ClassMatch || currentCheck.IsFullscreen;
+        if (currentCheck.ClassMatch)
+        {
+            return true;
+        }
+
+        return PresentationFullscreenWindowAdmissionPolicy.ShouldTreatAsPresentationFullscreen(
+            targetIsValid: target.IsValid,
+            targetHasInfo: target.Info != null,
+            isFullscreen: currentCheck.IsFullscreen,
+            classifiesAsSlideshow: false,
+            classifiesAsOffice: currentCheck.Type == PresentationType.Office,
+            classifiesAsDedicatedWpsRuntime: currentCheck.Type == PresentationType.Wps
+                && WpsPresentationRuntimePolicy.IsDedicatedSlideshowRuntime(currentCheck.ProcessName));
     }
 
     private static bool ClassIdentityMatches(

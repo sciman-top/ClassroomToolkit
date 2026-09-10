@@ -58,6 +58,37 @@ public sealed class PresentationTargetAdmissionTests
     }
 
     [Fact]
+    public void IsFreshIdentityMatch_ShouldRejectGenericWpsEditorFullscreen()
+    {
+        var target = new PresentationTarget(
+            new IntPtr(101),
+            new PresentationWindowInfo(1, "wps-editor.exe", ["randomclass"]));
+        var currentCheck = new PresentationWindowCheck(
+            PresentationType.Wps,
+            ProcessId: 1,
+            "wps-editor.exe",
+            ["randomclass"],
+            ClassMatch: false,
+            ProcessMatch: true,
+            HasCaption: false,
+            IsFullscreen: true,
+            Score: 100);
+        var classifier = new PresentationClassifier(new PresentationClassifierOverrides(
+            AdditionalWpsClassTokens: [],
+            AdditionalOfficeClassTokens: [],
+            AdditionalSlideshowClassTokens: [],
+            AdditionalWpsProcessTokens: ["wps-editor"],
+            AdditionalOfficeProcessTokens: []));
+
+        PresentationTargetAdmissionPolicy.IsFreshIdentityMatch(
+                target,
+                currentCheck,
+                classifier,
+                expectedType: PresentationType.Wps)
+            .Should().BeFalse();
+    }
+
+    [Fact]
     public void IsFreshIdentityMatch_ShouldRejectSameChannelFromDifferentProcess()
     {
         var target = CreateWpsTarget(processId: 1);

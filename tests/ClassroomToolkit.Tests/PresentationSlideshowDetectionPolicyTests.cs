@@ -50,4 +50,25 @@ public sealed class PresentationSlideshowDetectionPolicyTests
 
         result.Should().BeTrue();
     }
+
+    [Fact]
+    public void IsSlideshow_ShouldRejectGenericWpsEditorFullscreen()
+    {
+        var classifier = new PresentationClassifier(new PresentationClassifierOverrides(
+            AdditionalWpsClassTokens: [],
+            AdditionalOfficeClassTokens: [],
+            AdditionalSlideshowClassTokens: [],
+            AdditionalWpsProcessTokens: ["wps-editor"],
+            AdditionalOfficeProcessTokens: []));
+        var target = new PresentationTarget(
+            new IntPtr(3003),
+            new PresentationWindowInfo(1, "wps-editor.exe", new[] { "randomclass" }));
+
+        var result = PresentationSlideshowDetectionPolicy.IsSlideshow(
+            target,
+            classifier,
+            _ => true);
+
+        result.Should().BeFalse();
+    }
 }
