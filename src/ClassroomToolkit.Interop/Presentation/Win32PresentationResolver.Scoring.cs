@@ -46,6 +46,7 @@ public sealed partial class Win32PresentationResolver
 
         return new PresentationWindowCheck(
             type,
+            info.ProcessId,
             info.ProcessName,
             info.ClassNames,
             classMatch,

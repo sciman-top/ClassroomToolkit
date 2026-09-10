@@ -15,6 +15,7 @@ public sealed class PresentationTargetAdmissionTests
             new PresentationWindowInfo(1, "wpspresentation.exe", ["wpsshowframe"]));
         var currentCheck = new PresentationWindowCheck(
             PresentationType.Office,
+            ProcessId: 2,
             "powerpnt.exe",
             ["screenclass"],
             ClassMatch: true,
@@ -39,6 +40,7 @@ public sealed class PresentationTargetAdmissionTests
             new PresentationWindowInfo(1, "wpspresentation.exe", ["wpsshowframe"]));
         var currentCheck = new PresentationWindowCheck(
             PresentationType.Wps,
+            ProcessId: 1,
             "wpspresentation.exe",
             ["wpsshowframe"],
             ClassMatch: true,
@@ -53,6 +55,87 @@ public sealed class PresentationTargetAdmissionTests
                 new PresentationClassifier(),
                 expectedType: PresentationType.Wps)
             .Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsFreshIdentityMatch_ShouldRejectSameChannelFromDifferentProcess()
+    {
+        var target = CreateWpsTarget(processId: 1);
+        var currentCheck = CreateWpsCheck(processId: 2);
+
+        PresentationTargetAdmissionPolicy.IsFreshIdentityMatch(
+                target,
+                currentCheck,
+                new PresentationClassifier(),
+                expectedType: PresentationType.Wps)
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsFreshIdentityMatch_ShouldRejectSameProcessWithDifferentClassIdentity()
+    {
+        var target = CreateWpsTarget(processId: 1);
+        var currentCheck = new PresentationWindowCheck(
+            PresentationType.Wps,
+            ProcessId: 1,
+            "wpspresentation.exe",
+            ["different-show-frame"],
+            ClassMatch: false,
+            ProcessMatch: true,
+            HasCaption: false,
+            IsFullscreen: true,
+            Score: 100);
+
+        PresentationTargetAdmissionPolicy.IsFreshIdentityMatch(
+                target,
+                currentCheck,
+                new PresentationClassifier(),
+                expectedType: PresentationType.Wps)
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsFreshIdentityMatch_ShouldRejectSamePidWithDifferentProcessIdentity()
+    {
+        var target = CreateWpsTarget(processId: 1);
+        var currentCheck = new PresentationWindowCheck(
+            PresentationType.Wps,
+            ProcessId: 1,
+            "different-presentation.exe",
+            ["wpsshowframe"],
+            ClassMatch: true,
+            ProcessMatch: true,
+            HasCaption: false,
+            IsFullscreen: true,
+            Score: 100);
+
+        PresentationTargetAdmissionPolicy.IsFreshIdentityMatch(
+                target,
+                currentCheck,
+                new PresentationClassifier(),
+                expectedType: PresentationType.Wps)
+            .Should().BeFalse();
+    }
+
+    private static PresentationTarget CreateWpsTarget(uint processId)
+    {
+        return new PresentationTarget(
+            new IntPtr(100),
+            new PresentationWindowInfo(processId, "wpspresentation.exe", ["wpsshowframe"]));
+    }
+
+    private static PresentationWindowCheck CreateWpsCheck(uint processId)
+    {
+        return new PresentationWindowCheck(
+            PresentationType.Wps,
+            ProcessId: processId,
+            "wpspresentation.exe",
+            ["wpsshowframe"],
+            ClassMatch: true,
+            ProcessMatch: true,
+            HasCaption: false,
+            IsFullscreen: true,
+            Score: 100);
     }
 
     [Fact]
