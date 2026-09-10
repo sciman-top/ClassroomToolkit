@@ -114,6 +114,53 @@ public sealed class BrushPressurePrimaryWidthTests
         renderer.GetLastCoreGeometry().Should().NotBeNull();
     }
 
+    [Fact]
+    public void Renderer_ShouldRejectNonFiniteDownPosition_WithoutActivatingStroke()
+    {
+        var renderer = new VariableWidthBrushRenderer(BrushPhysicsConfig.CreateCalligraphyInkFeel());
+        renderer.Initialize(Colors.Black, baseSize: 12.0, opacity: 255);
+
+        long timestamp = Stopwatch.GetTimestamp();
+        long stepTicks = Math.Max(1, Stopwatch.Frequency / 120);
+        renderer.OnDown(new BrushInputSample(
+            new Point(double.NaN, 200), timestamp, 0.5, true));
+        timestamp += stepTicks;
+        renderer.OnMove(BrushInputSample.CreatePointer(new Point(100, 200), timestamp));
+        timestamp += stepTicks;
+        renderer.OnUp(BrushInputSample.CreatePointer(new Point(160, 200), timestamp));
+
+        renderer.GetLastStrokePoints().Should().BeNull(
+            "a non-finite down point must not create an active or partially poisoned stroke");
+        renderer.GetLastCoreGeometry().Should().BeNull();
+    }
+
+    [Fact]
+    public void Renderer_ShouldCloseAtLastFinitePoint_WhenUpPositionIsNonFinite()
+    {
+        var renderer = new VariableWidthBrushRenderer(BrushPhysicsConfig.CreateCalligraphyInkFeel());
+        renderer.Initialize(Colors.Black, baseSize: 12.0, opacity: 255);
+
+        long timestamp = Stopwatch.GetTimestamp();
+        long stepTicks = Math.Max(1, Stopwatch.Frequency / 120);
+        renderer.OnDown(BrushInputSample.CreatePointer(new Point(40, 200), timestamp));
+        timestamp += stepTicks;
+        renderer.OnMove(BrushInputSample.CreatePointer(new Point(100, 200), timestamp));
+        timestamp += stepTicks;
+        renderer.OnUp(new BrushInputSample(
+            new Point(double.PositiveInfinity, double.NaN), timestamp, 0.5, false));
+
+        var points = renderer.GetLastStrokePoints();
+        points.Should().NotBeNull();
+        points!.Count.Should().BeGreaterThanOrEqualTo(2);
+        var previous = points[^2].Position;
+        var last = points[^1].Position;
+        double.IsFinite(last.X).Should().BeTrue();
+        double.IsFinite(last.Y).Should().BeTrue();
+        last.X.Should().BeApproximately(previous.X, 0.0001);
+        last.Y.Should().BeApproximately(previous.Y, 0.0001);
+        renderer.GetLastCoreGeometry().Should().NotBeNull();
+    }
+
     private static (double LightBodyWidth, double HeavyBodyWidth) ReplayPressurePair(BrushPhysicsConfig config)
     {
         config.EnableRdpSimplify = false;

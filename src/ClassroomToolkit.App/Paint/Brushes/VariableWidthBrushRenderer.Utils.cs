@@ -55,6 +55,11 @@ internal partial class VariableWidthBrushRenderer
         return a + (b - a) * t;
     }
 
+    private static bool IsFinitePoint(WpfPoint point)
+    {
+        return double.IsFinite(point.X) && double.IsFinite(point.Y);
+    }
+
     private static double FractalNoise(double phase, double frequency)
     {
         double n1 = ValueNoise(phase * frequency);

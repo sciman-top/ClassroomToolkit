@@ -163,6 +163,12 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
     public void OnDown(BrushInputSample input)
     {
         var point = input.Position;
+        if (!IsFinitePoint(point))
+        {
+            Reset();
+            return;
+        }
+
         _points.Clear();
         _velocityAverage.Reset();
         _widthAverage.Reset();
@@ -232,8 +238,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
             var point = input.Position;
 
             // 数据验证：检查 NaN/Infinity
-            if (double.IsNaN(point.X) || double.IsNaN(point.Y) ||
-                double.IsInfinity(point.X) || double.IsInfinity(point.Y))
+            if (!IsFinitePoint(point))
             {
                 return;
             }
@@ -543,9 +548,25 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
     public void OnUp(BrushInputSample input)
     {
         if (!_isActive) return;
+        if (_points.Count == 0)
+        {
+            _isActive = false;
+            return;
+        }
+
         var point = input.Position;
 
         var last = _points.Last();
+        if (!IsFinitePoint(point))
+        {
+            point = last.Position;
+        }
+        if (!IsFinitePoint(point) || !IsFinitePoint(last.Position))
+        {
+            Reset();
+            return;
+        }
+
         var dir = point - last.Position;
         if (dir.Length > 0.1) dir.Normalize();
         else dir = _lastStrokeDirection;
