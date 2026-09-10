@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Threading;
 using ClassroomToolkit.Interop;
 using ClassroomToolkit.Interop.Utilities;
 
@@ -18,23 +19,30 @@ public sealed partial class WpsSlideshowNavigationHook : IDisposable
     private readonly HookProc _keyboardProc;
     private readonly HookProc _mouseProc;
     private readonly Action<string, Action, Action<Exception>?> _queueBackgroundWork;
+    private readonly object _lifecycleSync = new();
     private readonly object _suppressedKeyboardKeysSync = new();
     private readonly object _authorizedInputWindowsSync = new();
     private IntPtr _keyboardHook;
     private IntPtr _mouseHook;
     private HashSet<VirtualKey> _suppressedKeyboardKeys = [];
     private HashSet<IntPtr> _authorizedInputWindows = [];
-    private bool _interceptEnabled;
-    private bool _blockOnly;
-    private bool _interceptKeyboard = true;
-    private bool _interceptWheel = true;
-    private bool _emitWheelOnBlock = true;
+    private volatile bool _interceptEnabled;
+    private volatile bool _blockOnly;
+    private volatile bool _interceptKeyboard = true;
+    private volatile bool _interceptWheel = true;
+    private volatile bool _emitWheelOnBlock = true;
     private volatile bool _consumeAuthorizedInput;
     private int _callbackExceptionCount;
     private long _lastExceptionLogTick;
     private int _dispatchGeneration;
+    private int _lifecycleGeneration;
     private volatile bool _disposed;
-    public int LastError { get; private set; }
+    private int _lastError;
+    public int LastError
+    {
+        get => Volatile.Read(ref _lastError);
+        private set => Volatile.Write(ref _lastError, value);
+    }
     private readonly HashSet<VirtualKey> _allowedKeys = new()
     {
         VirtualKey.Up,
@@ -70,7 +78,16 @@ public sealed partial class WpsSlideshowNavigationHook : IDisposable
         "CA1822:Mark members as static",
         Justification = "Kept as instance member for compatibility with existing IWpsNavHookClient adapter contract.")]
     public bool Available => OperatingSystem.IsWindows();
-    public bool IsActive => _keyboardHook != IntPtr.Zero || _mouseHook != IntPtr.Zero;
+    public bool IsActive
+    {
+        get
+        {
+            lock (_lifecycleSync)
+            {
+                return IsActiveUnsafe();
+            }
+        }
+    }
 
     public void SetInterceptEnabled(bool enabled) => _interceptEnabled = enabled;
 
@@ -104,6 +121,11 @@ public sealed partial class WpsSlideshowNavigationHook : IDisposable
                 .ToHashSet()
                 ?? [];
         }
+    }
+
+    private bool IsActiveUnsafe()
+    {
+        return _keyboardHook != IntPtr.Zero || _mouseHook != IntPtr.Zero;
     }
 
     private bool IsKeyboardKeySuppressed(VirtualKey key)

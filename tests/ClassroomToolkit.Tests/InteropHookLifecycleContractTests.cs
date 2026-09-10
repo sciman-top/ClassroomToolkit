@@ -152,6 +152,22 @@ public sealed class InteropHookLifecycleContractTests
     }
 
     [Fact]
+    public void WpsHook_ShouldSerializeLifecycleAndPublishStopStateAcrossThreads()
+    {
+        var source = ReadInteropSources("WpsSlideshowNavigationHook*.cs");
+
+        source.Should().Contain("private readonly object _lifecycleSync = new();");
+        source.Should().Contain("private int _lifecycleGeneration;");
+        source.Should().Contain("private volatile bool _interceptEnabled;");
+        source.Should().Contain("private volatile bool _blockOnly;");
+        source.Should().Contain("private volatile bool _interceptKeyboard = true;");
+        source.Should().Contain("private volatile bool _interceptWheel = true;");
+        source.Should().Contain("private volatile bool _emitWheelOnBlock = true;");
+        source.Should().Contain("if (!IsStartGenerationCurrent(startGeneration))");
+        source.Should().Contain("_lifecycleGeneration++;");
+    }
+
+    [Fact]
     public void WpsHook_ShouldLogStartFailure()
     {
         var source = ReadInteropSources("WpsSlideshowNavigationHook*.cs");
