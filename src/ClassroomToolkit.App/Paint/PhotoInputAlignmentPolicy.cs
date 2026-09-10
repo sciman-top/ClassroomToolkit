@@ -199,7 +199,7 @@ internal static class PhotoManipulationRoutingPolicy
         {
             return PhotoManipulationRoutingDecision.Consume;
         }
-        return PhotoTouchInteractionPolicy.ShouldUseManipulationZoom(activeTouchCount)
+        return PhotoTouchInteractionPolicy.ShouldUseManipulation(activeTouchCount)
             ? PhotoManipulationRoutingDecision.Handle
             : PhotoManipulationRoutingDecision.Consume;
     }

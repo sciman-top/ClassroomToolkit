@@ -18,9 +18,9 @@ public sealed class PhotoTouchInputContractTests
         source.Should().Contain("OverlayRoot.TouchUp += OnTouchUp;");
         source.Should().Contain("OverlayRoot.LostTouchCapture += OnOverlayLostTouchCapture;");
         source.Should().Contain("PhotoTouchInteractionPolicy.ShouldIgnorePromotedTouchStylus");
-        source.Should().Contain("PhotoTouchInteractionPolicy.ShouldUseSingleTouchPan(");
-        source.Should().Contain("BeginPhotoPan(");
-        source.Should().Contain("PhotoPanPointerKind.Touch");
+        source.Should().Contain("PhotoManipulationAdmissionPolicy.Resolve(");
+        source.Should().Contain("ManipulationStarting");
+        source.Should().Contain("ManipulationDelta");
     }
 
     [Fact]
@@ -37,5 +37,19 @@ public sealed class PhotoTouchInputContractTests
 
         gateIndex.Should().BeGreaterThanOrEqualTo(0);
         touchStateIndex.Should().BeGreaterThan(gateIndex);
+    }
+
+    [Fact]
+    public void PhotoTouchInput_ShouldLeaveTouchDownUnhandledForWpfManipulation()
+    {
+        var source = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "Paint",
+            "PaintOverlayWindow.Input.Touch.cs"));
+
+        source.Should().NotContain("OverlayRoot.CaptureTouch(e.TouchDevice)");
+        source.Should().NotContain("e.Handled = true");
+        source.Should().Contain("ManipulationStarting/Delta");
     }
 }

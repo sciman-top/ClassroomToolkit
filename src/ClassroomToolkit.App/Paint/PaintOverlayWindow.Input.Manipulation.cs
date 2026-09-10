@@ -69,6 +69,14 @@ public partial class PaintOverlayWindow
             _photoTranslate.X += translation.X;
             _photoTranslate.Y += translation.Y;
             ApplyPhotoPanBounds(allowResistance: true);
+            if (interactionState.CrossPageDisplayActive
+                && !IsPhotoZoomInteractionActive()
+                && PhotoPanDragActivationPolicy.ShouldActivateCrossPageDrag(
+                    crossPageDisplayActive: true,
+                    deltaYDip: e.CumulativeManipulation.Translation.Y))
+            {
+                _crossPageDragging = true;
+            }
             UpdatePhotoInkPanCompensation();
             var shouldRefresh = PhotoPanInteractiveRefreshPolicy.ShouldRefresh(
                 _lastPhotoInteractiveRefreshTranslateX,
@@ -119,6 +127,12 @@ public partial class PaintOverlayWindow
             }
             else
             {
+                if (_crossPageDragging)
+                {
+                    _crossPageDragging = false;
+                    _crossPageTranslateClamped = false;
+                    FinalizeCurrentPageFromScroll();
+                }
                 RequestCrossPageDisplayUpdate(CrossPageUpdateSources.WithImmediate(CrossPageUpdateSources.ManipulationDelta));
             }
         }

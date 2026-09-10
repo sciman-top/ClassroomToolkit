@@ -4,17 +4,12 @@ namespace ClassroomToolkit.App.Paint;
 
 internal static class PhotoTouchInteractionPolicy
 {
-    internal static bool ShouldUseSingleTouchPan(
-        bool photoModeActive,
-        bool boardActive,
-        PaintToolMode mode,
-        bool inkOperationActive,
-        int activeTouchCount)
+    internal static bool ShouldUseManipulation(int activeTouchCount)
     {
-        return photoModeActive
-            && !boardActive
-            && !inkOperationActive
-            && activeTouchCount == 1;
+        // WPF only starts a manipulation when the originating TouchDown is
+        // left unhandled.  A one-finger manipulation is the canonical pan
+        // path; a second finger upgrades the same stream to pinch/translate.
+        return activeTouchCount >= 1;
     }
 
     internal static bool ShouldUseManipulationZoom(int activeTouchCount)

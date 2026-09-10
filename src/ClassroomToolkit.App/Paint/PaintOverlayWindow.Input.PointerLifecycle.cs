@@ -277,6 +277,7 @@ public partial class PaintOverlayWindow
         try
         {
             Debug.WriteLine($"[PaintOverlay] pointer capture cleanup: {reason}");
+            _photoManipulating = false;
             var fallbackPosition = _lastBrushInputSample?.Position
                                    ?? _lastPointerPosition
                                    ?? (_photoPanning ? _photoPanStart : new WpfPoint());
