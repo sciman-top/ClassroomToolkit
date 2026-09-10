@@ -377,6 +377,70 @@ public sealed class PresentationControlServiceTests
     }
 
     [Fact]
+    public void Wps_BackgroundRelay_ShouldUseMessageWithoutEnsuringForeground()
+    {
+        var planner = new PresentationControlPlanner(new PresentationClassifier());
+        var mapper = new PresentationCommandMapper();
+        var sender = new RecordingInputSender();
+        var foreground = new StubForegroundController(initialForeground: false, ensureResult: true);
+        var service = new PresentationControlService(
+            planner,
+            mapper,
+            sender,
+            new Win32PresentationResolver(),
+            new MockValidator(),
+            foreground);
+        var target = new PresentationTarget(
+            new IntPtr(6789),
+            new PresentationWindowInfo(1, "wpspresentation.exe", new[] { "wpsshowframe" }));
+        var options = new PresentationControlOptions
+        {
+            Strategy = InputStrategy.Raw,
+            AllowBackground = true,
+            AllowWps = true,
+            WpsDebounceMs = 0
+        };
+
+        var result = service.TrySendToTarget(target, PresentationCommand.Next, options);
+
+        result.Should().BeTrue();
+        sender.LastKeyStrategy.Should().Be(InputStrategy.Message);
+        foreground.EnsureForegroundCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public void Office_BackgroundRelay_ShouldUseMessageWithoutEnsuringForeground()
+    {
+        var planner = new PresentationControlPlanner(new PresentationClassifier());
+        var mapper = new PresentationCommandMapper();
+        var sender = new RecordingInputSender();
+        var foreground = new StubForegroundController(initialForeground: false, ensureResult: true);
+        var service = new PresentationControlService(
+            planner,
+            mapper,
+            sender,
+            new Win32PresentationResolver(),
+            new MockValidator(),
+            foreground);
+        var target = new PresentationTarget(
+            new IntPtr(6790),
+            new PresentationWindowInfo(2, "powerpnt.exe", new[] { "screenclass" }));
+        var options = new PresentationControlOptions
+        {
+            Strategy = InputStrategy.Raw,
+            AllowBackground = true,
+            AllowOffice = true,
+            WpsDebounceMs = 0
+        };
+
+        var result = service.TrySendToTarget(target, PresentationCommand.Next, options);
+
+        result.Should().BeTrue();
+        sender.LastKeyStrategy.Should().Be(InputStrategy.Message);
+        foreground.EnsureForegroundCalls.Should().Be(0);
+    }
+
+    [Fact]
     public void OtherWindowType_ShouldNotSendAnyInput()
     {
         var planner = new PresentationControlPlanner(new PresentationClassifier());
@@ -871,6 +935,8 @@ public sealed class PresentationControlServiceTests
         private bool _isForeground;
         private readonly bool _ensureResult;
 
+        public int EnsureForegroundCalls { get; private set; }
+
         public StubForegroundController(bool initialForeground, bool ensureResult)
         {
             _isForeground = initialForeground;
@@ -881,6 +947,7 @@ public sealed class PresentationControlServiceTests
 
         public bool EnsureForeground(IntPtr hwnd)
         {
+            EnsureForegroundCalls++;
             if (_ensureResult)
             {
                 _isForeground = true;

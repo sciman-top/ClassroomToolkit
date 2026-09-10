@@ -82,23 +82,28 @@ internal sealed class PresentationInputPipeline
         return WpsStrategy;
     }
 
-    public PresentationControlOptions BuildWpsOptions(PresentationControlOptions currentOptions, string? source = null)
+    public PresentationControlOptions BuildWpsOptions(
+        PresentationControlOptions currentOptions,
+        string? source = null,
+        bool allowBackground = false)
     {
         if (currentOptions == null)
         {
             return new PresentationControlOptions
             {
                 Strategy = InputStrategy.Message,
+                AllowBackground = allowBackground,
                 AllowOffice = false,
                 AllowWps = true
             };
         }
 
-        var strategy = ResolveWpsOptionStrategy(currentOptions, source);
+        var strategy = ResolveWpsOptionStrategy(currentOptions, source, allowBackground);
         return new PresentationControlOptions
         {
             Strategy = strategy,
             WheelAsKey = currentOptions.WheelAsKey,
+            AllowBackground = allowBackground,
             WpsDebounceMs = currentOptions.WpsDebounceMs,
             LockStrategyWhenDegraded = currentOptions.LockStrategyWhenDegraded,
             AutoFallbackFailureThreshold = currentOptions.AutoFallbackFailureThreshold,
@@ -108,13 +113,16 @@ internal sealed class PresentationInputPipeline
         };
     }
 
-    public PresentationControlOptions BuildOfficeOptions(PresentationControlOptions currentOptions)
+    public PresentationControlOptions BuildOfficeOptions(
+        PresentationControlOptions currentOptions,
+        bool allowBackground = false)
     {
         if (currentOptions == null)
         {
             return new PresentationControlOptions
             {
-                Strategy = OfficeStrategy,
+                Strategy = allowBackground ? InputStrategy.Message : OfficeStrategy,
+                AllowBackground = allowBackground,
                 AllowOffice = true,
                 AllowWps = false
             };
@@ -122,8 +130,9 @@ internal sealed class PresentationInputPipeline
 
         return new PresentationControlOptions
         {
-            Strategy = OfficeStrategy,
+            Strategy = allowBackground ? InputStrategy.Message : OfficeStrategy,
             WheelAsKey = currentOptions.WheelAsKey,
+            AllowBackground = allowBackground,
             WpsDebounceMs = currentOptions.WpsDebounceMs,
             LockStrategyWhenDegraded = currentOptions.LockStrategyWhenDegraded,
             AutoFallbackFailureThreshold = currentOptions.AutoFallbackFailureThreshold,
@@ -143,10 +152,13 @@ internal sealed class PresentationInputPipeline
         };
     }
 
-    private InputStrategy ResolveWpsOptionStrategy(PresentationControlOptions currentOptions, string? source)
+    private InputStrategy ResolveWpsOptionStrategy(
+        PresentationControlOptions currentOptions,
+        string? source,
+        bool allowBackground)
     {
         var strategy = WpsStrategy;
-        if (WpsForceMessageFallback)
+        if (allowBackground || WpsForceMessageFallback)
         {
             strategy = InputStrategy.Message;
         }

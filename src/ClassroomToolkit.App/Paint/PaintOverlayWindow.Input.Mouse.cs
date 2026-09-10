@@ -102,19 +102,7 @@ public partial class PaintOverlayWindow
 
     private void OnOverlayLostMouseCapture(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        PaintModeManager.Instance.IsDrawing = false;
-        var interactionState = CaptureInputInteractionState();
-        var lostCapturePlan = OverlayLostMouseCaptureExecutionPolicy.Resolve(
-            IsMousePhotoPanActive(interactionState),
-            rightClickPending: _photoRightClickPending);
-        if (lostCapturePlan.ShouldEndPan)
-        {
-            EndPhotoPan(allowInertia: false);
-        }
-        if (lostCapturePlan.ShouldClearRightClickPending)
-        {
-            PhotoRightClickPendingStateUpdater.Clear(ref _photoRightClickPending);
-        }
+        HandlePointerCaptureLoss("mouse-capture-lost");
     }
 
     private void OnOverlayMouseLeave(object sender, System.Windows.Input.MouseEventArgs e)

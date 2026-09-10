@@ -86,6 +86,29 @@ public sealed class PresentationInputPipelineTests
     }
 
     [Fact]
+    public void BuildWpsOptions_BackgroundRelay_ShouldForceMessageAndPreserveRelayIntent()
+    {
+        var pipeline = CreatePipeline();
+        pipeline.UpdateWpsMode(WpsInputModeDefaults.Raw);
+        var baseOptions = new PresentationControlOptions
+        {
+            Strategy = InputStrategy.Raw,
+            WheelAsKey = false,
+            LockStrategyWhenDegraded = true
+        };
+
+        var options = pipeline.BuildWpsOptions(
+            baseOptions,
+            source: "keyboard",
+            allowBackground: true);
+
+        options.Strategy.Should().Be(InputStrategy.Message);
+        options.AllowBackground.Should().BeTrue();
+        options.AllowWps.Should().BeTrue();
+        options.AllowOffice.Should().BeFalse();
+    }
+
+    [Fact]
     public void BuildOfficeOptions_ShouldUseOfficeStrategyAndOfficeChannel()
     {
         var pipeline = CreatePipeline();
@@ -100,6 +123,25 @@ public sealed class PresentationInputPipelineTests
         var options = pipeline.BuildOfficeOptions(baseOptions);
 
         options.Strategy.Should().Be(InputStrategy.Raw);
+        options.AllowOffice.Should().BeTrue();
+        options.AllowWps.Should().BeFalse();
+    }
+
+    [Fact]
+    public void BuildOfficeOptions_BackgroundRelay_ShouldForceMessage()
+    {
+        var pipeline = CreatePipeline();
+        pipeline.UpdateOfficeMode(WpsInputModeDefaults.Raw);
+        var baseOptions = new PresentationControlOptions
+        {
+            Strategy = InputStrategy.Raw,
+            LockStrategyWhenDegraded = true
+        };
+
+        var options = pipeline.BuildOfficeOptions(baseOptions, allowBackground: true);
+
+        options.Strategy.Should().Be(InputStrategy.Message);
+        options.AllowBackground.Should().BeTrue();
         options.AllowOffice.Should().BeTrue();
         options.AllowWps.Should().BeFalse();
     }

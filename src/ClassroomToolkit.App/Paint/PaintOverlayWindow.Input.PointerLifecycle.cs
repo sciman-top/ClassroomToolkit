@@ -1,6 +1,8 @@
 using System;
+using System.Diagnostics;
 using System.Windows.Media.Imaging;
 using ClassroomToolkit.App.Paint.Brushes;
+using ClassroomToolkit.App.Windowing;
 using WpfPoint = System.Windows.Point;
 
 namespace ClassroomToolkit.App.Paint;
@@ -248,5 +250,120 @@ public partial class PaintOverlayWindow
             default:
                 return;
         }
+    }
+
+    private void HandlePointerCaptureLoss(string reason)
+    {
+        if (_pointerCleanupInProgress)
+        {
+            return;
+        }
+
+        _pointerCleanupInProgress = true;
+        try
+        {
+            Debug.WriteLine($"[PaintOverlay] pointer capture cleanup: {reason}");
+            var fallbackPosition = _lastBrushInputSample?.Position
+                                   ?? _lastPointerPosition
+                                   ?? (_photoPanning ? _photoPanStart : new WpfPoint());
+
+            if (_strokeInProgress)
+            {
+                var input = _lastBrushInputSample ?? BrushInputSample.CreatePointer(fallbackPosition);
+                SafeActionExecutionExecutor.TryExecute(
+                    () => EndBrushStroke(input),
+                    ex => Debug.WriteLine(
+                        $"[PaintOverlay] interrupted brush finalization failed: {ex.GetType().Name} - {ex.Message}"));
+                ResetInterruptedBrushState();
+            }
+
+            if (_isErasing)
+            {
+                SafeActionExecutionExecutor.TryExecute(
+                    () => EndEraser(fallbackPosition),
+                    ex => Debug.WriteLine(
+                        $"[PaintOverlay] interrupted eraser finalization failed: {ex.GetType().Name} - {ex.Message}"));
+                _isErasing = false;
+                _lastEraserPoint = null;
+            }
+
+            if (_shapeType == PaintShapeType.Triangle && HasPendingTriangleDraft())
+            {
+                CancelPendingTriangleDraft(reason);
+            }
+            else if (_isDrawingShape)
+            {
+                SafeActionExecutionExecutor.TryExecute(
+                    () => EndShape(fallbackPosition),
+                    ex => Debug.WriteLine(
+                        $"[PaintOverlay] interrupted shape finalization failed: {ex.GetType().Name} - {ex.Message}"));
+                if (_isDrawingShape)
+                {
+                    ClearShapePreview();
+                }
+            }
+
+            if (_isRegionSelecting)
+            {
+                ClearRegionSelection();
+            }
+
+            if (_photoPanning)
+            {
+                SafeActionExecutionExecutor.TryExecute(
+                    () => EndPhotoPan(allowInertia: false),
+                    ex => Debug.WriteLine(
+                        $"[PaintOverlay] interrupted photo pan finalization failed: {ex.GetType().Name} - {ex.Message}"));
+            }
+
+            if (_photoPanInertiaRenderingAttached)
+            {
+                SafeActionExecutionExecutor.TryExecute(
+                    () => StopPhotoPanInertia(
+                        flushTransformSave: true,
+                        resetInkPanCompensation: true),
+                    ex => Debug.WriteLine(
+                        $"[PaintOverlay] photo pan inertia cleanup failed: {ex.GetType().Name} - {ex.Message}"));
+            }
+
+            if (_photoTouchPanDeviceId.HasValue || _photoActiveTouchIds.Count > 0)
+            {
+                SafeActionExecutionExecutor.TryExecute(
+                    () => OverlayRoot.ReleaseAllTouchCaptures(),
+                    ex => Debug.WriteLine(
+                        $"[PaintOverlay] touch capture cleanup failed: {ex.GetType().Name} - {ex.Message}"));
+                _photoTouchPanDeviceId = null;
+                _photoActiveTouchIds.Clear();
+            }
+
+            PhotoRightClickPendingStateUpdater.Clear(ref _photoRightClickPending);
+            _pendingCrossPageBrushContinuationSample = null;
+            _pendingCrossPageBrushReplayCurrentInput = false;
+            _pendingAdaptiveRendererRefresh = false;
+            StylusSampleTimestampStateUpdater.Reset(ref _stylusSampleTimestampState);
+            CancelPendingBrushPreview();
+            _lastPointerPosition = null;
+        }
+        finally
+        {
+            // Capture-loss events can be raised synchronously by the releases
+            // above; keep the guard active until every native/WPF capture is gone.
+            ReleasePointerInput();
+            PaintModeManager.Instance.IsDrawing = false;
+            _pointerCleanupInProgress = false;
+        }
+    }
+
+    private void ResetInterruptedBrushState()
+    {
+        _activeRenderer?.Reset();
+        _visualHost.Clear();
+        _strokeInProgress = false;
+        _activeBrushStrokeUsesCrossPageContinuation = false;
+        _lastBrushInputSample = null;
+        _lastBrushPredictionSample = null;
+        _lastBrushVelocityDipPerSec = new System.Windows.Vector(0, 0);
+        _lastBrushAccelerationDipPerSecSq = new System.Windows.Vector(0, 0);
+        _lastCalligraphyPreviewPoint = null;
     }
 }

@@ -597,7 +597,9 @@ public partial class PaintOverlayWindow
         {
             return false;
         }
-        var options = _presentationInputPipeline.BuildOfficeOptions(_presentationOptions);
+        var options = _presentationInputPipeline.BuildOfficeOptions(
+            _presentationOptions,
+            allowBackground);
         return TrySendPresentationCommandToTarget(target, command, options);
     }
 

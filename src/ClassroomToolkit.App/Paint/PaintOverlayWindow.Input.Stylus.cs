@@ -190,6 +190,11 @@ public partial class PaintOverlayWindow
         }
     }
 
+    private void OnOverlayLostStylusCapture(object sender, StylusEventArgs e)
+    {
+        HandlePointerCaptureLoss("stylus-capture-lost");
+    }
+
     private bool TryHandleStylusPhotoPan(StylusEventArgs e, StylusPhotoPanPhase phase)
     {
         var interactionState = CaptureInputInteractionState();

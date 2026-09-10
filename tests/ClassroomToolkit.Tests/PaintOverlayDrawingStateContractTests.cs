@@ -18,6 +18,9 @@ public sealed class PaintOverlayDrawingStateContractTests
         source.Should().Contain("private void ReleasePointerInput()");
         source.Should().Contain("PaintModeManager.Instance.IsDrawing = false;");
         source.Should().Contain("private void OnOverlayLostMouseCapture(object sender, System.Windows.Input.MouseEventArgs e)");
+        source.Should().Contain("private void OnOverlayLostStylusCapture(object sender, StylusEventArgs e)");
+        source.Should().Contain("HandlePointerCaptureLoss(\"stylus-capture-lost\")");
+        source.Should().Contain("ResetInterruptedBrushState();");
     }
 
     [Fact]
@@ -31,7 +34,8 @@ public sealed class PaintOverlayDrawingStateContractTests
 
         lifecycle.Should().Contain("private const int WmDpiChanged = 0x02E0;");
         lifecycle.Should().Contain("msg == WmDisplayChange || msg == WmDpiChanged");
-        lifecycle.Should().Contain("ReleasePointerInput();");
+        lifecycle.Should().Contain("HandlePointerCaptureLoss(\"overlay-deactivated\")");
+        lifecycle.Should().Contain("HandlePointerCaptureLoss(\"overlay-closed\")");
         lifecycle.Should().Contain("EnsureRasterSurface();");
 
         var program = ContractSourceAggregateLoader.LoadByPattern(

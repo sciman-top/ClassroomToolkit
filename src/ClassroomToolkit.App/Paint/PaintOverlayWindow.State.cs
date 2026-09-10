@@ -92,6 +92,7 @@ public partial class PaintOverlayWindow : Window
     private readonly List<RasterSnapshot> _history = new();
 
     private WpfPoint? _lastPointerPosition;
+    private bool _pointerCleanupInProgress;
     private DateTime _lastPhotoGestureInputUtc = PhotoInputConflictDefaults.UnsetTimestampUtc;
     private DateTime _lastPhotoZoomInputUtc = PhotoInputConflictDefaults.UnsetTimestampUtc;
     private bool _presentationFocusRestoreEnabled = true;

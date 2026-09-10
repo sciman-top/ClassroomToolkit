@@ -119,6 +119,7 @@ public partial class PaintOverlayWindow : Window
         OverlayRoot.StylusDown += OnStylusDown;
         OverlayRoot.StylusMove += OnStylusMove;
         OverlayRoot.StylusUp += OnStylusUp;
+        OverlayRoot.LostStylusCapture += OnOverlayLostStylusCapture;
         MouseWheel += OnMouseWheel;
         SizeChanged += OnWindowSizeChanged;
         StateChanged += OnWindowStateChanged;

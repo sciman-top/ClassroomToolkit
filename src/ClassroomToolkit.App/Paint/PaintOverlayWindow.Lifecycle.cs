@@ -121,12 +121,12 @@ public partial class PaintOverlayWindow
     private void OnOverlayDeactivated(object? sender, EventArgs e)
     {
         CancelPendingTriangleDraft("overlay-deactivated");
+        HandlePointerCaptureLoss("overlay-deactivated");
     }
 
     private void OnOverlayClosed(object? sender, EventArgs e)
     {
-        ReleasePointerInput();
-        CancelPendingBrushPreview();
+        HandlePointerCaptureLoss("overlay-closed");
         Interlocked.Exchange(ref _overlayClosed, 1);
         _overlayLifecycleCancellation.Cancel();
         if (_hwnd != IntPtr.Zero)
@@ -176,6 +176,7 @@ public partial class PaintOverlayWindow
         OverlayRoot.StylusDown -= OnStylusDown;
         OverlayRoot.StylusMove -= OnStylusMove;
         OverlayRoot.StylusUp -= OnStylusUp;
+        OverlayRoot.LostStylusCapture -= OnOverlayLostStylusCapture;
         _photoActiveTouchIds.Clear();
         _photoTouchPanDeviceId = null;
         SaveCurrentPageIfNeeded();

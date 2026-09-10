@@ -115,7 +115,7 @@ public partial class PaintOverlayWindow
             var command = direction > 0
                 ? ClassroomToolkit.Services.Presentation.PresentationCommand.Next
                 : ClassroomToolkit.Services.Presentation.PresentationCommand.Previous;
-            var options = BuildWpsOptions(source);
+            var options = BuildWpsOptions(source, allowBackground);
             var sent = TrySendPresentationCommandToTarget(target, command, options);
             if (sent)
             {
@@ -180,7 +180,7 @@ public partial class PaintOverlayWindow
         {
             return false;
         }
-        var options = BuildWpsOptions("wheel");
+        var options = BuildWpsOptions("wheel", allowBackground);
         var sent = TrySendPresentationCommandToTarget(target, command, options);
         if (sent)
         {
@@ -189,9 +189,14 @@ public partial class PaintOverlayWindow
         return sent;
     }
 
-    private ClassroomToolkit.Services.Presentation.PresentationControlOptions BuildWpsOptions(string? source = null)
+    private ClassroomToolkit.Services.Presentation.PresentationControlOptions BuildWpsOptions(
+        string? source = null,
+        bool allowBackground = false)
     {
-        return _presentationInputPipeline.BuildWpsOptions(_presentationOptions, source);
+        return _presentationInputPipeline.BuildWpsOptions(
+            _presentationOptions,
+            source,
+            allowBackground);
     }
 
     private void UpdateWpsNavHookState()

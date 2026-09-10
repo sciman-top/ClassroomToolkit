@@ -214,7 +214,13 @@ public sealed class PresentationControlService
             }
         }
 
-        var strategy = options.Strategy;
+        // Raw/SendInput is a system-wide input stream and cannot reliably target
+        // a background slideshow.  A route that explicitly admitted background
+        // delivery must therefore use the HWND message path and must not try to
+        // activate the presentation window.
+        var strategy = options.AllowBackground
+            ? InputStrategy.Message
+            : options.Strategy;
         if (targetType == PresentationType.Wps
             && options.LockStrategyWhenDegraded
             && IsWpsAutoForcedMessageForTarget(target.Handle)
