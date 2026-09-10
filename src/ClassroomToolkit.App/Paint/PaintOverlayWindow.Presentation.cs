@@ -31,6 +31,7 @@ public partial class PaintOverlayWindow
 
     private PresentationTarget ResolveOfficeTarget()
     {
+        var preferredTarget = ResolvePreferredForegroundPresentationTarget(PresentationType.Office);
         return _presentationTargetSessionBinding.Resolve(
             PresentationType.Office,
             resolveCandidate: () => _presentationResolver.ResolvePresentationTarget(
@@ -38,7 +39,24 @@ public partial class PaintOverlayWindow
                 allowWps: false,
                 allowOffice: true,
                 _currentProcessId),
-            isAdmitted: target => _presentationTargetAdmission(target, PresentationType.Office));
+            isAdmitted: target => _presentationTargetAdmission(target, PresentationType.Office),
+            preferredTarget: preferredTarget);
+    }
+
+    private PresentationTarget ResolvePreferredForegroundPresentationTarget(PresentationType expectedType)
+    {
+        var foreground = _presentationResolver.ResolveForeground();
+        if (!foreground.IsValid
+            || foreground.Info == null
+            || _presentationClassifier.Classify(foreground.Info) != expectedType
+            || !IsPresentationSlideshow(foreground, expectedType))
+        {
+            return PresentationTarget.Empty;
+        }
+
+        return _presentationTargetAdmission(foreground, expectedType)
+            ? foreground
+            : PresentationTarget.Empty;
     }
 
     private PresentationTarget ResolvePresentationFocusTarget(out PresentationType selectedType)

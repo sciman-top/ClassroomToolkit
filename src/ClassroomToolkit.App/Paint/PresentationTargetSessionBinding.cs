@@ -16,10 +16,16 @@ internal sealed class PresentationTargetSessionBinding
     internal PresentationTarget Resolve(
         PresentationType type,
         Func<PresentationTarget> resolveCandidate,
-        Func<PresentationTarget, bool> isAdmitted)
+        Func<PresentationTarget, bool> isAdmitted,
+        PresentationTarget? preferredTarget = null)
     {
         ArgumentNullException.ThrowIfNull(resolveCandidate);
         ArgumentNullException.ThrowIfNull(isAdmitted);
+
+        if (preferredTarget?.IsValid == true)
+        {
+            InvalidateIfBoundToDifferentWindow(type, preferredTarget.Handle);
+        }
 
         lock (_sync)
         {
@@ -30,7 +36,9 @@ internal sealed class PresentationTargetSessionBinding
             }
 
             Set(type, PresentationTarget.Empty);
-            var candidate = resolveCandidate();
+            var candidate = preferredTarget?.IsValid == true && isAdmitted(preferredTarget)
+                ? preferredTarget
+                : resolveCandidate();
             if (!candidate.IsValid || !isAdmitted(candidate))
             {
                 return PresentationTarget.Empty;

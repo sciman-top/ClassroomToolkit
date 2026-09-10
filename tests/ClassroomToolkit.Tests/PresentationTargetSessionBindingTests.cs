@@ -113,6 +113,31 @@ public sealed class PresentationTargetSessionBindingTests
             .Should().Be(target);
     }
 
+    [Fact]
+    public void Resolve_ShouldPreferAdmittedForegroundTarget_WhenSessionBindingIsStale()
+    {
+        var binding = new PresentationTargetSessionBinding();
+        var oldTarget = BuildTarget(800);
+        var foregroundTarget = BuildTarget(900);
+        var fallbackCalled = false;
+
+        binding.Resolve(PresentationType.Wps, () => oldTarget, candidate => candidate.IsValid)
+            .Should().Be(oldTarget);
+
+        binding.Resolve(
+                PresentationType.Wps,
+                () =>
+                {
+                    fallbackCalled = true;
+                    return oldTarget;
+                },
+                candidate => candidate.IsValid,
+                preferredTarget: foregroundTarget)
+            .Should().Be(foregroundTarget);
+
+        fallbackCalled.Should().BeFalse();
+    }
+
     private static PresentationTarget BuildTarget(long hwnd)
     {
         return new PresentationTarget(

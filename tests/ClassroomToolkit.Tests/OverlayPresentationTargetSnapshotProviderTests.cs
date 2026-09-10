@@ -47,7 +47,7 @@ public sealed class OverlayPresentationTargetSnapshotProviderTests
         var snapshot = provider.Resolve(allowWps: true, allowOffice: true);
 
         snapshot.WpsTarget.Should().Be(wpsTarget);
-        snapshot.OfficeTarget.Should().Be(officeTarget);
+        snapshot.OfficeTarget.Should().Be(foregroundTarget);
         snapshot.WpsSlideshow.Should().BeTrue();
         snapshot.OfficeSlideshow.Should().BeTrue();
         snapshot.ForegroundType.Should().Be(PresentationType.Office);
@@ -251,6 +251,33 @@ public sealed class OverlayPresentationTargetSnapshotProviderTests
         resolver.WpsTarget = newTarget;
 
         provider.Resolve(allowWps: true, allowOffice: false).WpsTarget.Should().Be(newTarget);
+    }
+
+    [Fact]
+    public void Resolve_ShouldPreferRecognizedForegroundSlideshowOverOlderBoundWindow()
+    {
+        var oldTarget = BuildTarget(9900, 99, "wpspresentation.exe", "wpsshowframe");
+        var foregroundTarget = BuildTarget(9910, 99, "wpspresentation.exe", "wpsshowframe");
+        var resolver = new FakeResolver
+        {
+            WpsTarget = oldTarget,
+            ForegroundTarget = foregroundTarget
+        };
+        var provider = new OverlayPresentationTargetSnapshotProvider(
+            resolver,
+            () => new PresentationClassifier(),
+            _ => true,
+            currentProcessId: 100,
+            targetAdmission: (target, expectedType) =>
+                expectedType == PresentationType.Wps && target.Info != null,
+            isWindowValid: _ => true);
+
+        provider.Resolve(allowWps: true, allowOffice: false).WpsTarget
+            .Should().Be(foregroundTarget);
+
+        resolver.ForegroundTarget = PresentationTarget.Empty;
+        provider.Resolve(allowWps: true, allowOffice: false).WpsTarget
+            .Should().Be(foregroundTarget);
     }
 
     private static PresentationTarget BuildTarget(long hwnd, uint processId, string processName, params string[] classNames)

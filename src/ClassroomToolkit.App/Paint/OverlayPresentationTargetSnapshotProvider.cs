@@ -85,11 +85,12 @@ internal sealed class OverlayPresentationTargetSnapshotProvider : IOverlayPresen
             return isFullscreen;
         }
 
+        var foreground = _resolver.ResolveForeground();
         var wpsTarget = allowWps
-            ? ResolveTarget(PresentationType.Wps, classifier, IsFullscreenCached)
+            ? ResolveTarget(PresentationType.Wps, classifier, IsFullscreenCached, foreground)
             : PresentationTarget.Empty;
         var officeTarget = allowOffice
-            ? ResolveTarget(PresentationType.Office, classifier, IsFullscreenCached)
+            ? ResolveTarget(PresentationType.Office, classifier, IsFullscreenCached, foreground)
             : PresentationTarget.Empty;
         var wpsAnalysis = AnalyzeTarget(
             wpsTarget,
@@ -101,7 +102,7 @@ internal sealed class OverlayPresentationTargetSnapshotProvider : IOverlayPresen
             PresentationType.Office,
             classifier,
             IsFullscreenCached);
-        var foregroundType = ResolveForegroundPresentationType(classifier, IsFullscreenCached);
+        var foregroundType = ResolveForegroundPresentationType(foreground, classifier, IsFullscreenCached);
 
         return new OverlayPresentationTargetSnapshot(
             WpsTarget: wpsTarget,
@@ -116,8 +117,14 @@ internal sealed class OverlayPresentationTargetSnapshotProvider : IOverlayPresen
     private PresentationTarget ResolveTarget(
         PresentationType type,
         PresentationClassifier classifier,
-        Func<IntPtr, bool> isFullscreenWindow)
+        Func<IntPtr, bool> isFullscreenWindow,
+        PresentationTarget foreground)
     {
+        var preferredTarget = ResolvePreferredForegroundTarget(
+            foreground,
+            type,
+            classifier,
+            isFullscreenWindow);
         return _sessionBinding.Resolve(
             type,
             resolveCandidate: () => _resolver.ResolvePresentationTarget(
@@ -131,7 +138,38 @@ internal sealed class OverlayPresentationTargetSnapshotProvider : IOverlayPresen
                 classifier,
                 isFullscreenWindow,
                 _isWindowValid,
-                _targetAdmission));
+                _targetAdmission),
+            preferredTarget: preferredTarget);
+    }
+
+    private PresentationTarget ResolvePreferredForegroundTarget(
+        PresentationTarget foreground,
+        PresentationType type,
+        PresentationClassifier classifier,
+        Func<IntPtr, bool> isFullscreenWindow)
+    {
+        if (!foreground.IsValid
+            || foreground.Info == null
+            || classifier.Classify(foreground.Info) != type
+            || !_isWindowValid(foreground.Handle))
+        {
+            return PresentationTarget.Empty;
+        }
+
+        if (_targetAdmission != null)
+        {
+            return _targetAdmission(foreground, type)
+                ? foreground
+                : PresentationTarget.Empty;
+        }
+
+        return PresentationSlideshowDetectionPolicy.IsSlideshow(
+            foreground,
+            classifier,
+            isFullscreenWindow,
+            type)
+            ? foreground
+            : PresentationTarget.Empty;
     }
 
     private static bool IsAdmittedTarget(
@@ -185,10 +223,10 @@ internal sealed class OverlayPresentationTargetSnapshotProvider : IOverlayPresen
     }
 
     private PresentationType ResolveForegroundPresentationType(
+        PresentationTarget target,
         PresentationClassifier classifier,
         Func<IntPtr, bool> isFullscreenWindow)
     {
-        var target = _resolver.ResolveForeground();
         if (!target.IsValid || target.Info == null)
         {
             return PresentationType.None;

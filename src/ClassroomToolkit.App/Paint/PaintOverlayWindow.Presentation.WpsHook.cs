@@ -324,6 +324,7 @@ public partial class PaintOverlayWindow
 
     private PresentationTarget ResolveWpsTarget()
     {
+        var preferredTarget = ResolvePreferredForegroundPresentationTarget(PresentationType.Wps);
         return _presentationTargetSessionBinding.Resolve(
             PresentationType.Wps,
             resolveCandidate: () => _presentationResolver.ResolvePresentationTarget(
@@ -332,7 +333,8 @@ public partial class PaintOverlayWindow
                 allowOffice: false,
                 _currentProcessId),
             isAdmitted: target =>
-                IsAdmittedWpsTarget(target));
+                IsAdmittedWpsTarget(target),
+            preferredTarget: preferredTarget);
     }
 
     private bool IsAdmittedWpsTarget(PresentationTarget target)
