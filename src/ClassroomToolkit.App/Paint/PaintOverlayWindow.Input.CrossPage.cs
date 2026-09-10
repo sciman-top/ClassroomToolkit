@@ -28,9 +28,18 @@ public partial class PaintOverlayWindow
         if (executionPlan.Action == CrossPageInputResumeAction.BeginBrushContinuation)
         {
             // Resume brush continuity after page switch without drawing an intermediate flash frame.
-            CapturePointerInput();
+            if (!CapturePointerInput())
+            {
+                CancelPendingBrushPreview();
+                return false;
+            }
             _visualHost.Clear();
             BeginBrushStrokeContinuation(seed, renderInitialPreview: false);
+            if (!_strokeInProgress)
+            {
+                HandlePointerCaptureLoss("continuation-start-failed");
+                return false;
+            }
             if (!executionPlan.ShouldUpdateBrushAfterContinuation)
             {
                 return false;

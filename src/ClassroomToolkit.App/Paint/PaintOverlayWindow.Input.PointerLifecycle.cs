@@ -52,7 +52,10 @@ public partial class PaintOverlayWindow
         }
         if (handled && executionPlan.ShouldCapturePointer)
         {
-            CapturePointerInput();
+            if (IsInkOperationActive() && !CapturePointerInput())
+            {
+                HandlePointerCaptureLoss("pointer-capture-failed");
+            }
         }
     }
 

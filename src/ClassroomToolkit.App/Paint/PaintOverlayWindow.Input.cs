@@ -122,11 +122,26 @@ public partial class PaintOverlayWindow
             orientation.TiltYRadians);
     }
 
-    private void CapturePointerInput()
+    private bool CapturePointerInput()
     {
-        OverlayRoot.CaptureMouse();
-        Stylus.Capture(OverlayRoot);
-        PaintModeManager.Instance.IsDrawing = true;
+        var mouseCaptured = SafeActionExecutionExecutor.TryExecute(
+            () => OverlayRoot.CaptureMouse(),
+            fallback: false,
+            onFailure: ex => Debug.WriteLine(
+                $"[PaintOverlay] mouse capture failed: {ex.GetType().Name} - {ex.Message}"));
+        var stylusCaptured = SafeActionExecutionExecutor.TryExecute(
+            () => Stylus.Capture(OverlayRoot, CaptureMode.Element),
+            fallback: false,
+            onFailure: ex => Debug.WriteLine(
+                $"[PaintOverlay] stylus capture failed: {ex.GetType().Name} - {ex.Message}"));
+        var captured = mouseCaptured || stylusCaptured;
+        PaintModeManager.Instance.IsDrawing = captured;
+        if (!captured)
+        {
+            Debug.WriteLine("[PaintOverlay] pointer capture unavailable; canceling input operation");
+        }
+
+        return captured;
     }
 
     private void ReleasePointerInput()
@@ -148,7 +163,7 @@ public partial class PaintOverlayWindow
                 {
                     if (OverlayRoot.IsStylusCaptured)
                     {
-                        Stylus.Capture(null);
+                        Stylus.Capture(OverlayRoot, CaptureMode.None);
                     }
                 },
                 ex => Debug.WriteLine($"[PaintOverlay] stylus capture release failed: {ex.GetType().Name} - {ex.Message}"));

@@ -120,7 +120,6 @@ public partial class PaintOverlayWindow
 
     private void OnOverlayDeactivated(object? sender, EventArgs e)
     {
-        CancelPendingTriangleDraft("overlay-deactivated");
         HandlePointerCaptureLoss("overlay-deactivated");
     }
 
