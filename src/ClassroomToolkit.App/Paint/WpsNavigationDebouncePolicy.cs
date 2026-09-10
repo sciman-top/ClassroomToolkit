@@ -3,11 +3,12 @@ using System;
 namespace ClassroomToolkit.App.Paint;
 
 internal readonly record struct WpsNavigationDebounceState(
-    (int Code, IntPtr Target, DateTime Timestamp)? LastEvent,
-    DateTime BlockUntilUtc);
+    (int Code, IntPtr Target, DateTime Timestamp)? LastEvent);
 
 internal static class WpsNavigationDebouncePolicy
 {
+    // 仅抑制同方向+同目标的重复导航（滚轮洪泛/多路径重复触发）；
+    // 反方向是用户刻意的翻页纠正，不得被全域阻断窗口吞掉。
     internal static bool ShouldSuppress(
         int direction,
         IntPtr target,
@@ -18,10 +19,6 @@ internal static class WpsNavigationDebouncePolicy
         if (target == IntPtr.Zero)
         {
             return false;
-        }
-        if (state.BlockUntilUtc > nowUtc)
-        {
-            return true;
         }
         if (!state.LastEvent.HasValue)
         {
@@ -40,11 +37,9 @@ internal static class WpsNavigationDebouncePolicy
     internal static WpsNavigationDebounceState Remember(
         int direction,
         IntPtr target,
-        DateTime nowUtc,
-        int debounceMs)
+        DateTime nowUtc)
     {
         return new WpsNavigationDebounceState(
-            LastEvent: (direction, target, nowUtc),
-            BlockUntilUtc: nowUtc.AddMilliseconds(debounceMs));
+            LastEvent: (direction, target, nowUtc));
     }
 }

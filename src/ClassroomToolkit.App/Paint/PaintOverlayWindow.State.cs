@@ -85,7 +85,6 @@ public partial class PaintOverlayWindow : Window
     private bool _wpsHookInterceptWheel = true;
     private bool _wpsHookBlockOnly;
     private int _wpsHookUnavailableNotifiedState;
-    private DateTime _wpsNavBlockUntil = PresentationRuntimeDefaults.UnsetTimestampUtc;
     private (int Code, IntPtr Target, DateTime Timestamp)? _lastWpsNavEvent;
     private DateTime _lastWpsHookInput = PresentationRuntimeDefaults.UnsetTimestampUtc;
     private readonly List<RasterSnapshot> _history = new();

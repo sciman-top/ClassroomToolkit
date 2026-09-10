@@ -1,13 +1,17 @@
+using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 using ClassroomToolkit.App.Helpers;
 
 namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintOverlayWindow
 {
+    private const int WmDisplayChange = 0x007E;
     private void OnOverlayLoaded(object sender, RoutedEventArgs e)
     {
         WindowPlacementHelper.EnsureVisible(this);
@@ -74,8 +78,40 @@ public partial class PaintOverlayWindow
         _hwnd = new WindowInteropHelper(this).Handle;
         _lastAppliedInputPassthroughEnabled = null;
         _lastAppliedFocusBlocked = null;
+        if (_hwnd != IntPtr.Zero && HwndSource.FromHwnd(_hwnd) is { } source)
+        {
+            source.AddHook(OnOverlayHwndHook);
+        }
         UpdateInputPassthrough();
         UpdateFocusAcceptance();
+    }
+
+    private IntPtr OnOverlayHwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == WmDisplayChange)
+        {
+            // 投影仪热插拔/分辨率变化后覆盖层几何会过期，按当前模式重铺。
+            var scheduled = TryBeginInvoke(RecoverAfterDisplaySettingsChange, DispatcherPriority.Background);
+            if (!scheduled && Dispatcher.CheckAccess())
+            {
+                RecoverAfterDisplaySettingsChange();
+            }
+        }
+        return IntPtr.Zero;
+    }
+
+    private void RecoverAfterDisplaySettingsChange()
+    {
+        if (ShouldIgnoreLifecycleTick() || !IsVisible)
+        {
+            return;
+        }
+        if (IsPhotoFullscreenActive)
+        {
+            ApplyPhotoWindowBounds(fullscreen: true);
+            return;
+        }
+        RecoverOverlayFullscreenBounds();
     }
 
     private void OnOverlayDeactivated(object? sender, EventArgs e)
@@ -88,6 +124,20 @@ public partial class PaintOverlayWindow
         CancelPendingBrushPreview();
         Interlocked.Exchange(ref _overlayClosed, 1);
         _overlayLifecycleCancellation.Cancel();
+        if (_hwnd != IntPtr.Zero)
+        {
+            try
+            {
+                if (HwndSource.FromHwnd(_hwnd) is { } closingSource)
+                {
+                    closingSource.RemoveHook(OnOverlayHwndHook);
+                }
+            }
+            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            {
+                Debug.WriteLine($"[PaintOverlay] displaychange hook removal failed: {ex.GetType().Name} - {ex.Message}");
+            }
+        }
         Closed -= OnOverlayClosed;
         KeyDown -= OnKeyDown;
         Loaded -= OnOverlayLoaded;

@@ -24,4 +24,23 @@ internal static class InkAtomicFileWriter
                 Debug.WriteLine($"{diagnosticPrefix} temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
             });
     }
+
+    internal static void WriteAllBytes(
+        string path,
+        byte[] content,
+        string diagnosticPrefix)
+    {
+        AtomicFileReplaceUtility.WriteAtomically(
+            path,
+            tempPath => File.WriteAllBytes(tempPath, content),
+            onTempCleanupFailure: (tempPath, ex) =>
+            {
+                if (!AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+                {
+                    return;
+                }
+
+                Debug.WriteLine($"{diagnosticPrefix} temp cleanup failed path={tempPath} ex={ex.GetType().Name} msg={ex.Message}");
+            });
+    }
 }

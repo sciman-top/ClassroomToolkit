@@ -292,11 +292,20 @@ public partial class PaintOverlayWindow
 
     private void ApplyFullscreenBounds()
     {
-        var rect = GetCurrentMonitorRect();
+        // Left/Top/Width/Height 是 DIP；显示器矩形是设备像素，必须换算，
+        // 否则非 100% 缩放下覆盖层会放大且偏移。
+        var rect = GetCurrentMonitorRectInDip(useWorkArea: false);
         Left = rect.Left;
         Top = rect.Top;
         Width = rect.Width;
         Height = rect.Height;
+    }
+
+    private static Rect GetMonitorRectOfWindow(IntPtr hwnd)
+    {
+        var screen = System.Windows.Forms.Screen.FromHandle(hwnd);
+        var r = screen.Bounds;
+        return new Rect(r.X, r.Y, r.Width, r.Height);
     }
 
     private Rect GetCurrentMonitorRect(bool useWorkArea = false)

@@ -285,6 +285,7 @@ public partial class PaintOverlayWindow
         if (fullscreenNow)
         {
             DispatchSessionEvent(new EnterPresentationFullscreenEvent(MapPresentationSource(nextType)));
+            TryFollowPresentationMonitor();
         }
         else
         {
@@ -309,6 +310,53 @@ public partial class PaintOverlayWindow
             return PresentationType.None;
         }
         return _presentationClassifier.Classify(target.Info);
+    }
+
+    private void TryFollowPresentationMonitor()
+    {
+        if (!PresentationFollowMonitorPolicy.ShouldFollow(
+                photoModeActive: _photoModeActive,
+                boardActive: IsBoardActive(),
+                overlayVisible: IsVisible,
+                windowStateMinimized: WindowState == WindowState.Minimized))
+        {
+            return;
+        }
+        var target = _presentationResolver.ResolvePresentationTarget(
+            _presentationClassifier,
+            _presentationOptions.AllowWps,
+            _presentationOptions.AllowOffice,
+            _currentProcessId);
+        if (!IsFullscreenPresentationWindow(target))
+        {
+            return;
+        }
+        var targetMonitorRect = GetMonitorRectOfWindow(target.Handle);
+        if (!PresentationFollowMonitorPolicy.ShouldMove(
+                GetCurrentMonitorRect(useWorkArea: false),
+                targetMonitorRect))
+        {
+            return;
+        }
+        var hwnd = ResolveOverlayWindowHandle();
+        if (hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+        NormalizeOverlayWindowState(shouldNormalize: true);
+        // 与图片全屏同路：设备像素 SetWindowPos 保证真实铺满目标显示器。
+        var positioned = WindowPlacementExecutor.TryApplyBoundsNoActivateNoZOrder(
+            hwnd,
+            (int)Math.Round(targetMonitorRect.Left, MidpointRounding.AwayFromZero),
+            (int)Math.Round(targetMonitorRect.Top, MidpointRounding.AwayFromZero),
+            (int)Math.Round(targetMonitorRect.Width, MidpointRounding.AwayFromZero),
+            (int)Math.Round(targetMonitorRect.Height, MidpointRounding.AwayFromZero),
+            showWindow: true);
+        if (positioned)
+        {
+            EnsureRasterSurface();
+            LogPresentationState("presentation-monitor-follow");
+        }
     }
 
     public void UpdateWpsMode(string mode)

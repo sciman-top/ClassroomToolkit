@@ -71,7 +71,7 @@ public class FloatingWindowExecutionExecutorTests
             {
                 target.Should().Be("overlay");
                 enabled.Should().BeTrue();
-                enforceZOrder.Should().BeFalse();
+                enforceZOrder.Should().BeTrue();
                 overlayTopmostReplayed = true;
             });
 
@@ -80,6 +80,33 @@ public class FloatingWindowExecutionExecutorTests
         overlayTopmostReplayed.Should().BeTrue();
         imageManagerActivated.Should().BeTrue();
         topmostCalled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Apply_ShouldReplayOverlay_WithPlanEnforceZOrderFlag()
+    {
+        var enforcedCalls = new List<bool>();
+
+        FloatingWindowExecutionExecutor.Apply(
+            new FloatingWindowExecutionPlan(
+                TopmostExecutionPlan: new FloatingTopmostExecutionPlan(false, false, false, false, EnforceZOrder: false),
+                ActivationPlan: new FloatingWindowActivationPlan(false, false),
+                OwnerPlan: new FloatingOwnerExecutionPlan(
+                    FloatingOwnerBindingAction.None,
+                    FloatingOwnerBindingAction.None,
+                    FloatingOwnerBindingAction.None),
+                ReplayOverlayBelowFloatingUtilities: true),
+            overlayWindow: "overlay",
+            toolbarWindow: "toolbar",
+            rollCallWindow: null,
+            launcherWindow: null,
+            imageManagerWindow: null,
+            applyOwnerPlan: (_, _, _, _, _) => { },
+            tryActivate: (_, _) => true,
+            applyTopmostPlan: (_, _, _, _, _) => { },
+            applyOverlayTopmostNoActivate: (_, _, enforceZOrder) => enforcedCalls.Add(enforceZOrder));
+
+        enforcedCalls.Should().ContainSingle().Which.Should().BeFalse();
     }
 
     [Fact]

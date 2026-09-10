@@ -20,6 +20,7 @@ internal sealed class InkStorageService
     };
     private const string PagesFolderName = "pages";
     private const string DefaultPhotosFolderName = "Photos";
+    private const string PresentationSnapshotsFolderName = "presentation";
 
     private readonly string _rootPath;
     private readonly string _photoRootPath;
@@ -252,6 +253,23 @@ internal sealed class InkStorageService
 
         throw new IOException(
             $"No available photo name remains in '{dateFolder}' for source '{fileName}'.");
+    }
+
+    public string SavePresentationSnapshot(DateTime date, string fileName, byte[] pngBytes)
+    {
+        ArgumentNullException.ThrowIfNull(pngBytes);
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            throw new ArgumentException("Invalid snapshot file name.", nameof(fileName));
+        }
+
+        EnsureRoot();
+        var dateFolder = Path.Combine(_rootPath, date.ToString("yyyyMMdd", CultureInfo.InvariantCulture));
+        var folder = Path.Combine(dateFolder, PresentationSnapshotsFolderName);
+        Directory.CreateDirectory(folder);
+        var path = Path.Combine(folder, SanitizeName(fileName));
+        InkAtomicFileWriter.WriteAllBytes(path, pngBytes, "[InkStorage]");
+        return path;
     }
 
     public DateTime? FindLatestDateWithDocument(string documentName, DateTime maxDate)

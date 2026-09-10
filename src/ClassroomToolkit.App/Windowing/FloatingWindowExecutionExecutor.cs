@@ -68,8 +68,10 @@ internal static class FloatingWindowExecutionExecutor
 
         if (plan.ReplayOverlayBelowFloatingUtilities && applyOverlayTopmostNoActivate != null)
         {
+            // WPF Topmost 属性去重后感知不到 topmost 带内漂移（放映窗创建/前台切换会把
+            // 覆盖层压到下面），必须把 enforce 透传给原生 SetWindowPos 重断言。
             SafeActionExecutionExecutor.TryExecute(
-                () => applyOverlayTopmostNoActivate(overlayWindow, true, false));
+                () => applyOverlayTopmostNoActivate(overlayWindow, true, plan.TopmostExecutionPlan.EnforceZOrder));
         }
 
         SafeActionExecutionExecutor.TryExecute(

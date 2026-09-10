@@ -35,11 +35,15 @@ public partial class PaintOverlayWindow
                 Debug.WriteLine($"[WpsNavHook] target invalid source={source} dir={direction}");
                 return;
             }
-            var passthrough = IsWpsRawInputPassthrough(target);
-            var interceptSource = source == "wheel" ? _wpsHookInterceptWheel : _wpsHookInterceptKeyboard;
-            if (passthrough && !interceptSource)
+            if (WpsHookNavigationInjectionGatePolicy.ShouldSuppressInjection(
+                    targetIsForeground: IsTargetForeground(target),
+                    foregroundOwnedByCurrentProcess: IsForegroundOwnedByCurrentProcess(),
+                    wheelSource: source == "wheel",
+                    wheelAsKeyEnabled: _presentationOptions.WheelAsKey))
             {
-                Debug.WriteLine($"[WpsNavHook] passthrough source={source} dir={direction}");
+                // 真实输入已直达前台放映窗（hook 不吞键），再注入必然双翻页；
+                // 外来应用前台时注入会把无关输入误转为翻页。
+                Debug.WriteLine($"[WpsNavHook] injection-suppressed source={source} dir={direction}");
                 return;
             }
             if (ShouldSuppressWpsNav(direction, target.Handle))
@@ -65,7 +69,7 @@ public partial class PaintOverlayWindow
             }
         }
 
-        var scheduled = TryBeginInvoke(ExecuteHookRequest, System.Windows.Threading.DispatcherPriority.Background);
+        var scheduled = TryBeginInvoke(ExecuteHookRequest, System.Windows.Threading.DispatcherPriority.Normal);
         if (!scheduled)
         {
             if (Dispatcher.CheckAccess())
@@ -302,15 +306,6 @@ public partial class PaintOverlayWindow
         }
     }
 
-    private bool IsWpsRawInputPassthrough(PresentationTarget target)
-    {
-        if (ResolveWpsSendMode(target) != InputStrategy.Raw)
-        {
-            return false;
-        }
-        return IsTargetForeground(target);
-    }
-
     private static bool IsTargetForeground(PresentationTarget target)
     {
         if (!target.IsValid)
@@ -327,7 +322,7 @@ public partial class PaintOverlayWindow
             direction,
             target,
             nowUtc,
-            new WpsNavigationDebounceState(_lastWpsNavEvent, _wpsNavBlockUntil),
+            new WpsNavigationDebounceState(_lastWpsNavEvent),
             WpsNavDebounceMs);
     }
 
@@ -337,11 +332,9 @@ public partial class PaintOverlayWindow
         var state = WpsNavigationDebouncePolicy.Remember(
             direction,
             target,
-            nowUtc,
-            WpsNavDebounceMs);
+            nowUtc);
         WpsNavigationDebounceStateUpdater.Apply(
             ref _lastWpsNavEvent,
-            ref _wpsNavBlockUntil,
             state);
     }
 

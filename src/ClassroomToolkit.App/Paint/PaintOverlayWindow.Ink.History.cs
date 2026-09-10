@@ -216,6 +216,8 @@ public partial class PaintOverlayWindow
 
     private void ClearInkSurfaceForPresentationExit()
     {
+        // 放映批注不落盘（CacheScope=None），清空前先留 PNG 快照兜底。
+        TryCapturePresentationExitSnapshot();
         _activeRenderer?.Reset();
         _visualHost.Clear();
         CancelPendingBrushPreview();
