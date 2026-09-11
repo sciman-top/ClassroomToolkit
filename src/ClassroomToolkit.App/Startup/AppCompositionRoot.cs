@@ -32,7 +32,9 @@ internal static class AppCompositionRoot
         AddWindows(services);
         AddRuntimeServices(services);
         AddLogging(services, appDataDirectory);
-        return services.BuildServiceProvider();
+        var serviceProvider = services.BuildServiceProvider();
+        WireInfraDiagnosticsSink(serviceProvider);
+        return serviceProvider;
     }
 
     private static void AddConfigurationAndSettings(IServiceCollection services)
@@ -139,9 +141,9 @@ internal static class AppCompositionRoot
 
     private static void AddLogging(IServiceCollection services, string appDataDirectory)
     {
-        var fileProvider = new FileLoggerProvider(
+        services.AddSingleton<ILoggerProvider>(_ => new FileLoggerProvider(
             Path.Combine(appDataDirectory, "logs"),
-            resetExistingLogsOnStartup: false);
+            resetExistingLogsOnStartup: false));
         services.AddLogging(builder =>
         {
 #if DEBUG
@@ -150,11 +152,14 @@ internal static class AppCompositionRoot
             builder.SetMinimumLevel(LogLevel.Information);
 #endif
             builder.AddConsole();
-            builder.AddProvider(fileProvider);
         });
+    }
 
+    private static void WireInfraDiagnosticsSink(IServiceProvider serviceProvider)
+    {
         // Infra 存储层降级事件转发到文件日志：Release 无调试器时备份/快照失败才可留痕。
-        var infraLogger = fileProvider.CreateLogger("ClassroomToolkit.Infra");
+        // Sink 在组合根构建完成后接线，经 DI 解析出的 ILoggerFactory 与注册的 FileLoggerProvider 同源。
+        var infraLogger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("ClassroomToolkit.Infra");
         InfraDiagnosticsLog.SetSink(message => LogInfraDiagnostics(infraLogger, message));
     }
 

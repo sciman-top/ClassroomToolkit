@@ -100,6 +100,7 @@ internal sealed class WpsHookOrchestrator
     }
 
     [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Instance API kept for compatibility with existing tests and call sites.")]
+    [SuppressMessage("Reliability", "CA2007:Consider calling ConfigureAwait on the awaited task", Justification = "Caller resumes on the UI thread by design: the LL WPS hook must be installed on the UI thread (see PaintOverlayWindow.Presentation.WpsHook.cs).")]
     public async Task<bool> TryStartSafeAsync(IWpsNavHookClient? hookClient)
     {
         if (hookClient == null || !hookClient.Available)
