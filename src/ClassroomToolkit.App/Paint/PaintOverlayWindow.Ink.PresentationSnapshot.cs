@@ -10,7 +10,7 @@ public partial class PaintOverlayWindow
 {
     private void TryCapturePresentationExitSnapshot()
     {
-        if (!PresentationInkExitSnapshotPolicy.ShouldCapture(_hasDrawing, _inkStrokes.Count))
+        if (!PresentationInkExitSnapshotPolicy.ShouldCapture(_hasDrawing))
         {
             return;
         }

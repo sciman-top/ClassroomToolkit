@@ -60,16 +60,22 @@ public sealed class PresentationInkExitSnapshotPolicyTests
     [Fact]
     public void ShouldCapture_ShouldReturnTrue_WhenDrawingExists()
     {
-        PresentationInkExitSnapshotPolicy.ShouldCapture(hasDrawing: true, strokeCount: 3).Should().BeTrue();
+        PresentationInkExitSnapshotPolicy.ShouldCapture(hasDrawing: true).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ShouldCapture_ShouldReturnTrue_WhenRecordDisabledLeavesEmptyVectorList()
+    {
+        // 出厂默认 ink_record_enabled=false：笔画只渲染不进向量表，
+        // 快照判据必须只依赖位图表面，否则放映批注退出即静默丢失。
+        PresentationInkExitSnapshotPolicy.ShouldCapture(hasDrawing: true).Should().BeTrue();
     }
 
     [Theory]
-    [InlineData(false, 0)]
-    [InlineData(false, 5)]
-    [InlineData(true, 0)]
-    public void ShouldCapture_ShouldReturnFalse_WhenNothingToCapture(bool hasDrawing, int strokeCount)
+    [InlineData(false)]
+    public void ShouldCapture_ShouldReturnFalse_WhenNothingToCapture(bool hasDrawing)
     {
-        PresentationInkExitSnapshotPolicy.ShouldCapture(hasDrawing, strokeCount).Should().BeFalse();
+        PresentationInkExitSnapshotPolicy.ShouldCapture(hasDrawing).Should().BeFalse();
     }
 }
 
