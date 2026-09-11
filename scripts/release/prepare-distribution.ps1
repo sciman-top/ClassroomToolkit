@@ -335,6 +335,7 @@ function Invoke-Publish {
         [Parameter(Mandatory = $true)][string]$Rid,
         [Parameter(Mandatory = $true)][bool]$SelfContained,
         [Parameter(Mandatory = $true)][string]$OutputPath,
+        [Parameter(Mandatory = $true)][string]$ApplicationVersion,
         [switch]$ReadyToRun
     )
 
@@ -355,6 +356,9 @@ function Invoke-Publish {
         "-p:ContinuousIntegrationBuild=true",
         "-p:NuGetLockFilePath=obj/release-packages.lock.json",
         "-p:RestoreForceEvaluate=true",
+        "-p:Version=$ApplicationVersion",
+        "-p:FileVersion=$ApplicationVersion",
+        "-p:InformationalVersion=$ApplicationVersion",
         "-o",
         $OutputPath
     )
@@ -417,7 +421,7 @@ $buildOffline = $PackageMode -eq "all" -or $PackageMode -eq "offline"
 if ($buildStandard) {
     New-Item -ItemType Directory -Path $standardApp -Force | Out-Null
     if (-not $SkipPublish) {
-        Invoke-Publish -Project $resolvedProjectPath -ConfigurationValue $resolvedConfiguration -Rid $resolvedRid -SelfContained:$false -OutputPath $standardApp
+        Invoke-Publish -Project $resolvedProjectPath -ConfigurationValue $resolvedConfiguration -Rid $resolvedRid -SelfContained:$false -OutputPath $standardApp -ApplicationVersion $Version
     }
 
     Assert-FileExists -Path $standardApp -Label "standard app output folder"
@@ -458,7 +462,7 @@ if ($buildStandard) {
 if ($buildOffline) {
     New-Item -ItemType Directory -Path $offlineApp -Force | Out-Null
     if (-not $SkipPublish) {
-        Invoke-Publish -Project $resolvedProjectPath -ConfigurationValue $resolvedConfiguration -Rid $resolvedRid -SelfContained:$true -OutputPath $offlineApp -ReadyToRun
+        Invoke-Publish -Project $resolvedProjectPath -ConfigurationValue $resolvedConfiguration -Rid $resolvedRid -SelfContained:$true -OutputPath $offlineApp -ApplicationVersion $Version -ReadyToRun
     }
 
     Assert-FileExists -Path $offlineApp -Label "offline app output folder"

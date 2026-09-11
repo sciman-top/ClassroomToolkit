@@ -50,6 +50,17 @@ public sealed class ReleasePrepareDistributionContractTests
     }
 
     [Fact]
+    public void PrepareDistribution_ShouldStampReleaseVersionIntoPublishedAssemblies()
+    {
+        var source = ReadPrepareDistributionScript();
+
+        source.Should().Contain("\"-p:Version=$ApplicationVersion\"");
+        source.Should().Contain("\"-p:FileVersion=$ApplicationVersion\"");
+        source.Should().Contain("\"-p:InformationalVersion=$ApplicationVersion\"");
+        source.Should().Contain("-ApplicationVersion $Version");
+    }
+
+    [Fact]
     public void ReleaseConfig_RuntimeInstaller_ShouldPinVersionHashAndPublisher()
     {
         using var config = JsonDocument.Parse(File.ReadAllText(TestPathHelper.ResolveRepoPath(
