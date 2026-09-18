@@ -23,6 +23,12 @@ internal sealed class LatestOnlyAsyncGate : IDisposable
             && Volatile.Read(ref _generation) == generation;
     }
 
+    public Task RunInBackgroundAsync(int generation, Func<Func<bool>, Task> action)
+    {
+        return SafeTaskRunner.Run("LatestOnlyAsyncGate.Background",
+            _ => RunAsync(generation, action), CancellationToken.None);
+    }
+
     /// <param name="continueOnCapturedContext">
     /// true 时 await 续接回调用方上下文（UI 线程）。钩子启动协程必须传 true：
     /// WH_*_LL 钩子要求安装线程持续泵消息，落到线程池线程会静默失效。

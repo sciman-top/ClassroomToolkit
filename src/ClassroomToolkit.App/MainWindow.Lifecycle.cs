@@ -13,6 +13,8 @@ namespace ClassroomToolkit.App;
 
 public partial class MainWindow
 {
+    private readonly ApplicationExitCoordinator _exitCoordinator = new();
+
     private void OnAutoExitTimerTick(object? sender, EventArgs e)
     {
         if (ShouldIgnoreShutdownTicks())
@@ -156,17 +158,35 @@ public partial class MainWindow
             return;
         }
 
-        const string phase = "request-exit";
+        _exitCoordinator.TryExit(
+            saveSettings: () =>
+            {
+                CapturePaintToolbarPosition(save: false);
+                return SaveLauncherSettings();
+            },
+            confirmDiscardSettings: ConfirmExitWithoutSavingSettings,
+            prepareChildWindows: discardSettings =>
+                _rollCallWindow?.TryPrepareForApplicationExit(discardSettings) ?? true,
+            shutdown: () => CompleteExit(exitPlan));
+    }
 
-        // Capture the last toolbar position into the shared settings snapshot and
-        // gate shutdown on the final durable settings write. If the settings file is
-        // locked or unavailable, keep the window open so a retry cannot lose the
-        // user's launcher/layout changes.
-        ExecuteLifecycleSafe(phase, "capture-toolbar-position", () => CapturePaintToolbarPosition(save: false));
-        if (!SaveLauncherSettings())
-        {
-            return;
-        }
+    private bool ConfirmExitWithoutSavingSettings()
+    {
+        var reason = _settingsService.IsOverwriteBlocked
+            ? "设置文件无法安全读取，当前处于保护模式，原文件将保留。"
+            : "本次设置未能保存。";
+        return TopmostMessageBox.Show(
+            this,
+            $"{reason}\n\n是否放弃本次设置更改并退出？\n点名记录仍须成功保存才能退出。",
+            "退出课堂工具箱",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning,
+            MessageBoxResult.No) == MessageBoxResult.Yes;
+    }
+
+    private void CompleteExit(MainWindowExitPlan exitPlan)
+    {
+        const string phase = "request-exit";
 
         _allowClose = true;
 

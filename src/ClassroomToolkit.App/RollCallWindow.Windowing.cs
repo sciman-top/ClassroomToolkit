@@ -15,6 +15,18 @@ namespace ClassroomToolkit.App;
 
 public partial class RollCallWindow
 {
+    private bool _closePersistencePrepared;
+
+    internal bool TryPrepareForApplicationExit(bool discardSettings)
+    {
+        if ((!discardSettings && !PersistSettings()) || !TrySaveRollStateNow())
+        {
+            return false;
+        }
+        _closePersistencePrepared = true;
+        return true;
+    }
+
     private void OnTitleBarDrag(object sender, MouseButtonEventArgs e)
     {
         if (!_dataLoaded)
@@ -112,7 +124,7 @@ public partial class RollCallWindow
 
         // 先完成两类持久化，再开始取消异步工作和解绑事件。真实写盘失败时取消
         // Closing，保留窗口、dirty 标记与失败反馈，让教师修复占用/权限后重试。
-        if (!PersistSettings() || !TrySaveRollStateNow())
+        if (!_closePersistencePrepared && (!PersistSettings() || !TrySaveRollStateNow()))
         {
             e.Cancel = true;
             return;

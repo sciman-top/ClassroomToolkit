@@ -341,8 +341,24 @@ public partial class RollCallWindow : Window
         }
 
         _warmupStarted = true;
-        _viewModel.WarmupData(_dataPath);
-        _ = _viewModel.LoadDataAsync(_settings.RollCallCurrentClass, Dispatcher);
+        _ = EnsureDataLoadedAsync();
+    }
+
+    private Task? _dataLoadTask;
+
+    private Task EnsureDataLoadedAsync()
+    {
+        if (_dataLoadTask == null || _dataLoadTask.IsFaulted || _dataLoadTask.IsCanceled)
+        {
+            _dataLoadTask = LoadDataOnceAsync();
+        }
+        return _dataLoadTask;
+    }
+
+    private async Task LoadDataOnceAsync()
+    {
+        await _viewModel.WarmupDataAsync(_dataPath);
+        await _viewModel.LoadDataAsync(_settings.RollCallCurrentClass, Dispatcher);
     }
 
     private async Task HandleLoadedAsync(CancellationToken cancellationToken)
@@ -358,8 +374,7 @@ public partial class RollCallWindow : Window
             ApplySettings(_settings, updatePhoto: false);
             if (!_viewModel.IsDataReady)
             {
-                _viewModel.WarmupData(_dataPath);
-                await _viewModel.LoadDataAsync(_settings.RollCallCurrentClass, Dispatcher);
+                await EnsureDataLoadedAsync();
             }
             cancellationToken.ThrowIfCancellationRequested();
             RestoreGroupSelection();

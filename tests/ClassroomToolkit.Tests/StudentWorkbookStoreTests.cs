@@ -521,8 +521,10 @@ public sealed class StudentWorkbookStoreTests
         }
     }
 
-    [Fact]
-    public void Save_ShouldRejectOverwrite_WhenFileModifiedExternallyAfterLoad()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Save_ShouldRejectOverwrite_WhenFileModifiedExternallyAfterLoad(bool restoreTimestamp)
     {
         var tempPath = TestPathHelper.CreateFilePath("ctool_workbook_external_edit", ".xlsx");
         try
@@ -537,6 +539,8 @@ public sealed class StudentWorkbookStoreTests
             store.Save(workbook, tempPath, rollStateJson: null);
             store.LoadOrCreate(tempPath);
 
+            var originalTimestamp = File.GetLastWriteTimeUtc(tempPath);
+
             // 模拟老师在 Excel 中加了一名学生并保存。
             using (var external = new XLWorkbook(tempPath))
             {
@@ -544,6 +548,11 @@ public sealed class StudentWorkbookStoreTests
                 sheet.Cell(3, 1).Value = "1002";
                 sheet.Cell(3, 2).Value = "李四";
                 external.Save();
+            }
+
+            if (restoreTimestamp)
+            {
+                File.SetLastWriteTimeUtc(tempPath, originalTimestamp);
             }
 
             var staleSave = () => store.Save(workbook, tempPath, rollStateJson: null);

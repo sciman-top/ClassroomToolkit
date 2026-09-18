@@ -15,6 +15,8 @@ public sealed partial class AppSettingsService
 
     private readonly ISettingsDocumentStore _store;
 
+    public bool IsOverwriteBlocked => _store.IsOverwriteBlocked;
+
     public AppSettingsService(ISettingsDocumentStore store)
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));

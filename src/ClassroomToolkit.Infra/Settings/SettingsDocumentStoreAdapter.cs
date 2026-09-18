@@ -7,6 +7,8 @@ public sealed class SettingsDocumentStoreAdapter : ISettingsDocumentStore
 {
     private readonly SettingsRepository _repository;
 
+    public bool IsOverwriteBlocked => !_repository.LastLoadSucceeded;
+
     public SettingsDocumentStoreAdapter(string settingsPath)
     {
         ArgumentNullException.ThrowIfNull(settingsPath);

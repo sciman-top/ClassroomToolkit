@@ -16,7 +16,7 @@ public sealed class RollCallViewModelPreloadConcurrencyTests
         .GetField("_preloadedResult", BindingFlags.Instance | BindingFlags.NonPublic)!;
 
     [Fact]
-    public void WarmupData_ShouldNotClearLatestPreloadTask_WhenOlderTaskCompletes()
+    public async Task WarmupData_ShouldNotClearLatestPreloadTask_WhenOlderTaskCompletes()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         var tempRoot = Path.Combine(Path.GetTempPath(), $"ctoolkit-preload-{Guid.NewGuid():N}");
@@ -32,8 +32,8 @@ public sealed class RollCallViewModelPreloadConcurrencyTests
 
         try
         {
-            viewModel.WarmupData(path1);
-            viewModel.WarmupData(path2);
+            await viewModel.WarmupDataAsync(path1);
+            await viewModel.WarmupDataAsync(path2);
 
             store.Path1Started.Wait(WaitTimeout, cancellationToken).Should().BeTrue();
             store.Path2Started.Wait(WaitTimeout, cancellationToken).Should().BeTrue();
@@ -65,7 +65,7 @@ public sealed class RollCallViewModelPreloadConcurrencyTests
     }
 
     [Fact]
-    public void WarmupData_ShouldNotCacheFailedPreloadResult_AndShouldClearTaskReference()
+    public async Task WarmupData_ShouldNotCacheFailedPreloadResult_AndShouldClearTaskReference()
     {
         var tempRoot = TestPathHelper.CreateDirectory("ctoolkit-preload-fail");
         var path = Path.Combine(tempRoot, "students-fail.xlsx");
@@ -74,7 +74,7 @@ public sealed class RollCallViewModelPreloadConcurrencyTests
         var useCase = new RollCallWorkbookUseCase(new ThrowingStore());
         using var viewModel = new RollCallViewModel(path, useCase);
 
-        viewModel.WarmupData(path);
+        await viewModel.WarmupDataAsync(path);
 
         SpinWait.SpinUntil(() => GetPreloadTask(viewModel) is null, WaitTimeout).Should().BeTrue();
         PreloadedResultField.GetValue(viewModel).Should().BeNull("failed preload results must not be cached");

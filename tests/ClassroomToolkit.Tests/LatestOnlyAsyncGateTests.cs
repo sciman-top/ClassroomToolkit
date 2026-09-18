@@ -6,6 +6,43 @@ namespace ClassroomToolkit.Tests;
 public sealed class LatestOnlyAsyncGateTests
 {
     [Fact]
+    public async Task RunInBackgroundAsync_ShouldNotBlockCallingThread_WhenGateIsIdle()
+    {
+        using var gate = new LatestOnlyAsyncGate();
+        using var entered = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var returned = new TaskCompletionSource<Task>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var callerId = 0;
+        var workerId = 0;
+        var caller = new Thread(() =>
+        {
+            callerId = Environment.CurrentManagedThreadId;
+            returned.SetResult(gate.RunInBackgroundAsync(gate.NextGeneration(), _ =>
+            {
+                workerId = Environment.CurrentManagedThreadId;
+                entered.Set();
+                release.Wait(TimeSpan.FromSeconds(10));
+                return Task.CompletedTask;
+            }));
+        }) { IsBackground = true };
+        caller.Start();
+        try
+        {
+            var operation = await returned.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+            entered.Wait(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken).Should().BeTrue();
+            workerId.Should().NotBe(callerId);
+            operation.IsCompleted.Should().BeFalse();
+            release.Set();
+            await operation.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            release.Set();
+            caller.Join(TimeSpan.FromSeconds(5));
+        }
+    }
+
+    [Fact]
     public async Task RunAsync_ShouldSkipStaleGeneration()
     {
         var gate = new LatestOnlyAsyncGate();

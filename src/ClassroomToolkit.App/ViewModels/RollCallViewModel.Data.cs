@@ -79,73 +79,62 @@ public sealed partial class RollCallViewModel
             return;
         }
 
+        RollCallLoadResult result;
+        try
+        {
+            // Fingerprint validation also reads the entire workbook, so it belongs
+            // on the worker along with parsing, including cache-hit paths.
+            result = await Task.Run(LoadDataInBackgroundAsync, _disposeCancellation.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (_disposeCancellation.IsCancellationRequested)
+        {
+            return;
+        }
+        if (_disposed || _disposeCancellation.IsCancellationRequested
+            || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+        {
+            return;
+        }
+        await dispatcher.InvokeAsync(() => ApplyLoadResult(result, preferredClass), DispatcherPriority.Render);
+    }
+
+    public Task WarmupDataAsync(string path)
+    {
+        return ClassroomToolkit.App.Utilities.SafeTaskRunner.Run(
+            "RollCallViewModel.Warmup", _ => WarmupData(path), _disposeCancellation.Token);
+    }
+
+    private async Task<RollCallLoadResult> LoadDataInBackgroundAsync()
+    {
         var preload = TryConsumePreloadedResult(_dataPath);
         if (preload != null)
         {
-            if (_disposed || _disposeCancellation.IsCancellationRequested)
-            {
-                return;
-            }
-            if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
-            {
-                return;
-            }
-            await dispatcher.InvokeAsync(() =>
-            {
-                ApplyLoadResult(preload, preferredClass);
-            }, DispatcherPriority.Render);
-            return;
+            return preload;
         }
-
-        RollCallLoadResult result;
-        var pendingPreloadTask = TryGetMatchingPreloadTask(_dataPath);
-        if (pendingPreloadTask != null)
+        var pending = TryGetMatchingPreloadTask(_dataPath);
+        if (pending != null)
         {
             try
             {
-                result = await pendingPreloadTask.WaitAsync(_disposeCancellation.Token).ConfigureAwait(false);
-                if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
+                var result = await pending.WaitAsync(_disposeCancellation.Token).ConfigureAwait(false);
+                if (string.IsNullOrWhiteSpace(result.ErrorMessage))
                 {
-                    result = await Task.Run(LoadDataCore, _disposeCancellation.Token).ConfigureAwait(false);
+                    return result;
                 }
             }
             catch (OperationCanceledException) when (_disposeCancellation.IsCancellationRequested)
             {
-                return;
+                throw;
             }
             catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
             {
                 System.Diagnostics.Debug.WriteLine(
                     RollCallDataLoadDiagnosticsPolicy.FormatPreloadConsumeFailure(
-                        _dataPath,
-                        ex.GetType().Name,
-                        ex.Message));
-                result = await Task.Run(LoadDataCore, _disposeCancellation.Token).ConfigureAwait(false);
+                        _dataPath, ex.GetType().Name, ex.Message));
             }
         }
-        else
-        {
-            try
-            {
-                result = await Task.Run(LoadDataCore, _disposeCancellation.Token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException) when (_disposeCancellation.IsCancellationRequested)
-            {
-                return;
-            }
-        }
-        if (_disposed || _disposeCancellation.IsCancellationRequested)
-        {
-            return;
-        }
-        if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
-        {
-            return;
-        }
-        await dispatcher.InvokeAsync(() =>
-        {
-            ApplyLoadResult(result, preferredClass);
-        }, DispatcherPriority.Render);
+        _disposeCancellation.Token.ThrowIfCancellationRequested();
+        return LoadDataCore();
     }
 
     private Task<RollCallLoadResult>? TryGetMatchingPreloadTask(string path)

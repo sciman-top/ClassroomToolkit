@@ -140,7 +140,7 @@ public partial class PaintOverlayWindow
     private void QueueSidecarAutoSave(SidecarPersistSnapshot snapshot)
     {
         var generation = _inkSidecarAutoSaveGate.NextGeneration();
-        _ = _inkSidecarAutoSaveGate.RunAsync(generation, async isCurrent =>
+        _ = _inkSidecarAutoSaveGate.RunInBackgroundAsync(generation, async isCurrent =>
         {
             if (!_inkSaveEnabled)
             {
@@ -169,7 +169,7 @@ public partial class PaintOverlayWindow
                     return;
                 }
 
-                if (TryPersistSidecarSnapshot(snapshot, logFailure: attempt == InkSidecarAutoSaveRetryMax))
+                if (TryPersistSidecarSnapshot(snapshot, isCurrent, logFailure: attempt == InkSidecarAutoSaveRetryMax))
                 {
                     DispatchExportUiUpdate("autosave-persisted", () =>
                     {
@@ -201,11 +201,12 @@ public partial class PaintOverlayWindow
 
             DispatchExportUiUpdate("autosave-failed-reschedule", () =>
             {
-                MarkInkPageModified(
-                    snapshot.SourcePath,
-                    snapshot.PageIndex,
-                    snapshot.SnapshotHash,
-                    snapshot.Strokes);
+                if (!isCurrent() || !_inkSaveEnabled)
+                {
+                    return;
+                }
+                // The page remains dirty after a failed write. Never replace a
+                // newer runtime/WAL snapshot with the failed background snapshot.
                 _inkDiagnostics?.OnAutoSaveFailure();
                 ScheduleSidecarAutoSave();
             });
@@ -227,7 +228,7 @@ public partial class PaintOverlayWindow
         }
     }
 
-    private bool TryPersistSidecarSnapshot(SidecarPersistSnapshot snapshot, bool logFailure)
+    private bool TryPersistSidecarSnapshot(SidecarPersistSnapshot snapshot, Func<bool> isCurrent, bool logFailure)
     {
         return SafeActionExecutionExecutor.TryExecute(
             () =>
@@ -236,7 +237,14 @@ public partial class PaintOverlayWindow
                     snapshot.SourcePath,
                     snapshot.PageIndex,
                     snapshot.Strokes,
-                    snapshot.Persistence))
+                    snapshot.Persistence,
+                    canPersist: () =>
+                    {
+                        var known = _inkDirtyPages.TryGetRuntimeState(snapshot.SourcePath,
+                            snapshot.PageIndex, out _, out var hash, out _);
+                        return isCurrent() && _inkSaveEnabled
+                            && InkAutoSaveSnapshotAdmissionPolicy.ShouldPersistSnapshot(known, hash, snapshot.SnapshotHash);
+                    }))
                 {
                     return false;
                 }

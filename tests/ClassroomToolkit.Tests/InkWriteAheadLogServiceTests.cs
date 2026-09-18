@@ -10,6 +10,33 @@ namespace ClassroomToolkit.Tests;
 
 public sealed class InkWriteAheadLogServiceTests : IDisposable
 {
+    [Fact]
+    public void RecoverDirectory_ShouldRetainWalAndOriginal_WhenSidecarIsCorrupt()
+    {
+        var source = Path.Combine(_tempDir, "corrupt.pdf");
+        File.WriteAllText(source, "source");
+        var strokes = new List<InkStrokeData>
+        {
+            new() { GeometryPath = "M0,0 L1,1", ColorHex = "#FF0000", BrushSize = 2 }
+        };
+        _wal.Upsert(source, 2, strokes, ComputeInkHash(strokes));
+        _wal.FlushPending();
+        var sidecar = InkPersistenceService.GetJsonPath(source);
+        File.WriteAllText(sidecar, "{broken");
+        var walPath = Path.Combine(_tempDir, ".ctk-ink", ".ink-wal.json");
+        var originalWal = File.ReadAllText(walPath);
+
+        _wal.RecoverDirectory(_tempDir, _persistence, ComputeInkHash).Should().Be(0);
+        File.ReadAllText(sidecar).Should().Be("{broken");
+        File.ReadAllText(walPath).Should().Be(originalWal);
+
+        // Simulate explicit repair; retained WAL can now recover the pending page.
+        File.WriteAllText(sidecar, "{\"pages\":[]}");
+        _wal.RecoverDirectory(_tempDir, _persistence, ComputeInkHash).Should().Be(1);
+        _persistence.LoadInkPageForFile(source, 2).Should().ContainSingle();
+        File.Exists(walPath).Should().BeFalse();
+    }
+
     private readonly string _tempDir;
     private readonly InkWriteAheadLogService _wal = new();
     private readonly InkPersistenceService _persistence = new();

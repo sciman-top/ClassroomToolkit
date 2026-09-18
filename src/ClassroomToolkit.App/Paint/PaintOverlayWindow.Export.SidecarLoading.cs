@@ -115,16 +115,26 @@ public partial class PaintOverlayWindow
         string sourcePath,
         int pageIndex,
         List<InkStrokeData> strokes,
-        InkPersistenceService persistence)
+        InkPersistenceService persistence,
+        Func<bool>? canPersist = null)
     {
-        var historyAdapter = _inkHistorySnapshotStore;
-        if (historyAdapter == null)
+        return InkPersistenceService.ExecuteDocumentWrite(sourcePath, () =>
         {
-            return persistence.SaveInkForFile(sourcePath, pageIndex, strokes);
-        }
+            // Admission must be checked under the same lock as the write: a
+            // queued autosave must not overwrite a newer synchronous undo/export.
+            if (canPersist != null && !canPersist())
+            {
+                return false;
+            }
+            var historyAdapter = _inkHistorySnapshotStore;
+            if (historyAdapter == null)
+            {
+                return persistence.SaveInkForFile(sourcePath, pageIndex, strokes);
+            }
 
-        var strokesJson = SerializeInkStrokes(strokes);
-        return historyAdapter.Save(sourcePath, pageIndex, strokesJson);
+            var strokesJson = SerializeInkStrokes(strokes);
+            return historyAdapter.Save(sourcePath, pageIndex, strokesJson);
+        });
     }
 
     private List<InkStrokeData> LoadInkHistorySnapshot(

@@ -10,6 +10,28 @@ namespace ClassroomToolkit.Tests;
 
 public sealed class InkPersistenceServiceTests : IDisposable
 {
+    [Theory]
+    [InlineData("{broken", false)]
+    [InlineData("{broken", true)]
+    [InlineData("null", false)]
+    [InlineData("[]", true)]
+    public void Save_ShouldPreserveUnreadableSidecar(string original, bool empty)
+    {
+        var source = CreateTempFile("damaged.pdf");
+        var path = InkPersistenceService.GetJsonPath(source);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, original);
+        var strokes = empty ? new List<InkStrokeData>() : new List<InkStrokeData>
+        {
+            new() { ColorHex = "#FF0000", BrushSize = 3, GeometryPath = "M 0 0 L 10 10" }
+        };
+
+        _service.SaveInkForFile(source, 2, strokes).Should().BeFalse();
+        File.ReadAllText(path).Should().Be(original);
+        _service.SaveDocument(source, new InkDocumentData()).Should().BeFalse();
+        File.ReadAllText(path).Should().Be(original);
+    }
+
     private readonly string _tempDir;
     private readonly InkPersistenceService _service;
 
@@ -194,14 +216,12 @@ public sealed class InkPersistenceServiceTests : IDisposable
 
         var jsonPath = InkPersistenceService.GetJsonPath(filePath);
         using var lockStream = new FileStream(jsonPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
-        Action act = () => _service.SaveInkForFile(filePath, 1, new List<InkStrokeData>
+        var saved = _service.SaveInkForFile(filePath, 1, new List<InkStrokeData>
         {
             new() { ColorHex = "#00FF00", BrushSize = 2.0, GeometryPath = "M 1 1 L 2 2" }
         });
 
-        act.Should().Throw<Exception>().Where(ex =>
-            ex.GetType() == typeof(IOException)
-            || ex.GetType() == typeof(UnauthorizedAccessException));
+        saved.Should().BeFalse("an unreadable existing sidecar must block writing before creating a temp file");
         Directory.GetFiles(Path.GetDirectoryName(jsonPath)!, $"{Path.GetFileName(jsonPath)}.*.tmp").Should().BeEmpty();
     }
 

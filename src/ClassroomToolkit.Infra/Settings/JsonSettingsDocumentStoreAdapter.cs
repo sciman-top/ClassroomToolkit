@@ -20,6 +20,8 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
     private volatile string? _lastValidatedContentHash;
     private JsonObject? _rawRoot;
 
+    public bool IsOverwriteBlocked => Volatile.Read(ref _overwriteBlockedAfterLoadFailure) == 1;
+
     public JsonSettingsDocumentStoreAdapter(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);

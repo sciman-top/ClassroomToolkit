@@ -205,8 +205,8 @@ public sealed class StudentWorkbookStore
 
     /// <summary>
     /// 写前外部变更检测：加载后若文件被外部（如 Excel）修改，拒绝用内存旧快照整册覆盖。
-    /// mtime 一致时直接放行（免读盘）；mtime 变化但内容哈希一致视为仅时间戳触碰，放行并刷新基线；
-    /// 读不出当前内容（被占用/无权限）时不误判为外部修改，把真实 IO 错误留给写入路径暴露。
+    /// 即便 mtime 相同也核对内容，防止保留时间戳的复制/恢复绕过保护；
+    /// 无法读取当前内容时传播 IO 错误，保留原文件和调用方待保存状态。
     /// </summary>
     private void EnsureNoExternalModification(string fullPath)
     {
@@ -217,17 +217,8 @@ public sealed class StudentWorkbookStore
         }
 
         var currentWriteTimeUtcTicks = File.GetLastWriteTimeUtc(fullPath).Ticks;
-        if (_lastValidatedFileStates.TryGetValue(fullPath, out var validated)
-            && validated.WriteTimeUtcTicks == currentWriteTimeUtcTicks)
-        {
-            return;
-        }
-
-        var currentContentHash = TryComputeFileHash(fullPath);
-        if (currentContentHash == null)
-        {
-            return;
-        }
+        _lastValidatedFileStates.TryGetValue(fullPath, out var validated);
+        var currentContentHash = ComputeFileHash(fullPath);
         if (validated == null)
         {
             // 无基线（未经加载的存量文件写入）：以当前内容为基线，保持既有可写行为。
@@ -256,18 +247,6 @@ public sealed class StudentWorkbookStore
             InfraDiagnosticsLog.Write(
                 $"[StudentWorkbookStore] record file state failed path={fullPath} ex={ex.GetType().Name} msg={ex.Message}");
             _lastValidatedFileStates.TryRemove(fullPath, out _);
-        }
-    }
-
-    private static string? TryComputeFileHash(string fullPath)
-    {
-        try
-        {
-            return ComputeFileHash(fullPath);
-        }
-        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
-        {
-            return null;
         }
     }
 

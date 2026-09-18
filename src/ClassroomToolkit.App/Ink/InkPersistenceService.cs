@@ -74,11 +74,10 @@ public sealed class InkPersistenceService
 
         lock (GetDocumentWriteGate(jsonPath))
         {
-            var doc = InkPayloadNormalizer.NormalizeDocument(
-                LoadDocumentWithCache(jsonPath) ?? new InkDocumentData
-                {
-                    SourcePath = sourceFilePath
-                });
+            if (!TryLoadDocumentForWrite(jsonPath, sourceFilePath, out var doc))
+            {
+                return false;
+            }
 
             // Find or create page entry
             var page = doc.Pages.FirstOrDefault(p => p.PageIndex == pageIndex);
@@ -141,6 +140,10 @@ public sealed class InkPersistenceService
 
         lock (GetDocumentWriteGate(jsonPath))
         {
+            if (!TryLoadDocumentForWrite(jsonPath, sourceFilePath, out _))
+            {
+                return false;
+            }
             InkPayloadNormalizer.NormalizeDocument(doc);
             doc.Pages.RemoveAll(p => p.Strokes.Count == 0);
 
@@ -375,6 +378,38 @@ public sealed class InkPersistenceService
         }
     }
 
+    private bool TryLoadDocumentForWrite(string jsonPath, string sourcePath, out InkDocumentData document)
+    {
+        document = new InkDocumentData { SourcePath = sourcePath };
+        try
+        {
+            // Only a genuinely missing file is an empty document. A failed read must
+            // never authorize replacing or deleting recoverable ink from other pages.
+            using var stream = File.OpenRead(jsonPath);
+            var loaded = JsonSerializer.Deserialize<InkDocumentData>(stream, _options);
+            if (loaded == null)
+            {
+                return false;
+            }
+            document = InkPayloadNormalizer.NormalizeDocument(loaded);
+            return true;
+        }
+        catch (FileNotFoundException)
+        {
+            return true;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return true;
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        {
+            InvalidateCache(jsonPath);
+            Debug.WriteLine($"[InkPersistence] refusing overwrite after read failure path={jsonPath} error={ex.Message}");
+            return false;
+        }
+    }
+
     private InkDocumentData? LoadDocumentWithCache(string jsonPath)
     {
         if (!TryGetFileFingerprint(jsonPath, out var fingerprint))
@@ -481,6 +516,14 @@ public sealed class InkPersistenceService
     private static object GetDocumentWriteGate(string jsonPath)
     {
         return DocumentWriteGates.GetOrAdd(jsonPath, static _ => new object());
+    }
+
+    internal static bool ExecuteDocumentWrite(string sourcePath, Func<bool> write)
+    {
+        lock (GetDocumentWriteGate(GetJsonPath(sourcePath)))
+        {
+            return write();
+        }
     }
 
     private static void WriteAllTextAtomically(string path, string content)
