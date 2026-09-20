@@ -1,7 +1,7 @@
 # GEMINI.md — ClassroomToolkit（Gemini 项目级 wrapper）
 **项目**: ClassroomToolkit
 **类型**: Windows WPF (.NET 10)
-**承接来源**: `GlobalUser/GEMINI.md v9.53`
+**承接来源**: `GlobalUser/GEMINI.md v9.82`
 **共同项目规则**: `AGENTS.md`（下方独立 import 行）
 **适用范围**: 项目级（仓库根）
 **最后更新**: 2026-05-23
