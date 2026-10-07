@@ -1,0 +1,49 @@
+using System.Globalization;
+using System.Windows.Data;
+using ClassroomToolkit.App.Photos;
+using AwesomeAssertions;
+
+namespace ClassroomToolkit.Tests.Photos;
+
+public sealed class ImageManagerConvertersTests
+{
+    [Fact]
+    public void MultiplyConverter_ConvertBack_ShouldReturnDoNothing()
+    {
+        var converter = new MultiplyConverter();
+
+        var result = converter.ConvertBack(120.0, typeof(double), string.Empty, CultureInfo.InvariantCulture);
+
+        result.Should().Be(System.Windows.Data.Binding.DoNothing);
+    }
+
+    [Fact]
+    public void FolderVisibilityConverter_ConvertBack_ShouldReturnDoNothing()
+    {
+        var converter = new FolderVisibilityConverter();
+
+        var result = converter.ConvertBack(true, typeof(bool), string.Empty, CultureInfo.InvariantCulture);
+
+        result.Should().Be(System.Windows.Data.Binding.DoNothing);
+    }
+
+    [Fact]
+    public void FileVisibilityConverter_ConvertBack_ShouldReturnDoNothing()
+    {
+        var converter = new FileVisibilityConverter();
+
+        var result = converter.ConvertBack(true, typeof(bool), string.Empty, CultureInfo.InvariantCulture);
+
+        result.Should().Be(System.Windows.Data.Binding.DoNothing);
+    }
+
+    [Fact]
+    public void PdfBackgroundConverter_ConvertBack_ShouldReturnDoNothing()
+    {
+        var converter = new PdfBackgroundConverter();
+
+        var result = converter.ConvertBack(true, typeof(bool), string.Empty, CultureInfo.InvariantCulture);
+
+        result.Should().Be(System.Windows.Data.Binding.DoNothing);
+    }
+}

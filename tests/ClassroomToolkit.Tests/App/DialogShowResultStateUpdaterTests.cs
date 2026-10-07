@@ -1,0 +1,21 @@
+using ClassroomToolkit.App;
+using AwesomeAssertions;
+using Xunit;
+
+namespace ClassroomToolkit.Tests.App;
+
+public sealed class DialogShowResultStateUpdaterTests
+{
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    [InlineData(null, false)]
+    public void MarkFromDialogResult_ShouldMatchExpected(bool? dialogResult, bool expected)
+    {
+        var result = false;
+
+        DialogShowResultStateUpdater.MarkFromDialogResult(ref result, dialogResult);
+
+        result.Should().Be(expected);
+    }
+}

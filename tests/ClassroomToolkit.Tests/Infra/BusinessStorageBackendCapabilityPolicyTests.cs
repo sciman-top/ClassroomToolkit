@@ -1,0 +1,25 @@
+using ClassroomToolkit.Infra.Storage;
+using AwesomeAssertions;
+using Xunit;
+
+namespace ClassroomToolkit.Tests.Infra;
+
+public sealed class BusinessStorageBackendCapabilityPolicyTests
+{
+    [Fact]
+    public void IsSqliteAvailable_ShouldReturnFalse_WhenExperimentalDisabled()
+    {
+        var available = BusinessStorageBackendCapabilityPolicy.IsSqliteAvailable(experimentalEnabled: false);
+
+        available.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsSqliteAvailable_ShouldBeDeterministic_ForSameInput()
+    {
+        var first = BusinessStorageBackendCapabilityPolicy.IsSqliteAvailable(experimentalEnabled: true);
+        var second = BusinessStorageBackendCapabilityPolicy.IsSqliteAvailable(experimentalEnabled: true);
+
+        second.Should().Be(first);
+    }
+}

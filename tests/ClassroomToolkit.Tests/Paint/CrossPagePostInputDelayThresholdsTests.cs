@@ -1,0 +1,17 @@
+using ClassroomToolkit.App.Paint;
+using AwesomeAssertions;
+using Xunit;
+
+namespace ClassroomToolkit.Tests.Paint;
+
+public sealed class CrossPagePostInputDelayThresholdsTests
+{
+    [Fact]
+    public void Thresholds_ShouldMatchStabilizedValues()
+    {
+        CrossPagePostInputDelayThresholds.FallbackDelayMs.Should().Be(CrossPageRuntimeDefaults.PostInputRefreshDelayMs);
+        CrossPagePostInputDelayThresholds.NeighborRenderMinMs.Should().Be(180);
+        CrossPagePostInputDelayThresholds.NeighborMissingMinMs.Should().Be(200);
+        CrossPagePostInputDelayThresholds.ReplayMinMs.Should().Be(220);
+    }
+}

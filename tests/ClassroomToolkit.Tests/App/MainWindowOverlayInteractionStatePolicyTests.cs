@@ -1,0 +1,21 @@
+using ClassroomToolkit.App;
+using AwesomeAssertions;
+using Xunit;
+
+namespace ClassroomToolkit.Tests.App;
+
+public sealed class MainWindowOverlayInteractionStatePolicyTests
+{
+    [Fact]
+    public void Resolve_ShouldMapFlagsToState()
+    {
+        var state = MainWindowOverlayInteractionStatePolicy.Resolve(
+            overlayVisible: true,
+            photoModeActive: false,
+            whiteboardActive: true);
+
+        state.OverlayVisible.Should().BeTrue();
+        state.PhotoModeActive.Should().BeFalse();
+        state.WhiteboardActive.Should().BeTrue();
+    }
+}
