@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Windows;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Windowing;
+using ClassroomToolkit.App.Dialogs;
 
 namespace ClassroomToolkit.App;
 

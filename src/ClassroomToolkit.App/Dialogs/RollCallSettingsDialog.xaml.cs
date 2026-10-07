@@ -5,7 +5,7 @@ using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.Services.Input;
 
-namespace ClassroomToolkit.App;
+namespace ClassroomToolkit.App.Dialogs;
 
 public partial class RollCallSettingsDialog : Window
 {

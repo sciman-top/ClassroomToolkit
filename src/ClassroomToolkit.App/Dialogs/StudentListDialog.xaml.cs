@@ -5,7 +5,7 @@ using ClassroomToolkit.App.Models;
 using ClassroomToolkit.App.Helpers;
 using WpfSize = System.Windows.Size;
 
-namespace ClassroomToolkit.App;
+namespace ClassroomToolkit.App.Dialogs;
 
 public partial class StudentListDialog : Window
 {

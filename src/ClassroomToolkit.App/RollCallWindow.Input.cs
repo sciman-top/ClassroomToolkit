@@ -12,6 +12,7 @@ using ClassroomToolkit.App.RollCall;
 using ClassroomToolkit.Domain.Utilities;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Windowing;
+using ClassroomToolkit.App.Dialogs;
 
 namespace ClassroomToolkit.App;
 

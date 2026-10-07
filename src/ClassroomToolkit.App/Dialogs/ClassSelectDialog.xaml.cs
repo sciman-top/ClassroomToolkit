@@ -2,7 +2,7 @@ using System.Windows;
 using System.Windows.Input;
 using ClassroomToolkit.App.Helpers;
 
-namespace ClassroomToolkit.App;
+namespace ClassroomToolkit.App.Dialogs;
 
 public partial class ClassSelectDialog : Window
 {

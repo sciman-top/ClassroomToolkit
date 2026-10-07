@@ -12,14 +12,14 @@ public sealed class CoreWindowsNoHexColorLiteralContractTests
         {
             GetXamlPath("MainWindow.xaml"),
             GetXamlPath("RollCallWindow.xaml"),
-            GetXamlPath("AboutDialog.xaml"),
-            GetXamlPath("TimerSetDialog.xaml"),
-            GetXamlPath("RollCallSettingsDialog.xaml"),
+            GetXamlPath("Dialogs", "AboutDialog.xaml"),
+            GetXamlPath("Dialogs", "TimerSetDialog.xaml"),
+            GetXamlPath("Dialogs", "RollCallSettingsDialog.xaml"),
             GetXamlPath("Paint", "PaintSettingsDialog.xaml"),
             GetXamlPath("Paint", "PaintOverlayWindow.xaml"),
             GetXamlPath("Photos", "PhotoOverlayWindow.xaml"),
             GetXamlPath("Photos", "ImageManagerWindow.xaml"),
-            GetXamlPath("StudentListDialog.xaml"),
+            GetXamlPath("Dialogs", "StudentListDialog.xaml"),
             GetXamlPath("Diagnostics", "DiagnosticsDialog.xaml")
         };
 

@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Navigation;
 using ClassroomToolkit.App.Helpers;
 
-namespace ClassroomToolkit.App;
+namespace ClassroomToolkit.App.Dialogs;
 
 public partial class AboutDialog : Window
 {

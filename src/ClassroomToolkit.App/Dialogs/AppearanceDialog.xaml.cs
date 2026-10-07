@@ -4,7 +4,7 @@ using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.UI.Themes;
 using ClassroomToolkit.App.Windowing;
 
-namespace ClassroomToolkit.App;
+namespace ClassroomToolkit.App.Dialogs;
 
 public partial class AppearanceDialog : Window
 {

@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Speech.Synthesis;
 using System.Windows;
 
-namespace ClassroomToolkit.App;
+namespace ClassroomToolkit.App.Dialogs;
 
 public partial class RollCallSettingsDialog
 {

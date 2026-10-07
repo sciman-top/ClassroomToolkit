@@ -5,7 +5,7 @@ using System.Windows.Interop;
 using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Windowing;
 
-namespace ClassroomToolkit.App;
+namespace ClassroomToolkit.App.Windowing;
 
 public partial class LauncherBubbleWindow : Window
 {

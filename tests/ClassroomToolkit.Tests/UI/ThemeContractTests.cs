@@ -127,7 +127,7 @@ public sealed class ThemeContractTests
             var manager = new ThemeManager(application);
             manager.Apply(AppTheme.MidnightTeal).Should().BeTrue();
 
-            var dialog = new ClassroomToolkit.App.AppearanceDialog(AppTheme.MidnightTeal.ToString());
+            var dialog = new ClassroomToolkit.App.Dialogs.AppearanceDialog(AppTheme.MidnightTeal.ToString());
             dialog.ThemeSelected += theme => manager.Apply(theme);
 
             try

@@ -9,6 +9,7 @@ using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.UI.Themes;
 using AwesomeAssertions;
+using ClassroomToolkit.App.Dialogs;
 
 namespace ClassroomToolkit.Tests;
 
