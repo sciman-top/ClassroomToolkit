@@ -312,21 +312,6 @@ internal static class ImageManagerWindowingPolicies
                 Reason: ImageManagerActivationReason.None);
     }
 
-    internal static bool ShouldActivate(
-        bool imageManagerTopmost,
-        bool imageManagerActive,
-        bool toolbarActive,
-        bool rollCallActive,
-        bool launcherActive)
-    {
-        return ResolveImageManagerActivation(
-            imageManagerTopmost,
-            imageManagerActive,
-            toolbarActive,
-            rollCallActive,
-            launcherActive).ShouldActivate;
-    }
-
     internal static ImageManagerStateChangeDecision ResolveImageManagerStateChange(ImageManagerStateChangeContext context)
     {
         return ResolveImageManagerStateChange(

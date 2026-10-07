@@ -41,6 +41,36 @@ public sealed class ImageManagerActivationPolicyTests
     }
 }
 
+public sealed class ImageManagerWindowingActivationPolicyTests
+{
+    [Theory]
+    [InlineData(true, false, false, false, false, true, (int)ImageManagerActivationReason.None)]
+    [InlineData(false, false, false, false, false, false, (int)ImageManagerActivationReason.NotTopmostTarget)]
+    [InlineData(true, true, false, false, false, false, (int)ImageManagerActivationReason.AlreadyActive)]
+    [InlineData(true, false, true, false, false, false, (int)ImageManagerActivationReason.BlockedByToolbar)]
+    [InlineData(true, false, false, true, false, false, (int)ImageManagerActivationReason.BlockedByRollCall)]
+    [InlineData(true, false, false, false, true, false, (int)ImageManagerActivationReason.BlockedByLauncher)]
+    public void Resolve_ShouldExplainWhetherImageManagerCanActivate(
+        bool imageManagerTopmost,
+        bool imageManagerActive,
+        bool toolbarActive,
+        bool rollCallActive,
+        bool launcherActive,
+        bool expectedShouldActivate,
+        int expectedReason)
+    {
+        var decision = ImageManagerWindowingPolicies.ResolveImageManagerActivation(
+            imageManagerTopmost,
+            imageManagerActive,
+            toolbarActive,
+            rollCallActive,
+            launcherActive);
+
+        decision.ShouldActivate.Should().Be(expectedShouldActivate);
+        decision.Reason.Should().Be((ImageManagerActivationReason)expectedReason);
+    }
+}
+
 public sealed class ImageManagerStateChangePolicyTests
 {
     [Fact]
