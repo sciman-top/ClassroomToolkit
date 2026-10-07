@@ -53,16 +53,23 @@ internal static class StudentResourceLocator
         }
 
         var persistentRoot = Path.Combine(localAppData, AppDataFolderName, DataFolderName);
-        TryCopyLegacyClassroomData(baseDirectory, persistentRoot);
-        return persistentRoot;
+        return ResolveMigratedDataRoot(baseDirectory, persistentRoot);
     }
 
     // Development runs share the deployed data/ layout; legacy solution-root files are copied in on first run.
     internal static string ResolveDevelopmentDataRoot(string solutionDir)
     {
         var devDataRoot = Path.Combine(solutionDir, DataFolderName);
-        TryCopyLegacyClassroomData(solutionDir, devDataRoot);
-        return devDataRoot;
+        return ResolveMigratedDataRoot(solutionDir, devDataRoot);
+    }
+
+    internal static string ResolveMigratedDataRoot(string legacyRoot, string targetRoot)
+    {
+        TryCopyLegacyClassroomData(legacyRoot, targetRoot);
+        return File.Exists(Path.Combine(legacyRoot, WorkbookFileName))
+            && !File.Exists(Path.Combine(targetRoot, WorkbookFileName))
+            ? legacyRoot
+            : targetRoot;
     }
 
     // Package updates replace application directories, so classroom data must live outside them.

@@ -12,6 +12,75 @@ namespace ClassroomToolkit.Tests;
 
 public sealed class AppSettingsServiceTests
 {
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    [InlineData(true, true, true)]
+    public void Save_ShouldRequireServiceReloadAfterReadFailure(
+        bool useJson,
+        bool failureDuringSave,
+        bool reloadUnderlyingStore)
+    {
+        var path = TestPathHelper.CreateFilePath("ctool_settings_recovery", useJson ? ".json" : ".ini");
+        try
+        {
+            ISettingsDocumentStore store = useJson
+                ? new JsonSettingsDocumentStoreAdapter(path)
+                : new SettingsDocumentStoreAdapter(path);
+            var service = new AppSettingsService(store);
+            var settings = service.Load();
+            settings.BrushSize = 24;
+            service.Save(settings);
+            var data = store.Load();
+            data["Paint"]["custom_recovery_key"] = "preserve";
+            store.Save(data);
+            var original = File.ReadAllBytes(path);
+
+            using (var lockedFile = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                if (failureDuringSave)
+                {
+                    var saveWhileLocked = () => service.Save(settings);
+                    saveWhileLocked.Should().Throw<InvalidOperationException>();
+                }
+                else
+                {
+                    settings = service.Load();
+                    settings.BrushSize.Should().Be(new AppSettings().BrushSize);
+                }
+                service.IsOverwriteBlocked.Should().BeTrue();
+            }
+
+            if (reloadUnderlyingStore)
+            {
+                store.Load();
+                store.IsOverwriteBlocked.Should().BeFalse();
+            }
+            service.IsOverwriteBlocked.Should().BeTrue();
+            var saveAfterUnlock = () => service.Save(settings);
+            saveAfterUnlock.Should().Throw<InvalidOperationException>();
+            File.ReadAllBytes(path).Should().Equal(original);
+            service.IsOverwriteBlocked.Should().BeTrue();
+
+            var recovered = service.Load();
+            recovered.BrushSize.Should().Be(24);
+            service.IsOverwriteBlocked.Should().BeFalse();
+            recovered.BrushSize = 18;
+            service.Save(recovered);
+            service.Load().BrushSize.Should().Be(18);
+            store.Load()["Paint"]["custom_recovery_key"].Should().Be("preserve");
+        }
+        finally
+        {
+            DeleteSettingsArtifacts(path);
+        }
+    }
+
     [Fact]
     public void Load_ShouldReadThemeFromIniUiSection()
     {

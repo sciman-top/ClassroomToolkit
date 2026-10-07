@@ -8,6 +8,43 @@ namespace ClassroomToolkit.Tests;
 public sealed class SettingsRepositoryTests
 {
     [Fact]
+    public void Save_ShouldRemainBlockedAfterUnlockUntilSuccessfulExplicitReload()
+    {
+        var path = TestPathHelper.CreateFilePath("ctool_repository_recovery", ".ini");
+        const string original = "[_meta]\n_settings_version=2.0\n[Paint]\nvalue=99\nunknown=preserve\n";
+        File.WriteAllText(path, original);
+        try
+        {
+            var repository = new SettingsRepository(path);
+            Dictionary<string, Dictionary<string, string>> fallback;
+            using (var lockedFile = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                fallback = repository.Load();
+                repository.LastLoadSucceeded.Should().BeFalse();
+            }
+            fallback["Paint"] = new Dictionary<string, string> { ["value"] = "9" };
+
+            var saveAfterUnlock = () => repository.Save(fallback);
+
+            saveAfterUnlock.Should().Throw<InvalidOperationException>();
+            repository.LastLoadSucceeded.Should().BeFalse();
+            File.ReadAllText(path).Should().Be(original);
+            var recovered = repository.Load();
+            repository.LastLoadSucceeded.Should().BeTrue();
+            recovered["Paint"]["value"].Should().Be("99");
+            recovered["Paint"]["value"] = "18";
+            repository.Save(recovered);
+            var persisted = repository.Load();
+            persisted["Paint"]["value"].Should().Be("18");
+            persisted["Paint"]["unknown"].Should().Be("preserve");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void Save_ShouldRefuseMigration_WhenBackupPathContainsDifferentContent()
     {
         var path = TestPathHelper.CreateFilePath("ctool_settings_migration_collision", ".ini");
