@@ -271,7 +271,12 @@ public sealed class IniSettingsStore
                 continue;
             }
 
-            if (currentSection != null && TryParseKeyValue(trimmed, out var key, out _)
+            // 注释行（'#'/';' 开头，与 Load 的跳过语义一致）可能内嵌 '=' 或 ':'：
+            // 一旦进入键值分支，会被当作“调用方已删除的键”而整行丢弃，静默吃掉用户注释。
+            if (currentSection != null
+                && !trimmed.StartsWith('#')
+                && !trimmed.StartsWith(';')
+                && TryParseKeyValue(trimmed, out var key, out _)
                 && TryGetSection(data, currentSection, out var sectionData))
             {
                 if (!TryGetValue(sectionData, key, out var replacement))

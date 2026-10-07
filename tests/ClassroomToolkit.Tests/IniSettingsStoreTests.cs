@@ -147,6 +147,35 @@ public sealed class IniSettingsStoreTests
     }
 
     [Fact]
+    public void Save_ShouldPreserveCommentLinesContainingSeparatorsInsideKnownSections()
+    {
+        var path = TestPathHelper.CreateFilePath("ctool_ini_comment_separator", ".ini");
+        try
+        {
+            File.WriteAllText(
+                path,
+                "[Paint]\n; note: keep brush sizes in sync=classroom\n# tip: value=9 fits board\nbrush_base_size=8\n");
+            var store = new IniSettingsStore(path);
+            store.TryLoad(out var data).Should().BeTrue();
+            data["Paint"]["brush_base_size"] = "9";
+
+            store.Save(data);
+
+            var saved = File.ReadAllText(path);
+            saved.Should().Contain("; note: keep brush sizes in sync=classroom");
+            saved.Should().Contain("# tip: value=9 fits board");
+            saved.Should().Contain("brush_base_size=9");
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
     public void Save_ShouldThrowArgumentNullException_WhenDataIsNull()
     {
         var path = TestPathHelper.CreateFilePath("ctool_ini_save_null", ".ini");
