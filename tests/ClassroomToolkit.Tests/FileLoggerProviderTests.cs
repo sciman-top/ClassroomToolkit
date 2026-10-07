@@ -10,6 +10,29 @@ namespace ClassroomToolkit.Tests;
 public sealed class FileLoggerProviderTests
 {
     [Fact]
+    public void ShutdownWait_ShouldPreserveTaskOwnedHandle_AfterTimeout()
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handle = ((IAsyncResult)completion.Task).AsyncWaitHandle;
+        var wait = typeof(FileLoggerProvider).GetMethod("WaitTaskSafely", BindingFlags.Static | BindingFlags.NonPublic)!;
+        try
+        {
+            wait.Invoke(null, [completion.Task, 1]).Should().Be(false);
+            handle.SafeWaitHandle.IsClosed.Should().BeFalse();
+
+            completion.SetResult();
+
+            wait.Invoke(null, [completion.Task, 1000]).Should().Be(true);
+            handle.WaitOne(0).Should().BeTrue();
+        }
+        finally
+        {
+            completion.TrySetResult();
+            completion.Task.Dispose();
+        }
+    }
+
+    [Fact]
     public void Constructor_ShouldThrowArgumentException_WhenLogDirectoryIsBlank()
     {
         Action act = () => _ = new FileLoggerProvider(" ");

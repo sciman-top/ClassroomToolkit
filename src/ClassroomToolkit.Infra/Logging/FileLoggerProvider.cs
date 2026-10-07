@@ -334,7 +334,8 @@ public class FileLoggerProvider : ILoggerProvider
         try
         {
             var asyncResult = (IAsyncResult)task;
-            using var waitHandle = asyncResult.AsyncWaitHandle;
+            // 此句柄由 Task 持有并在后续等待中复用；超时不能释放它，否则取消后的再次等待失效。
+            var waitHandle = asyncResult.AsyncWaitHandle;
             if (timeoutMs == Timeout.Infinite)
             {
                 waitHandle.WaitOne();

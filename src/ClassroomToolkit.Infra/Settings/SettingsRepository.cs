@@ -64,7 +64,7 @@ public sealed class SettingsRepository
                 ? pair.Value!
                 : new Dictionary<string, string>(pair.Value, StringComparer.OrdinalIgnoreCase);
         }
-        if (!dataToSave.TryGetValue(SettingsMigrator.MetaSection, out var meta))
+        if (!dataToSave.TryGetValue(SettingsMigrator.MetaSection, out var meta) || meta == null)
         {
             meta = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             dataToSave[SettingsMigrator.MetaSection] = meta;

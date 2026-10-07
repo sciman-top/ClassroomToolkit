@@ -8,6 +8,32 @@ namespace ClassroomToolkit.Tests;
 public sealed class SettingsRepositoryTests
 {
     [Fact]
+    public void Save_ShouldInitializeNullMetaWithoutMutatingCaller()
+    {
+        var path = TestPathHelper.CreateFilePath("ctool_null_meta", ".ini");
+        try
+        {
+            var repository = new SettingsRepository(path);
+            var data = new Dictionary<string, Dictionary<string, string>>
+            {
+                [SettingsMigrator.MetaSection] = null!,
+                ["Paint"] = new() { ["custom"] = "keep" }
+            };
+
+            repository.Save(data);
+
+            data[SettingsMigrator.MetaSection].Should().BeNull();
+            var loaded = repository.Load();
+            loaded[SettingsMigrator.MetaSection][SettingsMigrator.VersionKey].Should().Be(SettingsMigrator.CurrentVersion);
+            loaded["Paint"]["custom"].Should().Be("keep");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void Save_ShouldRemainBlockedAfterUnlockUntilSuccessfulExplicitReload()
     {
         var path = TestPathHelper.CreateFilePath("ctool_repository_recovery", ".ini");

@@ -6,6 +6,39 @@ namespace ClassroomToolkit.Tests;
 public sealed class TimerEngineTests
 {
     [Fact]
+    public void Reminder_ShouldCapAfterExcludingCompletion_WhenManyIntervalsElapsed()
+    {
+        var engine = new TimerEngine();
+        engine.SetCountdown(0, 10);
+        engine.ReminderIntervalSeconds = 1;
+        var reminders = 0;
+        engine.ReminderTriggered += () => reminders++;
+        engine.Start();
+
+        engine.Tick(TimeSpan.FromSeconds(10));
+
+        reminders.Should().Be(3);
+        engine.Running.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(10, 3, 0)]
+    [InlineData(12, 4, 1)]
+    public void Reminder_ShouldUseRestoredIntervalPhase_AtCompletion(int countdown, int remaining, int expected)
+    {
+        var engine = new TimerEngine();
+        engine.SetState(TimerMode.Countdown, countdown, remaining, 0, running: true);
+        engine.ReminderIntervalSeconds = 3;
+        var reminders = 0;
+        engine.ReminderTriggered += () => reminders++;
+
+        engine.Tick(TimeSpan.FromSeconds(remaining));
+
+        reminders.Should().Be(expected);
+        engine.Running.Should().BeFalse();
+    }
+
+    [Fact]
     public void SetCountdown_ShouldClampToIntMax_WhenInputWouldOverflow()
     {
         var engine = new TimerEngine();

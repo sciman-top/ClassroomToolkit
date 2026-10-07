@@ -12,6 +12,42 @@ namespace ClassroomToolkit.Tests;
 [Trait("Gate", "CoreContract")]
 public sealed class GlobalHookServiceLifecycleContractTests
 {
+    [Theory]
+    [InlineData(2, false)]
+    [InlineData(3, false)]
+    [InlineData(2, true)]
+    [InlineData(3, true)]
+    public async Task RegisterHookAsync_ShouldRollback_WhenPostStartOrFinalValidityCheckThrows(int failingCheck, bool stopFails)
+    {
+        using var service = new GlobalHookService();
+        var binding = new KeyBinding(VirtualKey.Tab, KeyModifiers.None);
+        var fake = new FakeKeyboardHook { BoundBinding = binding, ThrowOnDispose = stopFails };
+        service.HookFactory = _ => fake;
+        var checks = 0;
+        var notifications = 0;
+        var callbacks = 0;
+        service.HookUnavailable += () => notifications++;
+
+        var started = await service.RegisterHookAsync(
+            bindings: [binding],
+            callback: _ => callbacks++,
+            shouldKeepActive: () => ++checks == failingCheck
+                ? throw new InvalidOperationException("validity-check-failed")
+                : true);
+
+        started.Should().BeFalse();
+        fake.Raise(binding);
+        callbacks.Should().Be(0);
+        notifications.Should().Be(1);
+        fake.IsActive.Should().Be(stopFails);
+        fake.Disposed.Should().Be(!stopFails);
+        service.ResidualHookCount.Should().Be(stopFails ? 1 : 0);
+        fake.ThrowOnDispose = false;
+        service.UnregisterAll();
+        fake.IsActive.Should().BeFalse();
+        service.ResidualHookCount.Should().Be(0);
+    }
+
     [Fact]
     public async Task RegisterHookAsync_ShouldRollbackStartedHooksAndNotify_WhenLaterHookStartThrows()
     {

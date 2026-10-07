@@ -144,6 +144,9 @@ public sealed class StudentWorkbookStore
         {
             if (TryEnsureNormalizationBackup(path))
             {
+                // 此次显式重载已完整解析且原字节已有备份；旧的读取失败闩锁不能阻止恢复。
+                // 后续 Save 仍核对外部修改；任一步失败由 LoadOrCreate 重新封锁覆盖。
+                _overwriteBlockedPaths.TryRemove(path, out _);
                 Save(normalizedWorkbook, path, normalizedRollStateJson);
             }
             else
@@ -617,8 +620,7 @@ public sealed class StudentWorkbookStore
 
         if (normalized.Count == 0)
         {
-            needsRepair = true;
-            return CreateTemplateWorkbook().Workbook;
+            throw new InvalidDataException("学生工作簿没有班级工作表，已阻止用示例名单覆盖原文件。");
         }
 
         return new StudentWorkbook(normalized, normalized.Keys.FirstOrDefault());

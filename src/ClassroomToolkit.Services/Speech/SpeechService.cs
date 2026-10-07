@@ -116,6 +116,11 @@ public class SpeechService : IDisposable
         bool shouldNotifyUnavailable;
         lock (_syncRoot)
         {
+            if (_disposed)
+            {
+                return;
+            }
+
             shouldNotifyUnavailable = SpeechServiceUnavailableNotificationPolicy.ShouldNotify(ref _unavailableNotifiedState);
         }
 
@@ -141,10 +146,12 @@ public class SpeechService : IDisposable
             _disposed = true;
             synthesizerToDispose = _synthesizer;
             _synthesizer = null;
+            SpeechUnavailable = null;
         }
 
         if (synthesizerToDispose != null)
         {
+            synthesizerToDispose.SpeakCompleted -= OnSpeakCompleted;
             try
             {
                 synthesizerToDispose.SpeakAsyncCancelAll();

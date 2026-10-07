@@ -194,23 +194,22 @@ public sealed class TimerEngine
         var total = (long)_reminderCounter + elapsedSeconds;
         var triggerCount = total / _reminderSeconds;
         _reminderCounter = (int)(total % _reminderSeconds);
-        var triggers = (int)Math.Min(triggerCount, 3);
-        if (triggers <= 0)
+        if (triggerCount <= 0)
         {
             return;
         }
 
         // Do not emit a "midway reminder" exactly at the completion boundary.
-        // When countdown length is an exact multiple of reminder interval,
-        // completion already provides the terminal feedback signal.
+        // Use the current reminder phase: restored timers restart that phase,
+        // so the original countdown length cannot identify this boundary.
+        // Exclude completion before capping overdue reminders.
         if (_secondsLeft == 0
-            && _countdownSeconds > 0
-            && _countdownSeconds % _reminderSeconds == 0
-            && triggers > 0)
+            && _reminderCounter == 0)
         {
-            triggers--;
+            triggerCount--;
         }
 
+        var triggers = (int)Math.Min(triggerCount, 3);
         if (triggers <= 0)
         {
             return;

@@ -10,6 +10,19 @@ namespace ClassroomToolkit.Tests;
 public sealed class SpeechServiceTests
 {
     [Fact]
+    public void SpeakCompletedError_ShouldNotNotifyAfterDispose()
+    {
+        using var service = new SpeechService();
+        var notifications = 0;
+        service.SpeechUnavailable += () => notifications++;
+        service.Dispose();
+
+        service.RaiseSpeakCompletedForTest(new InvalidOperationException("late-device-error"));
+
+        notifications.Should().Be(0);
+    }
+
+    [Fact]
     public async Task SpeakAsync_InvalidVoice_ShouldNotifyUnavailableOnlyOnce()
     {
         var service = new SpeechService();

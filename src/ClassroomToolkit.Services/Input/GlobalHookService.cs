@@ -105,6 +105,8 @@ public class GlobalHookService : IDisposable
                 }
 
                 var hook = HookFactory(binding);
+                // Start 后的有效性检查也可能抛异常；在任何 await 或外部回调前持有清理责任。
+                startedHooks.Add(hook);
                 hook.BindingTriggered += callback;
 
                 try
@@ -116,8 +118,6 @@ public class GlobalHookService : IDisposable
                 catch (Exception ex) when (IsNonFatal(ex))
                 {
                     Debug.WriteLine($"[GlobalHookService] Start hook failed: {ex.GetType().Name} - {ex.Message}");
-                    hook.BindingTriggered -= callback;
-                    RetainIfStopFailed(hook, "register-failed");
                     CleanupHooks(startedHooks, callback);
                     NotifyHookUnavailable();
                     return false;
@@ -125,22 +125,31 @@ public class GlobalHookService : IDisposable
 
                 if (IsDisposed() || !shouldKeepActive())
                 {
-                    hook.BindingTriggered -= callback;
-                    RetainIfStopFailed(hook, "register-aborted");
                     CleanupHooks(startedHooks, callback);
                     return false;
                 }
 
                 if (!hook.IsActive)
                 {
-                    hook.BindingTriggered -= callback;
-                    RetainIfStopFailed(hook, "register-inactive");
                     CleanupHooks(startedHooks, callback);
                     NotifyHookUnavailable();
                     return false;
                 }
-                startedHooks.Add(hook);
             }
+
+            if (IsDisposed() || !shouldKeepActive())
+            {
+                CleanupHooks(startedHooks, callback);
+                return false;
+            }
+
+            if (!TryTrackActiveHooks(startedHooks))
+            {
+                CleanupHooks(startedHooks, callback);
+                return false;
+            }
+
+            return true;
         }
         catch (Exception ex) when (IsNonFatal(ex))
         {
@@ -149,20 +158,6 @@ public class GlobalHookService : IDisposable
             NotifyHookUnavailable();
             return false;
         }
-
-        if (IsDisposed() || !shouldKeepActive())
-        {
-            CleanupHooks(startedHooks, callback);
-            return false;
-        }
-
-        if (!TryTrackActiveHooks(startedHooks))
-        {
-            CleanupHooks(startedHooks, callback);
-            return false;
-        }
-
-        return true;
     }
 
     public void UnregisterAll()

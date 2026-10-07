@@ -9,6 +9,81 @@ namespace ClassroomToolkit.Tests;
 public sealed class StudentWorkbookStoreTests
 {
     [Fact]
+    public void LoadOrCreate_ShouldRecoverAfterReadFailure_WhenRepairedFileRequiresNormalization()
+    {
+        var path = TestPathHelper.CreateFilePath("ctool_repaired_reload", ".xlsx");
+        var backupDirectory = Path.Combine(Path.GetDirectoryName(path)!, "backups");
+        var backupPattern = $"{Path.GetFileNameWithoutExtension(path)}.bak-normalize-*.xlsx";
+        try
+        {
+            File.WriteAllText(path, "corrupt-workbook");
+            var store = new StudentWorkbookStore();
+            var failedLoad = () => store.LoadOrCreate(path);
+            failedLoad.Should().Throw<Exception>();
+            using (var xl = new XLWorkbook())
+            {
+                var sheet = xl.Worksheets.Add("恢复班级");
+                sheet.Cell(1, 1).Value = "学号";
+                sheet.Cell(1, 2).Value = "姓名";
+                sheet.Cell(2, 1).Value = "01";
+                sheet.Cell(2, 2).Value = "真实学生";
+                xl.SaveAs(path);
+            }
+            var repairedBytes = File.ReadAllBytes(path);
+
+            var loaded = store.LoadOrCreate(path);
+
+            loaded.OverwriteBlocked.Should().BeFalse();
+            loaded.Workbook.GetActiveRoster().Students.Should().ContainSingle(s => s.Name == "真实学生");
+            var backups = Directory.GetFiles(backupDirectory, backupPattern);
+            backups.Should().ContainSingle();
+            File.ReadAllBytes(backups[0]).Should().Equal(repairedBytes);
+            store.Save(loaded.Workbook, path, loaded.RollStateJson);
+        }
+        finally
+        {
+            File.Delete(path);
+            if (Directory.Exists(backupDirectory))
+            {
+                foreach (var backup in Directory.GetFiles(backupDirectory, backupPattern))
+                {
+                    File.Delete(backup);
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public void LoadOrCreate_ShouldPreserveAndBlockWorkbookContainingOnlyRollState()
+    {
+        var path = TestPathHelper.CreateFilePath("ctool_state_only", ".xlsx");
+        try
+        {
+            using (var xl = new XLWorkbook())
+            {
+                var sheet = xl.Worksheets.Add(StudentWorkbookStore.RollStateSheetName);
+                sheet.Cell(1, 1).Value = StudentWorkbookStore.RollStateColumn;
+                sheet.Cell(2, 1).Value = RollStateSerializer.SerializeWorkbookStates(new());
+                xl.SaveAs(path);
+            }
+            var original = File.ReadAllBytes(path);
+            var store = new StudentWorkbookStore();
+
+            var load = () => store.LoadOrCreate(path);
+            load.Should().Throw<InvalidDataException>();
+            File.ReadAllBytes(path).Should().Equal(original);
+            var fallback = new StudentWorkbook(new Dictionary<string, ClassRoster>(), null);
+            var save = () => store.Save(fallback, path, null);
+            save.Should().Throw<StudentWorkbookOverwriteRefusedException>();
+            File.ReadAllBytes(path).Should().Equal(original);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void SaveAndLoad_ShouldPreserveStudentsAndRollState()
     {
         var tempPath = TestPathHelper.CreateFilePath("ctool_workbook", ".xlsx");
