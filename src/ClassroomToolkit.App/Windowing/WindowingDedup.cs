@@ -101,6 +101,48 @@ internal readonly record struct ExplicitForegroundRetouchRuntimeState(
         LastRetouchUtc: WindowDedupDefaults.UnsetTimestampUtc);
 }
 
+/// <summary>
+/// 时间戳+状态去重的共享判定结果。LauncherBubbleVisibleChanged 与 SurfaceZOrderDecision
+/// 两个 DedupPolicy 的决策树同构，统一委托到 TimestampDedupCore 后各自映射回私有 Reason 枚举。
+/// </summary>
+internal enum TimestampDedupOutcome
+{
+    ApplyNoHistory = 0,
+    ApplyDedupDisabledByInterval = 1,
+    ApplyUnsetTimestamp = 2,
+    SuppressDuplicateWithinWindow = 3,
+    Apply = 4
+}
+
+internal static class TimestampDedupCore
+{
+    internal static TimestampDedupOutcome Resolve(
+        bool hasHistory,
+        bool timestampIsSet,
+        bool isDuplicate,
+        double elapsedMs,
+        double minIntervalMs)
+    {
+        if (!hasHistory)
+        {
+            return TimestampDedupOutcome.ApplyNoHistory;
+        }
+        if (minIntervalMs <= WindowDedupDefaults.MinIntervalMs)
+        {
+            return TimestampDedupOutcome.ApplyDedupDisabledByInterval;
+        }
+        if (!timestampIsSet)
+        {
+            return TimestampDedupOutcome.ApplyUnsetTimestamp;
+        }
+        if (isDuplicate && elapsedMs < minIntervalMs)
+        {
+            return TimestampDedupOutcome.SuppressDuplicateWithinWindow;
+        }
+        return TimestampDedupOutcome.Apply;
+    }
+}
+
 internal static class ExplicitForegroundRetouchStateUpdater
 {
     internal static void MarkRetouched(

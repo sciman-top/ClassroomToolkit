@@ -112,37 +112,41 @@ internal static class SurfaceZOrderDecisionDedupPolicy
         DateTime nowUtc,
         int minIntervalMs = FloatingInteractiveDedupIntervalDefaults.DefaultMs)
     {
-        if (!lastDecision.HasValue
-            || minIntervalMs <= WindowDedupDefaults.MinIntervalMs
-            || lastAppliedUtc == WindowDedupDefaults.UnsetTimestampUtc)
+        var outcome = TimestampDedupCore.Resolve(
+            hasHistory: lastDecision.HasValue,
+            timestampIsSet: lastAppliedUtc != WindowDedupDefaults.UnsetTimestampUtc,
+            isDuplicate: !currentDecision.ForceEnforceZOrder
+                && currentDecision.Equals(lastDecision.GetValueOrDefault()),
+            elapsedMs: (nowUtc - lastAppliedUtc).TotalMilliseconds,
+            minIntervalMs: minIntervalMs);
+
+        return outcome switch
         {
-            var reason = !lastDecision.HasValue
-                ? SurfaceZOrderDecisionDedupReason.NoHistory
-                : minIntervalMs <= WindowDedupDefaults.MinIntervalMs
-                    ? SurfaceZOrderDecisionDedupReason.DedupDisabledByInterval
-                    : SurfaceZOrderDecisionDedupReason.UnsetTimestamp;
-            return new SurfaceZOrderDecisionDedupDecision(
+            TimestampDedupOutcome.SuppressDuplicateWithinWindow => new SurfaceZOrderDecisionDedupDecision(
+                ShouldApply: false,
+                LastDecision: lastDecision.GetValueOrDefault(),
+                LastAppliedUtc: lastAppliedUtc,
+                Reason: SurfaceZOrderDecisionDedupReason.SkippedWithinDedupWindow),
+            TimestampDedupOutcome.ApplyDedupDisabledByInterval => new SurfaceZOrderDecisionDedupDecision(
                 ShouldApply: true,
                 LastDecision: currentDecision,
                 LastAppliedUtc: nowUtc,
-                Reason: reason);
-        }
-
-        if (!currentDecision.ForceEnforceZOrder
-            && currentDecision.Equals(lastDecision.Value)
-            && (nowUtc - lastAppliedUtc).TotalMilliseconds < minIntervalMs)
-        {
-            return new SurfaceZOrderDecisionDedupDecision(
-                ShouldApply: false,
-                LastDecision: lastDecision.Value,
-                LastAppliedUtc: lastAppliedUtc,
-                Reason: SurfaceZOrderDecisionDedupReason.SkippedWithinDedupWindow);
-        }
-
-        return new SurfaceZOrderDecisionDedupDecision(
-            ShouldApply: true,
-            LastDecision: currentDecision,
-            LastAppliedUtc: nowUtc,
-            Reason: SurfaceZOrderDecisionDedupReason.Applied);
+                Reason: SurfaceZOrderDecisionDedupReason.DedupDisabledByInterval),
+            TimestampDedupOutcome.ApplyUnsetTimestamp => new SurfaceZOrderDecisionDedupDecision(
+                ShouldApply: true,
+                LastDecision: currentDecision,
+                LastAppliedUtc: nowUtc,
+                Reason: SurfaceZOrderDecisionDedupReason.UnsetTimestamp),
+            TimestampDedupOutcome.ApplyNoHistory => new SurfaceZOrderDecisionDedupDecision(
+                ShouldApply: true,
+                LastDecision: currentDecision,
+                LastAppliedUtc: nowUtc,
+                Reason: SurfaceZOrderDecisionDedupReason.NoHistory),
+            _ => new SurfaceZOrderDecisionDedupDecision(
+                ShouldApply: true,
+                LastDecision: currentDecision,
+                LastAppliedUtc: nowUtc,
+                Reason: SurfaceZOrderDecisionDedupReason.Applied)
+        };
     }
 }

@@ -182,38 +182,41 @@ internal static class LauncherBubbleVisibleChangedDedupPolicy
         DateTime nowUtc,
         int minIntervalMs = FloatingInteractiveDedupIntervalDefaults.DefaultMs)
     {
-        if (!lastVisibleState.HasValue
-            || minIntervalMs <= WindowDedupDefaults.MinIntervalMs
-            || lastEventUtc == WindowDedupDefaults.UnsetTimestampUtc)
-        {
-            var reason = !lastVisibleState.HasValue
-                ? LauncherBubbleVisibleChangedDedupReason.NoHistory
-                : minIntervalMs <= WindowDedupDefaults.MinIntervalMs
-                    ? LauncherBubbleVisibleChangedDedupReason.DedupDisabledByInterval
-                    : LauncherBubbleVisibleChangedDedupReason.UnsetTimestamp;
-            return new LauncherBubbleVisibleChangedDedupDecision(
-                ShouldApply: true,
-                Reason: reason,
-                LastVisibleState: currentVisibleState,
-                LastEventUtc: nowUtc);
-        }
+        var outcome = TimestampDedupCore.Resolve(
+            hasHistory: lastVisibleState.HasValue,
+            timestampIsSet: lastEventUtc != WindowDedupDefaults.UnsetTimestampUtc,
+            isDuplicate: lastVisibleState.GetValueOrDefault() == currentVisibleState,
+            elapsedMs: (nowUtc - lastEventUtc).TotalMilliseconds,
+            minIntervalMs: minIntervalMs);
 
-        var duplicatedState = lastVisibleState.Value == currentVisibleState;
-        var withinWindow = (nowUtc - lastEventUtc).TotalMilliseconds < minIntervalMs;
-        if (duplicatedState && withinWindow)
+        return outcome switch
         {
-            return new LauncherBubbleVisibleChangedDedupDecision(
+            TimestampDedupOutcome.SuppressDuplicateWithinWindow => new LauncherBubbleVisibleChangedDedupDecision(
                 ShouldApply: false,
                 Reason: LauncherBubbleVisibleChangedDedupReason.DuplicateWithinWindow,
                 LastVisibleState: lastVisibleState,
-                LastEventUtc: lastEventUtc);
-        }
-
-        return new LauncherBubbleVisibleChangedDedupDecision(
-            ShouldApply: true,
-            Reason: LauncherBubbleVisibleChangedDedupReason.Applied,
-            LastVisibleState: currentVisibleState,
-            LastEventUtc: nowUtc);
+                LastEventUtc: lastEventUtc),
+            TimestampDedupOutcome.ApplyDedupDisabledByInterval => new LauncherBubbleVisibleChangedDedupDecision(
+                ShouldApply: true,
+                Reason: LauncherBubbleVisibleChangedDedupReason.DedupDisabledByInterval,
+                LastVisibleState: currentVisibleState,
+                LastEventUtc: nowUtc),
+            TimestampDedupOutcome.ApplyUnsetTimestamp => new LauncherBubbleVisibleChangedDedupDecision(
+                ShouldApply: true,
+                Reason: LauncherBubbleVisibleChangedDedupReason.UnsetTimestamp,
+                LastVisibleState: currentVisibleState,
+                LastEventUtc: nowUtc),
+            TimestampDedupOutcome.ApplyNoHistory => new LauncherBubbleVisibleChangedDedupDecision(
+                ShouldApply: true,
+                Reason: LauncherBubbleVisibleChangedDedupReason.NoHistory,
+                LastVisibleState: currentVisibleState,
+                LastEventUtc: nowUtc),
+            _ => new LauncherBubbleVisibleChangedDedupDecision(
+                ShouldApply: true,
+                Reason: LauncherBubbleVisibleChangedDedupReason.Applied,
+                LastVisibleState: currentVisibleState,
+                LastEventUtc: nowUtc)
+        };
     }
 }
 
