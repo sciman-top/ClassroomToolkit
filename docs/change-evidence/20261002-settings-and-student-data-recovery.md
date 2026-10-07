@@ -27,3 +27,7 @@
 ## 回滚范围
 
 回滚仅撤销本次四个实现文件的改动：`AppSettingsService.cs`、`SettingsRepository.cs`、`StudentResourceLocator.cs`、`.github/workflows/locked-restore.yml`，以及对应回归测试和本说明。保留其他既有工作区改动。由于数据格式未变且迁移源文件保留，无需数据格式回退；回滚实现会重新引入上述保护缺陷。
+
+## 附录（2026-10-07 治理减负切片）
+
+漏洞门禁步骤随后续治理减负切片调整：CI 改为 `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-dependency-vulnerabilities.ps1` 原生调用并显式 `exit $LASTEXITCODE`（退出码语义更确定），原针对内嵌 shell 片段的回归测试 `DependencyVulnerabilityGateTests` 随之移除；脚本自身的退出码行为（干净 `exit 0`、漏洞 `exit 2`、扫描失败抛错）保持本说明所述语义不变。本附录只记录增量，不改写上文 2026-10-02 当日的验证事实。

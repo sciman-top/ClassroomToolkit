@@ -23,7 +23,7 @@ jobs:
       - name: Vulnerability Gate
         shell: pwsh
         run: |
-          & ./scripts/quality/check-dependency-vulnerabilities.ps1 -Solution ClassroomToolkit.sln
+          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-dependency-vulnerabilities.ps1 -Solution ClassroomToolkit.sln
           exit $LASTEXITCODE
 
       - name: Build

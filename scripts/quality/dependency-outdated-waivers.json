@@ -4,53 +4,53 @@
       "package": "Microsoft.ApplicationInsights",
       "owner": "engineering",
       "status": "active",
-      "reason": "Pinned transitively by current stable xunit.v3 MTP chain; planned for dedicated migration once stable upstream line is available.",
-      "expires_at": "2026-10-15",
-      "recovery_plan": "Upgrade the xunit.v3 MTP dependency chain in a dedicated test-platform compatibility slice once the stable upstream dependency range moves beyond 1.9.1.",
+      "reason": "Pinned transitively by the current xunit.v3 3.2.x MTP chain (1.9.1); MTP 2.5.0 stable exists but its compatibility with xunit.v3 3.2.2 is unverified, so the chain moves only as part of the dedicated xUnit 4 migration slice. Re-reviewed 2026-10-07.",
+      "expires_at": "2027-01-15",
+      "recovery_plan": "Upgrade the whole MTP chain together with the xUnit 4 migration slice; verify discovery counts, filters, CI artifacts, and full quality gates before removing this waiver.",
       "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"
     },
     {
       "package": "Microsoft.Testing.Extensions.Telemetry",
       "owner": "engineering",
       "status": "active",
-      "reason": "Pinned transitively by current stable xunit.v3 MTP chain; planned for dedicated migration once stable upstream line is available.",
-      "expires_at": "2026-10-15",
-      "recovery_plan": "Upgrade the xunit.v3 MTP dependency chain in a dedicated test-platform compatibility slice once the stable upstream dependency range moves beyond 1.9.1.",
+      "reason": "Pinned transitively by the current xunit.v3 3.2.x MTP chain (1.9.1); MTP 2.5.0 stable exists but its compatibility with xunit.v3 3.2.2 is unverified, so the chain moves only as part of the dedicated xUnit 4 migration slice. Re-reviewed 2026-10-07.",
+      "expires_at": "2027-01-15",
+      "recovery_plan": "Upgrade the whole MTP chain together with the xUnit 4 migration slice; verify discovery counts, filters, CI artifacts, and full quality gates before removing this waiver.",
       "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"
     },
     {
       "package": "Microsoft.Testing.Extensions.TrxReport.Abstractions",
       "owner": "engineering",
       "status": "active",
-      "reason": "Pinned transitively by current stable xunit.v3 MTP chain; planned for dedicated migration once stable upstream line is available.",
-      "expires_at": "2026-10-15",
-      "recovery_plan": "Upgrade the xunit.v3 MTP dependency chain in a dedicated test-platform compatibility slice once the stable upstream dependency range moves beyond 1.9.1.",
+      "reason": "Pinned transitively by the current xunit.v3 3.2.x MTP chain (1.9.1); MTP 2.5.0 stable exists but its compatibility with xunit.v3 3.2.2 is unverified, so the chain moves only as part of the dedicated xUnit 4 migration slice. Re-reviewed 2026-10-07.",
+      "expires_at": "2027-01-15",
+      "recovery_plan": "Upgrade the whole MTP chain together with the xUnit 4 migration slice; verify discovery counts, filters, CI artifacts, and full quality gates before removing this waiver.",
       "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"
     },
     {
       "package": "Microsoft.Testing.Platform",
       "owner": "engineering",
       "status": "active",
-      "reason": "Pinned transitively by current stable xunit.v3 MTP chain; planned for dedicated migration once stable upstream line is available.",
-      "expires_at": "2026-10-15",
-      "recovery_plan": "Upgrade the xunit.v3 MTP dependency chain in a dedicated test-platform compatibility slice once the stable upstream dependency range moves beyond 1.9.1.",
+      "reason": "Pinned transitively by the current xunit.v3 3.2.x MTP chain (1.9.1); MTP 2.5.0 stable exists but its compatibility with xunit.v3 3.2.2 is unverified, so the chain moves only as part of the dedicated xUnit 4 migration slice. Re-reviewed 2026-10-07.",
+      "expires_at": "2027-01-15",
+      "recovery_plan": "Upgrade the whole MTP chain together with the xUnit 4 migration slice; verify discovery counts, filters, CI artifacts, and full quality gates before removing this waiver.",
       "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"
     },
     {
       "package": "Microsoft.Testing.Platform.MSBuild",
       "owner": "engineering",
       "status": "active",
-      "reason": "Pinned transitively by current stable xunit.v3 MTP chain; planned for dedicated migration once stable upstream line is available.",
-      "expires_at": "2026-10-15",
-      "recovery_plan": "Upgrade the xunit.v3 MTP dependency chain in a dedicated test-platform compatibility slice once the stable upstream dependency range moves beyond 1.9.1.",
+      "reason": "Pinned transitively by the current xunit.v3 3.2.x MTP chain (1.9.1); MTP 2.5.0 stable exists but its compatibility with xunit.v3 3.2.2 is unverified, so the chain moves only as part of the dedicated xUnit 4 migration slice. Re-reviewed 2026-10-07.",
+      "expires_at": "2027-01-15",
+      "recovery_plan": "Upgrade the whole MTP chain together with the xUnit 4 migration slice; verify discovery counts, filters, CI artifacts, and full quality gates before removing this waiver.",
       "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"
     },
     {
       "package": "SixLabors.Fonts",
       "owner": "engineering",
       "status": "active",
-      "reason": "Major-version migration can change font metrics and workbook/image export behavior; requires a dedicated visual/export compatibility slice before upgrade.",
-      "expires_at": "2026-10-15",
+      "reason": "Major-version migration can change font metrics and workbook/image export behavior; requires a dedicated visual/export compatibility slice before upgrade. Re-reviewed 2026-10-07.",
+      "expires_at": "2027-01-15",
       "recovery_plan": "Validate workbook layout, image export, font metrics, and classroom display output against SixLabors.Fonts 3.x before removing the 2.1.3 compatibility pin.",
       "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"
     },
@@ -59,8 +59,8 @@
       "package_regex": "^(xunit\\.v3(?:\\..+)?|xunit\\.runner\\.visualstudio|xunit\\.analyzers)$",
       "owner": "engineering",
       "status": "active",
-      "reason": "xUnit 4 is a major test-platform migration; the current 3.x suite is green and should not be upgraded without runner, analyzer, MTP, and CI compatibility validation.",
-      "expires_at": "2026-10-15",
+      "reason": "xUnit 4 is a major test-platform migration; the current 3.x suite is green and should not be upgraded without runner, analyzer, MTP, and CI compatibility validation. Re-reviewed 2026-10-07.",
+      "expires_at": "2027-01-15",
       "recovery_plan": "Migrate the xUnit packages as one dedicated slice, update runner and analyzer contracts, then verify discovery counts, filters, CI artifacts, and full quality gates before removing this waiver.",
       "evidence_link": "docs/change-evidence/20260817-deep-audit-closeout.md"
     },
@@ -68,10 +68,19 @@
       "package": "Microsoft.Bcl.AsyncInterfaces",
       "owner": "engineering",
       "status": "active",
-      "reason": "Version 6.0.0 is a transitive dependency of xunit.v3.common 3.2.2 and is not consumed directly by production or test source.",
-      "expires_at": "2026-10-15",
+      "reason": "Version 6.0.0 is a transitive dependency of xunit.v3.common 3.2.2 and is not consumed directly by production or test source. Re-reviewed 2026-10-07.",
+      "expires_at": "2027-01-15",
       "recovery_plan": "Remove this waiver together with the xUnit 4 migration after the upstream xunit.v3.common dependency no longer resolves Microsoft.Bcl.AsyncInterfaces 6.0.0.",
       "evidence_link": "docs/change-evidence/20260817-deep-audit-closeout.md"
+    },
+    {
+      "package": "Velopack",
+      "owner": "engineering",
+      "status": "active",
+      "reason": "1.2.161 is a rolling in-minor build of the runtime auto-update component; upgrading it changes the update chain consumed by Program.cs and AutoUpdateBootstrapper and requires a dedicated release/update verification slice. Added 2026-10-07.",
+      "expires_at": "2027-01-15",
+      "recovery_plan": "Upgrade Velopack in a dedicated slice together with release packaging verification, including update bootstrap behavior on a classroom machine, before removing this waiver.",
+      "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"
     }
   ]
 }

@@ -81,7 +81,7 @@ Invoke-NativeStep -Name "build" -FilePath "dotnet" -Arguments @(
 $stableTestsScript = Join-Path $PSScriptRoot "..\validation\run-stable-tests.ps1"
 $powerShellExe = Resolve-PowerShellExecutable
 if (Test-Path -LiteralPath $stableTestsScript) {
-    Invoke-NativeStep -Name "stable-tests" -FilePath $powerShellExe -Arguments @(
+    $stableTestArgs = @(
         "-NoProfile",
         "-ExecutionPolicy",
         "Bypass",
@@ -92,7 +92,14 @@ if (Test-Path -LiteralPath $stableTestsScript) {
         "-Profile",
         $Profile,
         "-SkipBuild"
-    ) -RetryCount 1
+    )
+    # standard 把稳定测试与核心契约并入同一次 dotnet test：两级过滤的并集
+    # 恰为 Gate!=Performance（两组 Gate 标记互斥），省去一次测试主机启动；
+    # quick/full 维持分步执行，CI 亦保持分步以便步骤级报告。
+    if ($Profile -eq "standard") {
+        $stableTestArgs += @("-FilterOverride", "Gate!=Performance")
+    }
+    Invoke-NativeStep -Name "stable-tests" -FilePath $powerShellExe -Arguments $stableTestArgs -RetryCount 1
 }
 else {
     Invoke-NativeStep -Name "test(full)" -FilePath "dotnet" -Arguments @(
@@ -104,16 +111,18 @@ else {
     ) -RetryCount 1
 }
 
-Invoke-NativeStep -Name "test(contract)" -FilePath "dotnet" -Arguments @(
-    "test",
-    "tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj",
-    "-c",
-    $Configuration,
-    "-m:1",
-    "--no-build",
-    "--filter",
-    "Gate=CoreContract"
-) -RetryCount 1
+if ($Profile -ne "standard") {
+    Invoke-NativeStep -Name "test(contract)" -FilePath "dotnet" -Arguments @(
+        "test",
+        "tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj",
+        "-c",
+        $Configuration,
+        "-m:1",
+        "--no-build",
+        "--filter",
+        "Gate=CoreContract"
+    ) -RetryCount 1
+}
 
 Invoke-NativeStep -Name "hotspot" -FilePath $powerShellExe -Arguments @(
     "-NoProfile",

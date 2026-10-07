@@ -2,7 +2,7 @@
 **项目契约**: 2.0
 **全局规则复核**: 9.84
 **类型**: Windows WPF (.NET 10)
-**最后更新**: 2026-10-01
+**最后更新**: 2026-10-07
 
 ## 1. 当前落点与目标归宿
 - 当前落点：`ClassroomToolkit.sln` 是课堂教学工具主解决方案，现有 WPF、Interop、配置与数据兼容是运行真相。
@@ -31,8 +31,8 @@
 ## C. 门禁、证据与回滚
 - fixed order：`build -> test -> contract/invariant -> hotspot`。
 - build：`dotnet build ClassroomToolkit.sln -c Debug`
-- test：standard 排除下述 5 组 contract 与墙钟性能微基准，避免重复和机器争用；full 纳入性能预算；quick 仅跑高风险精选回归。
-- contract/invariant：运行标记为 `Gate=CoreContract` 的 5 组架构与 Interop 生命周期契约。
+- test：standard 排除墙钟性能微基准并在同一次执行内纳入下述 contract（过滤即 `Gate!=Performance`）；full 纳入性能预算；quick 仅跑高风险精选回归。
+- contract/invariant：运行标记为 `Gate=CoreContract` 的 5 组架构与 Interop 生命周期契约；quick/full 与 CI 分步执行，standard 已并入同一次测试执行。
 - hotspot：`pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-hotspot-line-budgets.ps1`
 - focused：低风险切片运行受影响测试与 build；不要求为普通文案、样式或局部实现重复整套门禁。
 - standard：`pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile standard -Configuration Debug`，仅用于共享 seam、高风险路径或阶段收口。

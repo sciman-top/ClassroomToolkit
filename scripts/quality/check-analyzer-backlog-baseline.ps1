@@ -107,10 +107,6 @@ if (-not (Test-Path -LiteralPath $resolvedBaselinePath)) {
     throw "[analyzer-backlog] Missing baseline file: $BaselinePath"
 }
 
-if (-not (Test-Path -LiteralPath $resolvedBaselinePath)) {
-    throw "[analyzer-backlog] Missing baseline file: $BaselinePath"
-}
-
 $baseline = Get-Content -LiteralPath $resolvedBaselinePath -Raw | ConvertFrom-Json
 $baselineConfiguration = [string]$baseline.configuration
 if ([string]::IsNullOrWhiteSpace($Configuration)) {

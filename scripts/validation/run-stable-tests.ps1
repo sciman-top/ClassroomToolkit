@@ -6,7 +6,10 @@ param(
     [string]$TestProject = "tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj",
     [switch]$SkipBuild,
     [switch]$DryRun,
-    [string]$SummaryPath = ""
+    [string]$SummaryPath = "",
+    # 非空时替代 profile 推导的过滤表达式，供聚合门禁把 stable 与 contract
+    # 合并为同一次 dotnet test 执行；留空保持既有 profile 语义（CI 分步路径）。
+    [string]$FilterOverride = ""
 )
 
 Set-StrictMode -Version Latest
@@ -86,7 +89,12 @@ if (-not [string]::IsNullOrWhiteSpace($summaryDir)) {
     New-Item -Path $summaryDir -ItemType Directory -Force | Out-Null
 }
 
-$filter = Resolve-StableFilter -StableProfile $Profile
+$filter = if (-not [string]::IsNullOrWhiteSpace($FilterOverride)) {
+    $FilterOverride
+}
+else {
+    Resolve-StableFilter -StableProfile $Profile
+}
 $command = @(
     "test",
     $resolvedProjectPath,
