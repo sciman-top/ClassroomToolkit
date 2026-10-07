@@ -9,7 +9,11 @@ internal static class LauncherBubbleVisibleChangedSuppressionPolicy
         int defaultMs = LauncherBubbleVisibleChangedSuppressionDefaults.TransitionCooldownMs,
         int interactiveMs = LauncherBubbleVisibleChangedSuppressionDefaults.InteractiveTransitionCooldownMs)
     {
-        var interactiveScene = overlayVisible && (photoModeActive || whiteboardActive);
-        return interactiveScene ? interactiveMs : defaultMs;
+        return InteractiveSceneIntervalPolicy.ResolveMs(
+            overlayVisible,
+            photoModeActive,
+            whiteboardActive,
+            defaultMs,
+            interactiveMs);
     }
 }

@@ -9,9 +9,10 @@ internal static class FloatingTopmostDriftRepairEnforcePolicy
             return false;
         }
 
-        var interactiveScene = snapshot.OverlayVisible
-                               && (snapshot.PhotoModeActive || snapshot.WhiteboardActive);
-        if (!interactiveScene)
+        if (!InteractiveSceneIntervalPolicy.IsInteractiveScene(
+                snapshot.OverlayVisible,
+                snapshot.PhotoModeActive,
+                snapshot.WhiteboardActive))
         {
             return false;
         }

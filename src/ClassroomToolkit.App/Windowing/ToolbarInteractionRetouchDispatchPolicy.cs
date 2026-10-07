@@ -18,8 +18,10 @@ internal static class ToolbarInteractionRetouchDispatchPolicy
             return ToolbarInteractionRetouchDispatchMode.Immediate;
         }
 
-        var interactiveScene = snapshot.OverlayVisible
-                               && (snapshot.PhotoModeActive || snapshot.WhiteboardActive);
+        var interactiveScene = InteractiveSceneIntervalPolicy.IsInteractiveScene(
+            snapshot.OverlayVisible,
+            snapshot.PhotoModeActive,
+            snapshot.WhiteboardActive);
         var launcherDrift = snapshot.LauncherVisible && !snapshot.LauncherTopmost;
         if (trigger == ToolbarInteractionRetouchTrigger.Activated && interactiveScene && launcherDrift)
         {

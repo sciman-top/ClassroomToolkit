@@ -13,8 +13,11 @@ internal static class ToolbarInteractionRetouchIntervalPolicy
             return defaultMs;
         }
 
-        var interactiveScene = snapshot.OverlayVisible
-                               && (snapshot.PhotoModeActive || snapshot.WhiteboardActive);
-        return interactiveScene ? interactiveMs : defaultMs;
+        return InteractiveSceneIntervalPolicy.ResolveMs(
+            snapshot.OverlayVisible,
+            snapshot.PhotoModeActive,
+            snapshot.WhiteboardActive,
+            defaultMs,
+            interactiveMs);
     }
 }

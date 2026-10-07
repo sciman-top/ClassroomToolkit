@@ -9,7 +9,11 @@ internal static class LauncherBubbleVisibleChangedDedupIntervalPolicy
         int defaultMs = FloatingInteractiveDedupIntervalDefaults.DefaultMs,
         int interactiveMs = FloatingInteractiveDedupIntervalDefaults.InteractiveMs)
     {
-        var interactiveScene = overlayVisible && (photoModeActive || whiteboardActive);
-        return interactiveScene ? interactiveMs : defaultMs;
+        return InteractiveSceneIntervalPolicy.ResolveMs(
+            overlayVisible,
+            photoModeActive,
+            whiteboardActive,
+            defaultMs,
+            interactiveMs);
     }
 }

@@ -25,8 +25,10 @@ internal static class ToolbarInteractionRetouchDecisionPolicy
         ToolbarInteractionRetouchSnapshot snapshot,
         ToolbarInteractionRetouchTrigger trigger)
     {
-        var interactiveScene = snapshot.OverlayVisible
-                               && (snapshot.PhotoModeActive || snapshot.WhiteboardActive);
+        var interactiveScene = InteractiveSceneIntervalPolicy.IsInteractiveScene(
+            snapshot.OverlayVisible,
+            snapshot.PhotoModeActive,
+            snapshot.WhiteboardActive);
         if (!interactiveScene)
         {
             return new ToolbarInteractionRetouchDecision(
