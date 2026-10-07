@@ -153,21 +153,12 @@ public partial class PaintOverlayWindow
         Height = rect.Height;
     }
 
-    private void UpdatePhotoContentTransforms(bool enabled)
+    private void UpdatePhotoContentTransforms()
     {
-        var applyPhotoTransform = PhotoWindowPolicies.ShouldApplyPhotoTransform(
-            enabledRequested: enabled,
-            photoModeActive: _photoModeActive,
-            boardActive: IsBoardActive(),
-            transformAvailable: _photoContentTransform != null);
-        RasterImage.RenderTransform = applyPhotoTransform
-            ? _photoContentTransform!
-            : _photoInkPanCompensation;
-        if (!applyPhotoTransform)
-        {
-            ResetPhotoInkPanCompensation(syncToCurrentPhotoTranslate: !IsPhotoInkModeActive());
-            SyncPhotoInteractiveRefreshAnchor();
-        }
+        // RasterImage is viewport-sized, so applying the photo transform clips off-viewport ink.
+        RasterImage.RenderTransform = _photoInkPanCompensation;
+        ResetPhotoInkPanCompensation(syncToCurrentPhotoTranslate: !IsPhotoInkModeActive());
+        SyncPhotoInteractiveRefreshAnchor();
         UpdatePhotoInkClip();
     }
 

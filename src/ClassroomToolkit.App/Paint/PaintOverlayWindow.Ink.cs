@@ -121,10 +121,7 @@ public partial class PaintOverlayWindow
                     stroke.CachedRibbonGeometries = null;
                 }
             }
-            if (InkPersistencePolicies.ShouldMarkStrokeChanged(
-                    geometryPathChanged,
-                    bloomGeometryChanged,
-                    ribbonGeometryChanged))
+            if (geometryPathChanged || bloomGeometryChanged || ribbonGeometryChanged)
             {
                 changed = true;
             }

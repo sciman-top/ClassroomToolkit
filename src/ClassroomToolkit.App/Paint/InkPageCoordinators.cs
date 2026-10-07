@@ -435,7 +435,7 @@ internal static class InkPageLoadCoordinator
                 LoadedStrokeCount: cached.Count);
         }
 
-        if (InkPersistencePolicies.ShouldLoadPersistedInk(allowDiskFallback)
+        if (allowDiskFallback
             && hasInkPersistence
             && tryLoadInkFromSidecar())
         {

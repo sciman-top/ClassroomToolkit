@@ -35,15 +35,15 @@ public sealed class InkStartupCleanupLogPolicyTests
     }
 }
 
-public sealed class RemoteHookUnavailableNotificationPolicyTests
+public sealed class NotificationOncePolicyTests
 {
     [Fact]
     public void ShouldNotify_ShouldReturnTrue_OnlyOnFirstCall()
     {
         var state = 0;
 
-        var first = NotificationAndExitPolicies.ShouldNotifyRemoteHookUnavailableNotification(ref state);
-        var second = NotificationAndExitPolicies.ShouldNotifyRemoteHookUnavailableNotification(ref state);
+        var first = NotificationAndExitPolicies.TryClaimNotification(ref state);
+        var second = NotificationAndExitPolicies.TryClaimNotification(ref state);
 
         first.Should().BeTrue();
         second.Should().BeFalse();
@@ -58,7 +58,7 @@ public sealed class RemoteHookUnavailableNotificationPolicyTests
         var tasks = Enumerable.Range(0, 32)
             .Select(_ => Task.Run(() =>
             {
-                results.Add(NotificationAndExitPolicies.ShouldNotifyRemoteHookUnavailableNotification(ref state));
+                results.Add(NotificationAndExitPolicies.TryClaimNotification(ref state));
             }))
             .ToArray();
 
@@ -72,12 +72,12 @@ public sealed class RemoteHookUnavailableNotificationPolicyTests
     public void Reset_ShouldAllowNotifyAgain()
     {
         var state = 0;
-        NotificationAndExitPolicies.ShouldNotifyRemoteHookUnavailableNotification(ref state).Should().BeTrue();
-        NotificationAndExitPolicies.ShouldNotifyRemoteHookUnavailableNotification(ref state).Should().BeFalse();
+        NotificationAndExitPolicies.TryClaimNotification(ref state).Should().BeTrue();
+        NotificationAndExitPolicies.TryClaimNotification(ref state).Should().BeFalse();
 
         NotificationAndExitPolicies.Reset(ref state);
 
-        NotificationAndExitPolicies.ShouldNotifyRemoteHookUnavailableNotification(ref state).Should().BeTrue();
+        NotificationAndExitPolicies.TryClaimNotification(ref state).Should().BeTrue();
     }
 }
 
@@ -166,39 +166,5 @@ public sealed class SettingsSaveFailureNotificationPolicyTests
 
         plan.ShouldNotify.Should().BeFalse();
         plan.NextNotifiedState.Should().BeTrue();
-    }
-}
-
-public sealed class SpeechUnavailableNotificationPolicyTests
-{
-    [Fact]
-    public void ShouldNotify_ShouldReturnTrue_OnlyOnFirstCall()
-    {
-        var state = 0;
-
-        var first = NotificationAndExitPolicies.ShouldNotifySpeechUnavailableNotification(ref state);
-        var second = NotificationAndExitPolicies.ShouldNotifySpeechUnavailableNotification(ref state);
-
-        first.Should().BeTrue();
-        second.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task ShouldNotify_ShouldAllowOnlyOneWinner_UnderConcurrency()
-    {
-        var state = 0;
-        var results = new ConcurrentBag<bool>();
-
-        var tasks = Enumerable.Range(0, 32)
-            .Select(_ => Task.Run(() =>
-            {
-                results.Add(NotificationAndExitPolicies.ShouldNotifySpeechUnavailableNotification(ref state));
-            }))
-            .ToArray();
-
-        await Task.WhenAll(tasks);
-
-        results.Count(result => result).Should().Be(1);
-        results.Count(result => !result).Should().Be(31);
     }
 }

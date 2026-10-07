@@ -53,39 +53,6 @@ public sealed class PhotoBackgroundVisibilityPolicyTests
     }
 }
 
-public sealed class PhotoContentTransformPolicyTests
-{
-    [Fact]
-    public void ShouldApplyPhotoTransform_ShouldReturnFalse_WhenAllConditionsMet()
-    {
-        PhotoWindowPolicies.ShouldApplyPhotoTransform(
-            enabledRequested: true,
-            photoModeActive: true,
-            boardActive: false,
-            transformAvailable: true).Should().BeFalse();
-    }
-
-    [Fact]
-    public void ShouldApplyPhotoTransform_ShouldReturnFalse_WhenBoardIsActive()
-    {
-        PhotoWindowPolicies.ShouldApplyPhotoTransform(
-            enabledRequested: true,
-            photoModeActive: true,
-            boardActive: true,
-            transformAvailable: true).Should().BeFalse();
-    }
-
-    [Fact]
-    public void ShouldApplyPhotoTransform_ShouldReturnFalse_WhenTransformUnavailable()
-    {
-        PhotoWindowPolicies.ShouldApplyPhotoTransform(
-            enabledRequested: true,
-            photoModeActive: true,
-            boardActive: false,
-            transformAvailable: false).Should().BeFalse();
-    }
-}
-
 public sealed class PhotoCrossPageSequencePolicyTests
 {
     [Fact]

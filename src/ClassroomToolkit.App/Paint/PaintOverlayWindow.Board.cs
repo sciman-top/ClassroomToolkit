@@ -45,7 +45,7 @@ public partial class PaintOverlayWindow
         if (isActive && !wasActive)
         {
             DispatchSessionEvent(new EnterWhiteboardEvent());
-            UpdatePhotoContentTransforms(enabled: false);
+            UpdatePhotoContentTransforms();
             if (!_photoModeActive)
             {
                 RecoverOverlayFullscreenBounds();
@@ -77,7 +77,7 @@ public partial class PaintOverlayWindow
                 PresentationSource: resume.PresentationSource));
             if (_photoModeActive)
             {
-                UpdatePhotoContentTransforms(enabled: true);
+                UpdatePhotoContentTransforms();
             }
             if (!_photoModeActive)
             {

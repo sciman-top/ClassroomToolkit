@@ -305,7 +305,7 @@ public partial class RollCallWindow
 
     private void NotifyRemoteHookError()
     {
-        if (!NotificationAndExitPolicies.ShouldNotifyRemoteHookUnavailableNotification(ref _remoteHookUnavailableNotifiedState))
+        if (!NotificationAndExitPolicies.TryClaimNotification(ref _remoteHookUnavailableNotifiedState))
         {
             return;
         }

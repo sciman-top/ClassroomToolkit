@@ -78,17 +78,12 @@ internal sealed class ApplicationExitCoordinator
 
 internal static class NotificationAndExitPolicies
 {
-    internal static bool ShouldNotifySpeechUnavailableNotification(ref int notifiedState)
-    {
-        return Interlocked.Exchange(ref notifiedState, 1) == 0;
-    }
-
     internal static bool IsNotified(ref int notifiedState)
     {
         return Volatile.Read(ref notifiedState) != 0;
     }
 
-    internal static bool ShouldNotifyRemoteHookUnavailableNotification(ref int notifiedState)
+    internal static bool TryClaimNotification(ref int notifiedState)
     {
         return Interlocked.Exchange(ref notifiedState, 1) == 0;
     }

@@ -447,36 +447,6 @@ internal static class InkPersistencePolicies
             ShouldRequestRefresh: true);
     }
 
-    internal static bool ShouldMarkStrokeChanged(
-        bool geometryPathChanged,
-        bool bloomGeometryChanged,
-        bool ribbonGeometryChanged)
-    {
-        return geometryPathChanged
-            || bloomGeometryChanged
-            || ribbonGeometryChanged;
-    }
-
-    internal static bool ShouldLoadPersistedInk(bool allowDiskFallback)
-    {
-        return allowDiskFallback;
-    }
-
-    internal static bool ShouldTrackWal(bool inkSaveEnabled)
-    {
-        return inkSaveEnabled;
-    }
-
-    internal static bool ShouldRecoverWal(bool inkSaveEnabled)
-    {
-        return inkSaveEnabled;
-    }
-
-    internal static bool ShouldRetainRuntimeCacheOnPhotoExit(bool inkSaveEnabled)
-    {
-        return inkSaveEnabled;
-    }
-
     internal static bool ShouldUsePartialClear(
         bool clipAvailable,
         Int32Rect clipPixelRect,

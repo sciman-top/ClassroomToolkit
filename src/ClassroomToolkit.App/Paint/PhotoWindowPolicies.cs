@@ -153,18 +153,6 @@ internal static class PhotoWindowPolicies
             : Visibility.Collapsed;
     }
 
-    internal static bool ShouldApplyPhotoTransform(
-        bool enabledRequested,
-        bool photoModeActive,
-        bool boardActive,
-        bool transformAvailable)
-    {
-        // RasterImage is backed by a viewport-sized bitmap. Applying the photo transform to that
-        // bitmap makes off-viewport photo-space strokes render outside the bitmap and disappear
-        // when the page is panned back into view.
-        return false;
-    }
-
     internal static (IReadOnlyList<string> Sequence, int CurrentIndex) Normalize(
         IReadOnlyList<string>? sequence,
         int currentIndex)

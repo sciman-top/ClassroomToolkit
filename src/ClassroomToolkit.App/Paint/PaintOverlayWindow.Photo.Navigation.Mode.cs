@@ -139,7 +139,7 @@ public partial class PaintOverlayWindow
         _photoModeActive = true;
         _photoRenderQualityRestoreTimer.Stop();
         ApplyPhotoRenderQualityMode(useLowQualityScaling: false, forceApply: true);
-        UpdatePhotoContentTransforms(enabled: true);
+        UpdatePhotoContentTransforms();
         _photoFullscreen = wasFullscreen;
         _photoRestoreFullscreenPending = false;
         _presentationFullscreenActive = false;
@@ -206,7 +206,7 @@ public partial class PaintOverlayWindow
         _foregroundPhotoActive = false;
         FlushPhotoTransformSave();
         SaveCurrentPageOnNavigate(forceBackground: false);
-        if (!InkPersistencePolicies.ShouldRetainRuntimeCacheOnPhotoExit(_inkSaveEnabled))
+        if (!_inkSaveEnabled)
         {
             EvictRuntimeInkCacheForClosedPhotoSession();
         }
@@ -229,7 +229,7 @@ public partial class PaintOverlayWindow
         ApplyPhotoRenderQualityMode(useLowQualityScaling: false, forceApply: true);
         _photoUnboundedInkCanvasEnabled = false;
         _boardSuspendedPhotoCache = false;
-        UpdatePhotoContentTransforms(enabled: false);
+        UpdatePhotoContentTransforms();
         _photoFullscreen = false;
         _photoRestoreFullscreenPending = false;
         _photoDocumentIsPdf = false;

@@ -385,7 +385,7 @@ public partial class RollCallWindow
 
     private void NotifySpeechError()
     {
-        if (!NotificationAndExitPolicies.ShouldNotifySpeechUnavailableNotification(ref _speechUnavailableNotifiedState))
+        if (!NotificationAndExitPolicies.TryClaimNotification(ref _speechUnavailableNotifiedState))
         {
             return;
         }
