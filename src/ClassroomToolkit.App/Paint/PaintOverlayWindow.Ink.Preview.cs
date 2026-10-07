@@ -75,22 +75,32 @@ public partial class PaintOverlayWindow
             return;
         }
 
-        _visualHost.UpdateVisual(dc =>
+        // 书写期间每帧调用：传方法组（编译器缓存委托）而非捕获 this 的 lambda，
+        // 避免逐帧闭包+委托堆分配。
+        _visualHost.UpdateVisual(RenderPreviewContent);
+    }
+
+    private void RenderPreviewContent(DrawingContext dc)
+    {
+        var renderer = _activeRenderer;
+        if (renderer == null)
         {
-            _activeRenderer.Render(dc);
-            if (TryResolvePredictedBrushSegment(
-                    out var p0,
-                    out var p1,
-                    out var p2,
-                    out var w0,
-                    out var w1,
-                    out var w2,
-                    out var predictionState))
-            {
-                var previewColor = EffectiveBrushColor();
-                DrawPredictedBrushSegment(dc, previewColor, p0, p1, p2, w0, w1, w2, predictionState);
-            }
-        });
+            return;
+        }
+
+        renderer.Render(dc);
+        if (TryResolvePredictedBrushSegment(
+                out var p0,
+                out var p1,
+                out var p2,
+                out var w0,
+                out var w1,
+                out var w2,
+                out var predictionState))
+        {
+            var previewColor = EffectiveBrushColor();
+            DrawPredictedBrushSegment(dc, previewColor, p0, p1, p2, w0, w1, w2, predictionState);
+        }
     }
 
     private bool TryResolvePredictedBrushSegment(

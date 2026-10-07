@@ -399,23 +399,31 @@ internal static class StylusOrientationResolver
             return false;
         }
 
-        var resolveResult = PaintActionInvoker.TryInvoke(() =>
+        // 触控采样热路径：每个样本解析 4 个方向属性，此处不得引入闭包/委托分配
+        // （原 TryInvoke(lambda) 每属性一次闭包+委托堆分配）。
+        double resolvedRaw;
+        double resolvedMin;
+        double resolvedMax;
+        try
         {
-            var resolvedRaw = stylusPoint.GetPropertyValue(property);
+            resolvedRaw = stylusPoint.GetPropertyValue(property);
             var info = description.GetPropertyInfo(property);
-            var resolvedMin = info.Minimum;
-            var resolvedMax = info.Maximum;
-            var valid = double.IsFinite(resolvedRaw) && double.IsFinite(resolvedMin) && double.IsFinite(resolvedMax);
-            return (Valid: valid, Raw: resolvedRaw, Min: resolvedMin, Max: resolvedMax);
-        }, fallback: (Valid: false, Raw: 0d, Min: 0d, Max: 0d));
-        if (!resolveResult.Valid)
+            resolvedMin = info.Minimum;
+            resolvedMax = info.Maximum;
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.Windowing.WindowingExceptionFilterPolicy.IsNonFatal(ex))
         {
             return false;
         }
 
-        raw = resolveResult.Raw;
-        min = resolveResult.Min;
-        max = resolveResult.Max;
+        if (!double.IsFinite(resolvedRaw) || !double.IsFinite(resolvedMin) || !double.IsFinite(resolvedMax))
+        {
+            return false;
+        }
+
+        raw = resolvedRaw;
+        min = resolvedMin;
+        max = resolvedMax;
         return true;
     }
 }
@@ -588,6 +596,7 @@ internal sealed class StylusPressureSignalAnalyzer
 
     private readonly Queue<double> _samples = new();
     private readonly Queue<bool> _endpointFlags = new();
+    private readonly HashSet<int> _distinctPressureBuckets = new();
     private int _endpointCount;
 
     public StylusPressureDeviceProfile Profile { get; private set; } = StylusPressureDeviceProfile.Unknown;
@@ -596,6 +605,7 @@ internal sealed class StylusPressureSignalAnalyzer
     {
         _samples.Clear();
         _endpointFlags.Clear();
+        _distinctPressureBuckets.Clear();
         _endpointCount = 0;
         Profile = StylusPressureDeviceProfile.Unknown;
     }
@@ -664,7 +674,8 @@ internal sealed class StylusPressureSignalAnalyzer
 
         double min = 1.0;
         double max = 0.0;
-        var buckets = new HashSet<int>();
+        // 每触控样本调用：复用容器避免逐样本 HashSet 堆分配。
+        _distinctPressureBuckets.Clear();
         foreach (var value in _samples)
         {
             if (value < min)
@@ -675,11 +686,11 @@ internal sealed class StylusPressureSignalAnalyzer
             {
                 max = value;
             }
-            buckets.Add((int)Math.Round(value * StylusPressureAnalysisDefaults.BucketScale));
+            _distinctPressureBuckets.Add((int)Math.Round(value * StylusPressureAnalysisDefaults.BucketScale));
         }
 
         double range = max - min;
-        int distinctCount = buckets.Count;
+        int distinctCount = _distinctPressureBuckets.Count;
         double endpointRatio = _samples.Count == 0 ? 0 : (double)_endpointCount / _samples.Count;
 
         if (endpointRatio >= EndpointPseudoRatioThreshold && distinctCount <= EndpointDistinctMax)
