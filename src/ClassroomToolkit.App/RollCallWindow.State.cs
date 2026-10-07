@@ -187,7 +187,7 @@ public partial class RollCallWindow
 
         if (saveFailure != null)
         {
-            var notificationPlan = SettingsSaveFailureNotificationPolicy.Resolve(_settingsSaveFailedNotified);
+            var notificationPlan = NotificationAndExitPolicies.Resolve(_settingsSaveFailedNotified);
             SettingsSaveFailureNotificationStateUpdater.ApplyNotificationPlan(
                 ref _settingsSaveFailedNotified,
                 notificationPlan);
@@ -333,7 +333,7 @@ public partial class RollCallWindow
 
     private void SuppressRollClicks(TimeSpan duration)
     {
-        _suppressRollUntil = RollCallClickSuppressionPolicy.ExtendSuppressUntil(
+        _suppressRollUntil = NotificationAndExitPolicies.ExtendSuppressUntil(
             _suppressRollUntil,
             GetCurrentUtcTimestamp(),
             duration);
@@ -341,7 +341,7 @@ public partial class RollCallWindow
 
     private bool ShouldSuppressRollClick()
     {
-        return RollCallClickSuppressionPolicy.ShouldSuppress(
+        return NotificationAndExitPolicies.ShouldSuppress(
             _suppressRollUntil,
             GetCurrentUtcTimestamp());
     }
@@ -385,7 +385,7 @@ public partial class RollCallWindow
 
     private void NotifySpeechError()
     {
-        if (!SpeechUnavailableNotificationPolicy.ShouldNotify(ref _speechUnavailableNotifiedState))
+        if (!NotificationAndExitPolicies.ShouldNotifySpeechUnavailableNotification(ref _speechUnavailableNotifiedState))
         {
             return;
         }

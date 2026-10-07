@@ -24,7 +24,7 @@ public partial class MainWindow
             OverlayVisible: IsOverlayVisibleForWindowing(),
             ImageManagerVisible: imageManagerWindow.IsVisible,
             ImageManagerWindowState: imageManagerWindow.WindowState);
-        var openPlan = ImageManagerVisibilityTransitionPolicy.ResolveOpen(openContext);
+        var openPlan = ImageManagerWindowingPolicies.ResolveOpenImageManagerVisibilityTransition(openContext);
         ApplyImageManagerOpenTransition(openPlan);
     }
 
@@ -76,7 +76,7 @@ public partial class MainWindow
     private void OnImageManagerStateChanged(object? sender, EventArgs e)
     {
         var context = CaptureImageManagerStateChangeContext();
-        var decision = ImageManagerStateChangePolicy.Resolve(context);
+        var decision = ImageManagerWindowingPolicies.ResolveImageManagerStateChange(context);
         ApplyImageManagerStateChangeTransition(decision);
     }
 
@@ -184,7 +184,7 @@ public partial class MainWindow
 
     private void OnImageManagerShowInkOverlayChanged(bool enabled)
     {
-        if (!PhotoShowInkOverlayChangePolicy.ShouldApply(_settings.PhotoShowInkOverlay, enabled))
+        if (!PhotoOverlayPolicies.ShouldApply(_settings.PhotoShowInkOverlay, enabled))
         {
             return;
         }

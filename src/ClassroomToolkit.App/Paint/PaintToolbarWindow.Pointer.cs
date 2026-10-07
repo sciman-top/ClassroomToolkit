@@ -52,7 +52,7 @@ public partial class PaintToolbarWindow
             return;
         }
 
-        if (!ToolbarResumeCancellationPolicy.ShouldCancelPendingResumeOnToolbarPress(
+        if (!ToolbarPolicies.ShouldCancelPendingResumeOnToolbarPress(
                 captureInteractionActive,
                 pressedToolbarButton: true,
                 pressedBoardButton: ReferenceEquals(button, BoardButton)))
@@ -158,7 +158,7 @@ public partial class PaintToolbarWindow
     private void TryResumeRegionCaptureIfPointerOutsideToolbar()
     {
         var screenPoint = System.Windows.Forms.Cursor.Position;
-        var decision = RegionCaptureResumeTriggerPolicy.Resolve(
+        var decision = SceneResolversPolicies.ResolveRegionCaptureResumeTrigger(
             _resumeRegionCaptureArmed,
             IsVisible,
             IsLoaded,

@@ -9,7 +9,7 @@ public partial class PaintOverlayWindow
 {
     public void UpdateInkCacheEnabled(bool enabled)
     {
-        var transitionPlan = InkCacheUpdateTransitionPolicy.Resolve(
+        var transitionPlan = InkPersistencePolicies.ResolveInkCacheUpdateTransition(
             enabled,
             _inkMonitor.IsEnabled);
         _inkCacheEnabled = enabled;
@@ -29,7 +29,7 @@ public partial class PaintOverlayWindow
 
     public void UpdateInkSaveEnabled(bool enabled)
     {
-        var transitionPlan = InkSaveUpdateTransitionPolicy.Resolve(enabled);
+        var transitionPlan = InkPersistencePolicies.ResolveInkSaveUpdateTransition(enabled);
         _inkSaveEnabled = enabled;
         if (transitionPlan.ShouldStopAutoSaveTimer)
         {
@@ -97,12 +97,12 @@ public partial class PaintOverlayWindow
     public void UpdatePhotoTransformMemoryEnabled(bool enabled)
     {
         _rememberPhotoTransform = enabled;
-        if (PhotoTransformMemoryTogglePolicy.ShouldResetUserDirtyState(_rememberPhotoTransform))
+        if (PhotoWindowTransformPolicies.ShouldResetUserDirtyState(_rememberPhotoTransform))
         {
             _photoUserTransformDirty = false;
             _photoPageTransforms.Clear();
         }
-        if (PhotoTransformMemoryTogglePolicy.ShouldResetUnifiedTransformState(_rememberPhotoTransform))
+        if (PhotoWindowTransformPolicies.ShouldResetUnifiedTransformState(_rememberPhotoTransform))
         {
             _photoUnifiedTransformReady = false;
         }
@@ -217,7 +217,7 @@ public partial class PaintOverlayWindow
 
     private void ApplyLoadedBitmapTransform(BitmapSource bitmap, bool useCrossPageUnifiedPath)
     {
-        var path = PhotoLoadedBitmapTransformPathPolicy.Resolve(
+        var path = PhotoWindowTransformPolicies.ResolvePhotoLoadedBitmapTransformPath(
             useCrossPageUnifiedPath,
             _rememberPhotoTransform,
             _photoUnifiedTransformReady);

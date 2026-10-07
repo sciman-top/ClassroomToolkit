@@ -49,10 +49,10 @@ internal static class FloatingWindowCoordinator
             windowOrchestrator,
             surfaceStack,
             coordination.Runtime);
-        var topmostPlan = FloatingTopmostPlanPolicy.Resolve(
+        var topmostPlan = FloatingTopmostPolicies.ResolvePlan(
             frontSurface,
             coordination.TopmostVisibility);
-        var enforceZOrder = FloatingTopmostApplyPolicy.ShouldEnforceZOrder(
+        var enforceZOrder = FloatingTopmostPolicies.ShouldEnforceZOrder(
             state.LastFrontSurface,
             frontSurface,
             state.LastTopmostPlan,
@@ -119,7 +119,7 @@ internal static class FloatingWindowCoordinator
         FloatingOwnerRuntimeSnapshot ownerSnapshot,
         bool suppressOverlayActivation)
     {
-        var activationPlan = FloatingWindowActivationPolicy.Resolve(
+        var activationPlan = FloatingWindowCoordinationPolicies.ResolveFloatingWindowActivation(
             runtimeSnapshot,
             topmostPlan,
             utilityActivity);
@@ -182,29 +182,6 @@ internal static class FloatingWindowCoordinator
     }
 }
 
-internal static class FloatingWindowRuntimeSnapshotPolicy
-{
-    public static FloatingWindowRuntimeSnapshot Resolve(
-        bool overlayVisible,
-        bool overlayActive,
-        bool photoActive,
-        bool presentationFullscreen,
-        bool whiteboardActive,
-        bool imageManagerVisible,
-        bool imageManagerMinimized,
-        bool launcherVisible)
-    {
-        return new FloatingWindowRuntimeSnapshot(
-            OverlayVisible: overlayVisible,
-            OverlayActive: overlayActive,
-            PhotoActive: photoActive,
-            PresentationFullscreen: presentationFullscreen,
-            WhiteboardActive: whiteboardActive,
-            ImageManagerVisible: imageManagerVisible && !imageManagerMinimized,
-            LauncherVisible: launcherVisible);
-    }
-}
-
 internal readonly record struct FloatingWindowCoordinationSnapshot(
     FloatingWindowRuntimeSnapshot Runtime,
     LauncherWindowRuntimeSnapshot Launcher,
@@ -252,45 +229,6 @@ internal readonly record struct FloatingWindowActivationPlan(
     bool ActivateOverlay,
     bool ActivateImageManager);
 
-internal static class FloatingWindowActivationPolicy
-{
-    internal static FloatingWindowActivationPlan Resolve(
-        FloatingWindowRuntimeSnapshot runtimeSnapshot,
-        FloatingTopmostPlan topmostPlan,
-        FloatingUtilityActivitySnapshot utilityActivity)
-    {
-        return Resolve(new FloatingWindowActivationSnapshot(
-            OverlayVisible: runtimeSnapshot.OverlayVisible,
-            OverlayShouldActivate: topmostPlan.OverlayShouldActivate,
-            OverlayActive: runtimeSnapshot.OverlayActive,
-            ImageManagerTopmost: topmostPlan.ImageManagerTopmost,
-            ImageManagerActive: utilityActivity.ImageManagerActive,
-            UtilityActivity: utilityActivity));
-    }
-
-    internal static FloatingWindowActivationPlan Resolve(FloatingWindowActivationSnapshot snapshot)
-    {
-        var overlayDecision = OverlayActivationPolicy.Resolve(
-            overlayVisible: snapshot.OverlayVisible,
-            overlayShouldActivate: snapshot.OverlayShouldActivate,
-            overlayActive: snapshot.OverlayActive,
-            toolbarActive: snapshot.UtilityActivity.ToolbarActive,
-            imageManagerActive: snapshot.UtilityActivity.ImageManagerActive,
-            rollCallActive: snapshot.UtilityActivity.RollCallActive,
-            launcherActive: snapshot.UtilityActivity.LauncherActive);
-        var imageManagerDecision = ImageManagerActivationPolicy.Resolve(
-            imageManagerTopmost: snapshot.ImageManagerTopmost,
-            imageManagerActive: snapshot.ImageManagerActive,
-            toolbarActive: snapshot.UtilityActivity.ToolbarActive,
-            rollCallActive: snapshot.UtilityActivity.RollCallActive,
-            launcherActive: snapshot.UtilityActivity.LauncherActive);
-
-        return new FloatingWindowActivationPlan(
-            ActivateOverlay: overlayDecision.ShouldActivate,
-            ActivateImageManager: imageManagerDecision.ShouldActivate);
-    }
-}
-
 internal static class FloatingWindowExecutionExecutor
 {
     internal static void Apply(
@@ -336,7 +274,7 @@ internal static class FloatingWindowExecutionExecutor
         SafeActionExecutionExecutor.TryExecute(
             () => applyOwnerPlan(plan.OwnerPlan, overlayWindow, toolbarWindow, rollCallWindow, imageManagerWindow));
 
-        var imageManagerActivationDecision = FloatingActivationExecutionPolicy.Resolve(
+        var imageManagerActivationDecision = FloatingWindowCoordinationPolicies.Resolve(
             imageManagerWindow,
             plan.ActivationPlan.ActivateImageManager);
         ExecuteActivation(
@@ -345,7 +283,7 @@ internal static class FloatingWindowExecutionExecutor
             "ImageManager",
             tryActivate);
 
-        var overlayActivationDecision = FloatingActivationExecutionPolicy.Resolve(
+        var overlayActivationDecision = FloatingWindowCoordinationPolicies.Resolve(
             overlayWindow,
             plan.ActivationPlan.ActivateOverlay);
         ExecuteActivation(
@@ -409,34 +347,6 @@ internal readonly record struct FloatingActivationExecutionDecision(
     bool ShouldActivate,
     FloatingActivationExecutionReason Reason);
 
-internal static class FloatingActivationExecutionPolicy
-{
-    internal static FloatingActivationExecutionDecision Resolve<TWindow>(TWindow? target, bool shouldActivate)
-        where TWindow : class
-    {
-        if (target == null)
-        {
-            return new FloatingActivationExecutionDecision(
-                ShouldActivate: false,
-                Reason: FloatingActivationExecutionReason.TargetMissing);
-        }
-
-        return shouldActivate
-            ? new FloatingActivationExecutionDecision(
-                ShouldActivate: true,
-                Reason: FloatingActivationExecutionReason.None)
-            : new FloatingActivationExecutionDecision(
-                ShouldActivate: false,
-                Reason: FloatingActivationExecutionReason.ActivationNotRequested);
-    }
-
-    internal static bool ShouldActivate<TWindow>(TWindow? target, bool shouldActivate)
-        where TWindow : class
-    {
-        return Resolve(target, shouldActivate).ShouldActivate;
-    }
-}
-
 internal enum FloatingActivationGuardReason
 {
     None = 0,
@@ -449,63 +359,6 @@ internal enum FloatingActivationGuardReason
 internal readonly record struct FloatingActivationGuardDecision(
     bool IsBlocked,
     FloatingActivationGuardReason Reason);
-
-internal static class FloatingActivationGuardPolicy
-{
-    internal static FloatingActivationGuardDecision Resolve(FloatingUtilityActivitySnapshot snapshot)
-    {
-        if (snapshot.ToolbarActive)
-        {
-            return new FloatingActivationGuardDecision(
-                IsBlocked: true,
-                Reason: FloatingActivationGuardReason.ToolbarActive);
-        }
-
-        if (snapshot.RollCallActive)
-        {
-            return new FloatingActivationGuardDecision(
-                IsBlocked: true,
-                Reason: FloatingActivationGuardReason.RollCallActive);
-        }
-
-        if (snapshot.ImageManagerActive)
-        {
-            return new FloatingActivationGuardDecision(
-                IsBlocked: true,
-                Reason: FloatingActivationGuardReason.ImageManagerActive);
-        }
-
-        if (snapshot.LauncherActive)
-        {
-            return new FloatingActivationGuardDecision(
-                IsBlocked: true,
-                Reason: FloatingActivationGuardReason.LauncherActive);
-        }
-
-        return new FloatingActivationGuardDecision(
-            IsBlocked: false,
-            Reason: FloatingActivationGuardReason.None);
-    }
-
-    internal static bool IsBlockedByUtilityWindows(FloatingUtilityActivitySnapshot snapshot)
-    {
-        return Resolve(snapshot).IsBlocked;
-    }
-
-    internal static bool IsBlockedByUtilityWindows(
-        bool toolbarActive,
-        bool rollCallActive,
-        bool imageManagerActive,
-        bool launcherActive)
-    {
-        return IsBlockedByUtilityWindows(
-            new FloatingUtilityActivitySnapshot(
-                ToolbarActive: toolbarActive,
-                RollCallActive: rollCallActive,
-                ImageManagerActive: imageManagerActive,
-                LauncherActive: launcherActive));
-    }
-}
 
 internal static class FloatingFrontSurfaceResolver
 {
@@ -558,8 +411,143 @@ internal readonly record struct FloatingDispatchQueueDecision(
     FloatingDispatchQueueAction Action,
     FloatingDispatchQueueReason Reason);
 
-internal static class FloatingDispatchQueuePolicy
+internal static class FloatingWindowCoordinationPolicies
 {
+    public static FloatingWindowRuntimeSnapshot ResolveFloatingWindowRuntimeSnapshot(
+        bool overlayVisible,
+        bool overlayActive,
+        bool photoActive,
+        bool presentationFullscreen,
+        bool whiteboardActive,
+        bool imageManagerVisible,
+        bool imageManagerMinimized,
+        bool launcherVisible)
+    {
+        return new FloatingWindowRuntimeSnapshot(
+            OverlayVisible: overlayVisible,
+            OverlayActive: overlayActive,
+            PhotoActive: photoActive,
+            PresentationFullscreen: presentationFullscreen,
+            WhiteboardActive: whiteboardActive,
+            ImageManagerVisible: imageManagerVisible && !imageManagerMinimized,
+            LauncherVisible: launcherVisible);
+    }
+
+    internal static FloatingWindowActivationPlan ResolveFloatingWindowActivation(
+        FloatingWindowRuntimeSnapshot runtimeSnapshot,
+        FloatingTopmostPlan topmostPlan,
+        FloatingUtilityActivitySnapshot utilityActivity)
+    {
+        return ResolveFloatingWindowActivation(new FloatingWindowActivationSnapshot(
+            OverlayVisible: runtimeSnapshot.OverlayVisible,
+            OverlayShouldActivate: topmostPlan.OverlayShouldActivate,
+            OverlayActive: runtimeSnapshot.OverlayActive,
+            ImageManagerTopmost: topmostPlan.ImageManagerTopmost,
+            ImageManagerActive: utilityActivity.ImageManagerActive,
+            UtilityActivity: utilityActivity));
+    }
+
+    internal static FloatingWindowActivationPlan ResolveFloatingWindowActivation(FloatingWindowActivationSnapshot snapshot)
+    {
+        var overlayDecision = OverlayActivationPolicies.ResolveOverlayActivation(
+            overlayVisible: snapshot.OverlayVisible,
+            overlayShouldActivate: snapshot.OverlayShouldActivate,
+            overlayActive: snapshot.OverlayActive,
+            toolbarActive: snapshot.UtilityActivity.ToolbarActive,
+            imageManagerActive: snapshot.UtilityActivity.ImageManagerActive,
+            rollCallActive: snapshot.UtilityActivity.RollCallActive,
+            launcherActive: snapshot.UtilityActivity.LauncherActive);
+        var imageManagerDecision = ImageManagerWindowingPolicies.ResolveImageManagerActivation(
+            imageManagerTopmost: snapshot.ImageManagerTopmost,
+            imageManagerActive: snapshot.ImageManagerActive,
+            toolbarActive: snapshot.UtilityActivity.ToolbarActive,
+            rollCallActive: snapshot.UtilityActivity.RollCallActive,
+            launcherActive: snapshot.UtilityActivity.LauncherActive);
+
+        return new FloatingWindowActivationPlan(
+            ActivateOverlay: overlayDecision.ShouldActivate,
+            ActivateImageManager: imageManagerDecision.ShouldActivate);
+    }
+
+    internal static FloatingActivationExecutionDecision Resolve<TWindow>(TWindow? target, bool shouldActivate)
+        where TWindow : class
+    {
+        if (target == null)
+        {
+            return new FloatingActivationExecutionDecision(
+                ShouldActivate: false,
+                Reason: FloatingActivationExecutionReason.TargetMissing);
+        }
+
+        return shouldActivate
+            ? new FloatingActivationExecutionDecision(
+                ShouldActivate: true,
+                Reason: FloatingActivationExecutionReason.None)
+            : new FloatingActivationExecutionDecision(
+                ShouldActivate: false,
+                Reason: FloatingActivationExecutionReason.ActivationNotRequested);
+    }
+
+    internal static bool ShouldActivate<TWindow>(TWindow? target, bool shouldActivate)
+        where TWindow : class
+    {
+        return Resolve(target, shouldActivate).ShouldActivate;
+    }
+
+    internal static FloatingActivationGuardDecision ResolveFloatingActivationGuard(FloatingUtilityActivitySnapshot snapshot)
+    {
+        if (snapshot.ToolbarActive)
+        {
+            return new FloatingActivationGuardDecision(
+                IsBlocked: true,
+                Reason: FloatingActivationGuardReason.ToolbarActive);
+        }
+
+        if (snapshot.RollCallActive)
+        {
+            return new FloatingActivationGuardDecision(
+                IsBlocked: true,
+                Reason: FloatingActivationGuardReason.RollCallActive);
+        }
+
+        if (snapshot.ImageManagerActive)
+        {
+            return new FloatingActivationGuardDecision(
+                IsBlocked: true,
+                Reason: FloatingActivationGuardReason.ImageManagerActive);
+        }
+
+        if (snapshot.LauncherActive)
+        {
+            return new FloatingActivationGuardDecision(
+                IsBlocked: true,
+                Reason: FloatingActivationGuardReason.LauncherActive);
+        }
+
+        return new FloatingActivationGuardDecision(
+            IsBlocked: false,
+            Reason: FloatingActivationGuardReason.None);
+    }
+
+    internal static bool IsBlockedByUtilityWindows(FloatingUtilityActivitySnapshot snapshot)
+    {
+        return ResolveFloatingActivationGuard(snapshot).IsBlocked;
+    }
+
+    internal static bool IsBlockedByUtilityWindows(
+        bool toolbarActive,
+        bool rollCallActive,
+        bool imageManagerActive,
+        bool launcherActive)
+    {
+        return IsBlockedByUtilityWindows(
+            new FloatingUtilityActivitySnapshot(
+                ToolbarActive: toolbarActive,
+                RollCallActive: rollCallActive,
+                ImageManagerActive: imageManagerActive,
+                LauncherActive: launcherActive));
+    }
+
     internal static FloatingDispatchQueueDecision RequestApply(
         FloatingDispatchQueueState state,
         bool forceEnforceZOrder = false)

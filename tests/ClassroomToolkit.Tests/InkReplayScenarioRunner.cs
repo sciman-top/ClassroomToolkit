@@ -61,23 +61,23 @@ public static class InkReplayScenarioRunner
                 case InkReplayEventType.PointerUp:
                     {
                         pointerUpCount++;
-                        var deferredState = CrossPagePointerUpDeferredStatePolicy.Resolve(
+                        var deferredState = CrossPagePointerUpPolicies.ResolveDeferredState(
                             deferredByInkInput: deferredByInkInput,
                             crossPageDisplayActive: crossPageDisplayActive);
                         deferredByInkInput = deferredState.NextDeferredByInkInput;
 
-                        var decision = CrossPagePointerUpDecisionPolicy.Resolve(
+                        var decision = CrossPagePointerUpPolicies.ResolveDecision(
                             crossPageDisplayActive: crossPageDisplayActive,
                             hadInkOperation: inkOperationActive,
                             deferredRefreshRequested: deferredState.DeferredRefreshRequested,
                             updatePending: updatePending);
 
-                        var executionPlan = CrossPagePointerUpExecutionPlanPolicy.Resolve(
+                        var executionPlan = CrossPagePointerUpPolicies.ResolveExecutionPlan(
                             decision,
                             hadInkOperation: inkOperationActive,
                             pendingInkContextCheck: pendingInkContextCheck);
 
-                        var postPlan = CrossPagePointerUpPostExecutionPolicy.Resolve(
+                        var postPlan = CrossPagePointerUpPolicies.ResolvePostExecution(
                             executionPlan,
                             crossPageFirstInputTraceActive: crossPageFirstInputTraceActive);
 

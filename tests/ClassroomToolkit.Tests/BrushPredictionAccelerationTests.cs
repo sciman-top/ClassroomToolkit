@@ -27,8 +27,8 @@ public sealed class BrushPredictionAccelerationTests
         {
             var current = new BrushInputSample(new Point(i * 8.0, 0), Timestamp(i), 0.5, false);
             var previousVelocity = velocity;
-            velocity = BrushPredictionVelocityPolicy.Resolve(velocity, previous, current);
-            acceleration = BrushPredictionVelocityPolicy.ResolveAcceleration(
+            velocity = PresetSchemePolicies.ResolveBrushPredictionVelocity(velocity, previous, current);
+            acceleration = PresetSchemePolicies.ResolveAcceleration(
                 acceleration, previous, current, previousVelocity, velocity);
             previous = current;
         }
@@ -48,8 +48,8 @@ public sealed class BrushPredictionAccelerationTests
         {
             var current = new BrushInputSample(new Point(i * i * 0.9, 0), Timestamp(i), 0.5, false);
             var previousVelocity = velocity;
-            velocity = BrushPredictionVelocityPolicy.Resolve(velocity, previous, current);
-            acceleration = BrushPredictionVelocityPolicy.ResolveAcceleration(
+            velocity = PresetSchemePolicies.ResolveBrushPredictionVelocity(velocity, previous, current);
+            acceleration = PresetSchemePolicies.ResolveAcceleration(
                 acceleration, previous, current, previousVelocity, velocity);
             previous = current;
         }
@@ -65,7 +65,7 @@ public sealed class BrushPredictionAccelerationTests
         var nextSample = new BrushInputSample(new Point(0, 0), Timestamp(1), 0.5, false);
         var hugeVelocity = new Vector(1e7, 0);
 
-        var acceleration = BrushPredictionVelocityPolicy.ResolveAcceleration(
+        var acceleration = PresetSchemePolicies.ResolveAcceleration(
             new Vector(), baseSample, nextSample, new Vector(), hugeVelocity);
 
         acceleration.Length.Should().BeLessThanOrEqualTo(
@@ -79,7 +79,7 @@ public sealed class BrushPredictionAccelerationTests
         var second = new BrushInputSample(new Point(100, 0), Timestamp(0), 0.5, false);
         var kept = new Vector(123, 45);
 
-        var result = BrushPredictionVelocityPolicy.ResolveAcceleration(
+        var result = PresetSchemePolicies.ResolveAcceleration(
             kept, first, second, new Vector(), new Vector(10, 0));
 
         result.Should().Be(kept);

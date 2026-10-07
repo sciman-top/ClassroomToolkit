@@ -20,28 +20,6 @@ internal static class ToolbarInteractionRetouchIntervalDefaults
     internal const int InteractiveMs = 220;
 }
 
-internal static class ToolbarInteractionRetouchIntervalPolicy
-{
-    internal static int ResolveMs(
-        ToolbarInteractionRetouchSnapshot snapshot,
-        ToolbarInteractionRetouchTrigger trigger,
-        int defaultMs = ToolbarInteractionRetouchIntervalDefaults.DefaultMs,
-        int interactiveMs = ToolbarInteractionRetouchIntervalDefaults.InteractiveMs)
-    {
-        if (trigger == ToolbarInteractionRetouchTrigger.PreviewMouseDown)
-        {
-            return defaultMs;
-        }
-
-        return WindowingDedupPolicies.ResolveMs(
-            snapshot.OverlayVisible,
-            snapshot.PhotoModeActive,
-            snapshot.WhiteboardActive,
-            defaultMs,
-            interactiveMs);
-    }
-}
-
 internal enum ToolbarInteractionRetouchRuntimeResetReason
 {
     None = 0,
@@ -107,221 +85,16 @@ internal enum ToolbarInteractionRetouchTrigger
     PreviewMouseDown = 1
 }
 
-internal static class ToolbarInteractionRetouchDecisionPolicy
-{
-    internal static ToolbarInteractionRetouchDecision Resolve(
-        ToolbarInteractionRetouchSnapshot snapshot,
-        ToolbarInteractionRetouchTrigger trigger)
-    {
-        var interactiveScene = WindowingDedupPolicies.IsInteractiveScene(
-            snapshot.OverlayVisible,
-            snapshot.PhotoModeActive,
-            snapshot.WhiteboardActive);
-        if (!interactiveScene)
-        {
-            return new ToolbarInteractionRetouchDecision(
-                ShouldRetouch: false,
-                ForceEnforceZOrder: false,
-                Reason: ToolbarInteractionRetouchDecisionReason.SceneNotInteractive);
-        }
-
-        if (trigger == ToolbarInteractionRetouchTrigger.PreviewMouseDown)
-        {
-            if (!snapshot.LauncherVisible)
-            {
-                return new ToolbarInteractionRetouchDecision(
-                    ShouldRetouch: false,
-                    ForceEnforceZOrder: false,
-                    Reason: ToolbarInteractionRetouchDecisionReason.PreviewMouseDown);
-            }
-
-            return new ToolbarInteractionRetouchDecision(
-                ShouldRetouch: true,
-                ForceEnforceZOrder: true,
-                Reason: ToolbarInteractionRetouchDecisionReason.None);
-        }
-
-        var driftDecision = FloatingTopmostDriftPolicy.ResolveDrift(snapshot);
-        if (!driftDecision.HasDrift)
-        {
-            if (snapshot.LauncherVisible)
-            {
-                return new ToolbarInteractionRetouchDecision(
-                    ShouldRetouch: true,
-                    ForceEnforceZOrder: true,
-                    Reason: ToolbarInteractionRetouchDecisionReason.None);
-            }
-
-            return new ToolbarInteractionRetouchDecision(
-                ShouldRetouch: false,
-                ForceEnforceZOrder: false,
-                Reason: ToolbarInteractionRetouchDecisionReason.NoTopmostDrift);
-        }
-
-        var forceEnforceDecision = FloatingTopmostDriftPolicy.ResolveForceEnforce(snapshot);
-
-        return new ToolbarInteractionRetouchDecision(
-            ShouldRetouch: true,
-            ForceEnforceZOrder: forceEnforceDecision.ShouldForceEnforce || ForegroundZOrderRetouchPolicy.ShouldForceOnToolbarInteraction(
-                snapshot.OverlayVisible,
-                snapshot.PhotoModeActive,
-                snapshot.WhiteboardActive),
-            Reason: ToolbarInteractionRetouchDecisionReason.None);
-    }
-}
-
 internal enum ToolbarInteractionRetouchDispatchMode
 {
     Immediate = 0,
     Background = 1
 }
 
-internal static class ToolbarInteractionRetouchDispatchPolicy
-{
-    internal static ToolbarInteractionRetouchDispatchMode Resolve(
-        ToolbarInteractionRetouchTrigger trigger,
-        ToolbarInteractionRetouchSnapshot snapshot,
-        ToolbarInteractionRetouchExecutionPlan executionPlan)
-    {
-        if (!executionPlan.ApplyDirectDriftRepair)
-        {
-            return ToolbarInteractionRetouchDispatchMode.Immediate;
-        }
-
-        var interactiveScene = WindowingDedupPolicies.IsInteractiveScene(
-            snapshot.OverlayVisible,
-            snapshot.PhotoModeActive,
-            snapshot.WhiteboardActive);
-        var launcherDrift = snapshot.LauncherVisible && !snapshot.LauncherTopmost;
-        if (trigger == ToolbarInteractionRetouchTrigger.Activated && interactiveScene && launcherDrift)
-        {
-            return ToolbarInteractionRetouchDispatchMode.Immediate;
-        }
-
-        if (trigger == ToolbarInteractionRetouchTrigger.Activated && interactiveScene)
-        {
-            return ToolbarInteractionRetouchDispatchMode.Background;
-        }
-
-        return ToolbarInteractionRetouchDispatchMode.Immediate;
-    }
-}
-
 internal readonly record struct ToolbarInteractionRetouchExecutionPlan(
     bool ApplyDirectDriftRepair,
     bool RequestZOrderApply,
     bool ForceEnforceZOrder);
-
-internal static class ToolbarInteractionRetouchExecutionPlanPolicy
-{
-    internal static ToolbarInteractionRetouchExecutionPlan Resolve(
-        ToolbarInteractionRetouchDecision decision)
-    {
-        if (!decision.ShouldRetouch)
-        {
-            return new ToolbarInteractionRetouchExecutionPlan(
-                ApplyDirectDriftRepair: false,
-                RequestZOrderApply: false,
-                ForceEnforceZOrder: false);
-        }
-
-        if (decision.ForceEnforceZOrder)
-        {
-            return new ToolbarInteractionRetouchExecutionPlan(
-                ApplyDirectDriftRepair: false,
-                RequestZOrderApply: true,
-                ForceEnforceZOrder: decision.ForceEnforceZOrder);
-        }
-
-        return new ToolbarInteractionRetouchExecutionPlan(
-            ApplyDirectDriftRepair: true,
-            RequestZOrderApply: false,
-            ForceEnforceZOrder: false);
-    }
-}
-
-internal static class ToolbarInteractionRetouchDiagnosticsPolicy
-{
-    internal static string FormatDecisionSkipMessage(
-        ToolbarInteractionRetouchTrigger trigger,
-        ToolbarInteractionRetouchDecisionReason reason)
-    {
-        return
-            $"[ToolbarRetouch][Decision] skip trigger={trigger} reason={reason}";
-    }
-
-    internal static string FormatActivationSuppressionSkipMessage(
-        ToolbarInteractionRetouchTrigger trigger,
-        ToolbarInteractionActivationSuppressionReason reason)
-    {
-        return
-            $"[ToolbarRetouch][Suppression] skip trigger={trigger} reason={reason}";
-    }
-
-    internal static string FormatAdmissionSkipMessage(
-        ToolbarInteractionRetouchTrigger trigger,
-        ZOrderApplyReentryReason reason,
-        bool forceEnforceZOrder)
-    {
-        return
-            $"[ToolbarRetouch][Admission] skip trigger={trigger} reason={reason} force={forceEnforceZOrder}";
-    }
-
-    internal static string FormatThrottleSkipMessage(
-        ToolbarInteractionRetouchTrigger trigger,
-        RetouchThrottleReason reason,
-        int minimumIntervalMs)
-    {
-        return
-            $"[ToolbarRetouch][Throttle] skip trigger={trigger} reason={reason} minIntervalMs={minimumIntervalMs}";
-    }
-
-    internal static string FormatExecutionPlanMessage(
-        ToolbarInteractionRetouchTrigger trigger,
-        ToolbarInteractionRetouchExecutionPlan plan)
-    {
-        return
-            $"[ToolbarRetouch][Execute] trigger={trigger} directRepair={plan.ApplyDirectDriftRepair} requestZOrder={plan.RequestZOrderApply} force={plan.ForceEnforceZOrder}";
-    }
-
-    internal static string FormatDirectRepairAdmissionSkipMessage(
-        ToolbarInteractionRetouchTrigger trigger,
-        ToolbarInteractionDirectRepairAdmissionReason reason)
-    {
-        return
-            $"[ToolbarRetouch][DirectRepair] skip trigger={trigger} reason={reason}";
-    }
-
-    internal static string FormatDirectRepairDispatchMessage(
-        ToolbarInteractionRetouchTrigger trigger,
-        ToolbarInteractionRetouchDispatchMode mode)
-    {
-        return
-            $"[ToolbarRetouch][DirectRepair] dispatch trigger={trigger} mode={mode}";
-    }
-
-    internal static string FormatDirectRepairDispatchAdmissionSkipMessage(
-        ToolbarInteractionRetouchTrigger trigger)
-    {
-        return
-            $"[ToolbarRetouch][DirectRepair] dispatch-skip trigger={trigger} reason=AlreadyQueued";
-    }
-
-    internal static string FormatDirectRepairDispatchFailureMessage(
-        ToolbarInteractionRetouchTrigger trigger,
-        string exceptionType,
-        string message)
-    {
-        return
-            $"[ToolbarRetouch][DirectRepair] dispatch-failed trigger={trigger} ex={exceptionType} msg={message}";
-    }
-
-    internal static string FormatRuntimeResetMessage(ToolbarInteractionRetouchRuntimeResetReason reason)
-    {
-        return
-            $"[ToolbarRetouch][RuntimeReset] reason={reason}";
-    }
-}
 
 internal enum ToolbarInteractionDirectRepairAdmissionReason
 {
@@ -333,32 +106,6 @@ internal enum ToolbarInteractionDirectRepairAdmissionReason
 internal readonly record struct ToolbarInteractionDirectRepairAdmissionDecision(
     bool ShouldApply,
     ToolbarInteractionDirectRepairAdmissionReason Reason);
-
-internal static class ToolbarInteractionDirectRepairAdmissionPolicy
-{
-    internal static ToolbarInteractionDirectRepairAdmissionDecision Resolve(
-        bool zOrderApplying,
-        bool zOrderQueued)
-    {
-        if (zOrderApplying)
-        {
-            return new ToolbarInteractionDirectRepairAdmissionDecision(
-                ShouldApply: false,
-                Reason: ToolbarInteractionDirectRepairAdmissionReason.ZOrderApplying);
-        }
-
-        if (zOrderQueued)
-        {
-            return new ToolbarInteractionDirectRepairAdmissionDecision(
-                ShouldApply: false,
-                Reason: ToolbarInteractionDirectRepairAdmissionReason.ZOrderQueued);
-        }
-
-        return new ToolbarInteractionDirectRepairAdmissionDecision(
-            ShouldApply: true,
-            Reason: ToolbarInteractionDirectRepairAdmissionReason.None);
-    }
-}
 
 internal enum ToolbarInteractionDirectRepairExecutionOutcome
 {
@@ -450,9 +197,250 @@ internal readonly record struct ToolbarInteractionActivationSuppressionDecision(
     bool ShouldSuppress,
     ToolbarInteractionActivationSuppressionReason Reason);
 
-internal static class ToolbarInteractionActivationSuppressionPolicy
+internal static class ToolbarInteractionActivationSuppressionDefaults
 {
-    internal static ToolbarInteractionActivationSuppressionDecision Resolve(
+    internal const int LauncherOnlyAfterPreviewSuppressionMs = 90;
+    internal const int LauncherOnlyAfterPreviewInteractiveSuppressionMs = 130;
+}
+
+internal static class ToolbarInteractionRetouchPolicies
+{
+    internal static int ResolveMs(
+        ToolbarInteractionRetouchSnapshot snapshot,
+        ToolbarInteractionRetouchTrigger trigger,
+        int defaultMs = ToolbarInteractionRetouchIntervalDefaults.DefaultMs,
+        int interactiveMs = ToolbarInteractionRetouchIntervalDefaults.InteractiveMs)
+    {
+        if (trigger == ToolbarInteractionRetouchTrigger.PreviewMouseDown)
+        {
+            return defaultMs;
+        }
+
+        return WindowingDedupPolicies.ResolveMs(
+            snapshot.OverlayVisible,
+            snapshot.PhotoModeActive,
+            snapshot.WhiteboardActive,
+            defaultMs,
+            interactiveMs);
+    }
+
+    internal static ToolbarInteractionRetouchDecision ResolveDecision(
+        ToolbarInteractionRetouchSnapshot snapshot,
+        ToolbarInteractionRetouchTrigger trigger)
+    {
+        var interactiveScene = WindowingDedupPolicies.IsInteractiveScene(
+            snapshot.OverlayVisible,
+            snapshot.PhotoModeActive,
+            snapshot.WhiteboardActive);
+        if (!interactiveScene)
+        {
+            return new ToolbarInteractionRetouchDecision(
+                ShouldRetouch: false,
+                ForceEnforceZOrder: false,
+                Reason: ToolbarInteractionRetouchDecisionReason.SceneNotInteractive);
+        }
+
+        if (trigger == ToolbarInteractionRetouchTrigger.PreviewMouseDown)
+        {
+            if (!snapshot.LauncherVisible)
+            {
+                return new ToolbarInteractionRetouchDecision(
+                    ShouldRetouch: false,
+                    ForceEnforceZOrder: false,
+                    Reason: ToolbarInteractionRetouchDecisionReason.PreviewMouseDown);
+            }
+
+            return new ToolbarInteractionRetouchDecision(
+                ShouldRetouch: true,
+                ForceEnforceZOrder: true,
+                Reason: ToolbarInteractionRetouchDecisionReason.None);
+        }
+
+        var driftDecision = FloatingTopmostPolicies.ResolveDrift(snapshot);
+        if (!driftDecision.HasDrift)
+        {
+            if (snapshot.LauncherVisible)
+            {
+                return new ToolbarInteractionRetouchDecision(
+                    ShouldRetouch: true,
+                    ForceEnforceZOrder: true,
+                    Reason: ToolbarInteractionRetouchDecisionReason.None);
+            }
+
+            return new ToolbarInteractionRetouchDecision(
+                ShouldRetouch: false,
+                ForceEnforceZOrder: false,
+                Reason: ToolbarInteractionRetouchDecisionReason.NoTopmostDrift);
+        }
+
+        var forceEnforceDecision = FloatingTopmostPolicies.ResolveForceEnforce(snapshot);
+
+        return new ToolbarInteractionRetouchDecision(
+            ShouldRetouch: true,
+            ForceEnforceZOrder: forceEnforceDecision.ShouldForceEnforce || ForegroundZOrderRetouchPolicy.ShouldForceOnToolbarInteraction(
+                snapshot.OverlayVisible,
+                snapshot.PhotoModeActive,
+                snapshot.WhiteboardActive),
+            Reason: ToolbarInteractionRetouchDecisionReason.None);
+    }
+
+    internal static ToolbarInteractionRetouchDispatchMode ResolveDispatch(
+        ToolbarInteractionRetouchTrigger trigger,
+        ToolbarInteractionRetouchSnapshot snapshot,
+        ToolbarInteractionRetouchExecutionPlan executionPlan)
+    {
+        if (!executionPlan.ApplyDirectDriftRepair)
+        {
+            return ToolbarInteractionRetouchDispatchMode.Immediate;
+        }
+
+        var interactiveScene = WindowingDedupPolicies.IsInteractiveScene(
+            snapshot.OverlayVisible,
+            snapshot.PhotoModeActive,
+            snapshot.WhiteboardActive);
+        var launcherDrift = snapshot.LauncherVisible && !snapshot.LauncherTopmost;
+        if (trigger == ToolbarInteractionRetouchTrigger.Activated && interactiveScene && launcherDrift)
+        {
+            return ToolbarInteractionRetouchDispatchMode.Immediate;
+        }
+
+        if (trigger == ToolbarInteractionRetouchTrigger.Activated && interactiveScene)
+        {
+            return ToolbarInteractionRetouchDispatchMode.Background;
+        }
+
+        return ToolbarInteractionRetouchDispatchMode.Immediate;
+    }
+
+    internal static ToolbarInteractionRetouchExecutionPlan ResolveExecutionPlan(
+        ToolbarInteractionRetouchDecision decision)
+    {
+        if (!decision.ShouldRetouch)
+        {
+            return new ToolbarInteractionRetouchExecutionPlan(
+                ApplyDirectDriftRepair: false,
+                RequestZOrderApply: false,
+                ForceEnforceZOrder: false);
+        }
+
+        if (decision.ForceEnforceZOrder)
+        {
+            return new ToolbarInteractionRetouchExecutionPlan(
+                ApplyDirectDriftRepair: false,
+                RequestZOrderApply: true,
+                ForceEnforceZOrder: decision.ForceEnforceZOrder);
+        }
+
+        return new ToolbarInteractionRetouchExecutionPlan(
+            ApplyDirectDriftRepair: true,
+            RequestZOrderApply: false,
+            ForceEnforceZOrder: false);
+    }
+
+    internal static string FormatDecisionSkipMessage(
+        ToolbarInteractionRetouchTrigger trigger,
+        ToolbarInteractionRetouchDecisionReason reason)
+    {
+        return
+            $"[ToolbarRetouch][Decision] skip trigger={trigger} reason={reason}";
+    }
+
+    internal static string FormatActivationSuppressionSkipMessage(
+        ToolbarInteractionRetouchTrigger trigger,
+        ToolbarInteractionActivationSuppressionReason reason)
+    {
+        return
+            $"[ToolbarRetouch][Suppression] skip trigger={trigger} reason={reason}";
+    }
+
+    internal static string FormatAdmissionSkipMessage(
+        ToolbarInteractionRetouchTrigger trigger,
+        ZOrderApplyReentryReason reason,
+        bool forceEnforceZOrder)
+    {
+        return
+            $"[ToolbarRetouch][Admission] skip trigger={trigger} reason={reason} force={forceEnforceZOrder}";
+    }
+
+    internal static string FormatThrottleSkipMessage(
+        ToolbarInteractionRetouchTrigger trigger,
+        RetouchThrottleReason reason,
+        int minimumIntervalMs)
+    {
+        return
+            $"[ToolbarRetouch][Throttle] skip trigger={trigger} reason={reason} minIntervalMs={minimumIntervalMs}";
+    }
+
+    internal static string FormatExecutionPlanMessage(
+        ToolbarInteractionRetouchTrigger trigger,
+        ToolbarInteractionRetouchExecutionPlan plan)
+    {
+        return
+            $"[ToolbarRetouch][Execute] trigger={trigger} directRepair={plan.ApplyDirectDriftRepair} requestZOrder={plan.RequestZOrderApply} force={plan.ForceEnforceZOrder}";
+    }
+
+    internal static string FormatDirectRepairAdmissionSkipMessage(
+        ToolbarInteractionRetouchTrigger trigger,
+        ToolbarInteractionDirectRepairAdmissionReason reason)
+    {
+        return
+            $"[ToolbarRetouch][DirectRepair] skip trigger={trigger} reason={reason}";
+    }
+
+    internal static string FormatDirectRepairDispatchMessage(
+        ToolbarInteractionRetouchTrigger trigger,
+        ToolbarInteractionRetouchDispatchMode mode)
+    {
+        return
+            $"[ToolbarRetouch][DirectRepair] dispatch trigger={trigger} mode={mode}";
+    }
+
+    internal static string FormatDirectRepairDispatchAdmissionSkipMessage(
+        ToolbarInteractionRetouchTrigger trigger)
+    {
+        return
+            $"[ToolbarRetouch][DirectRepair] dispatch-skip trigger={trigger} reason=AlreadyQueued";
+    }
+
+    internal static string FormatDirectRepairDispatchFailureMessage(
+        ToolbarInteractionRetouchTrigger trigger,
+        string exceptionType,
+        string message)
+    {
+        return
+            $"[ToolbarRetouch][DirectRepair] dispatch-failed trigger={trigger} ex={exceptionType} msg={message}";
+    }
+
+    internal static string FormatRuntimeResetMessage(ToolbarInteractionRetouchRuntimeResetReason reason)
+    {
+        return
+            $"[ToolbarRetouch][RuntimeReset] reason={reason}";
+    }
+
+    internal static ToolbarInteractionDirectRepairAdmissionDecision ResolveToolbarInteractionDirectRepairAdmission(
+        bool zOrderApplying,
+        bool zOrderQueued)
+    {
+        if (zOrderApplying)
+        {
+            return new ToolbarInteractionDirectRepairAdmissionDecision(
+                ShouldApply: false,
+                Reason: ToolbarInteractionDirectRepairAdmissionReason.ZOrderApplying);
+        }
+
+        if (zOrderQueued)
+        {
+            return new ToolbarInteractionDirectRepairAdmissionDecision(
+                ShouldApply: false,
+                Reason: ToolbarInteractionDirectRepairAdmissionReason.ZOrderQueued);
+        }
+
+        return new ToolbarInteractionDirectRepairAdmissionDecision(
+            ShouldApply: true,
+            Reason: ToolbarInteractionDirectRepairAdmissionReason.None);
+    }
+
+    internal static ToolbarInteractionActivationSuppressionDecision ResolveToolbarInteractionActivationSuppression(
         ToolbarInteractionRetouchTrigger trigger,
         ToolbarInteractionRetouchSnapshot snapshot,
         DateTime lastPreviewMouseDownUtc,
@@ -507,7 +495,7 @@ internal static class ToolbarInteractionActivationSuppressionPolicy
         DateTime nowUtc,
         int launcherOnlySuppressionMs = ToolbarInteractionActivationSuppressionDefaults.LauncherOnlyAfterPreviewSuppressionMs)
     {
-        return Resolve(
+        return ResolveToolbarInteractionActivationSuppression(
             trigger,
             snapshot,
             lastPreviewMouseDownUtc,
@@ -515,10 +503,4 @@ internal static class ToolbarInteractionActivationSuppressionPolicy
             nowUtc,
             launcherOnlySuppressionMs).ShouldSuppress;
     }
-}
-
-internal static class ToolbarInteractionActivationSuppressionDefaults
-{
-    internal const int LauncherOnlyAfterPreviewSuppressionMs = 90;
-    internal const int LauncherOnlyAfterPreviewInteractiveSuppressionMs = 130;
 }

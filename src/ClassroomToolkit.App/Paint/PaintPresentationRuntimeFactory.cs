@@ -36,7 +36,7 @@ internal static class PaintPresentationRuntimeFactory
 
             var activeClassifier = classifierAccessor() ?? classifier;
             var check = resolver.CheckWindow(target.Handle, activeClassifier);
-            return PresentationTargetAdmissionPolicy.IsFreshIdentityMatch(
+            return PresentationPipelinePolicies.IsFreshIdentityMatch(
                 target,
                 check,
                 activeClassifier,

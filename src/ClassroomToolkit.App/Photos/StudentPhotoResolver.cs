@@ -149,7 +149,7 @@ internal sealed class StudentPhotoResolver : IDisposable
             // paying 4x File.Exists checks while still detecting new files promptly.
             if (hasDirectoryWriteTime
                 && writeTimeUtc <= freshCache.DirectoryWriteTimeUtc
-                && StudentPhotoCachePolicy.ShouldSkipMissProbe(now, freshCache.LastMissProbeUtc, MissProbeInterval))
+                && PhotoOverlayPolicies.ShouldSkipMissProbe(now, freshCache.LastMissProbeUtc, MissProbeInterval))
             {
                 return null;
             }
@@ -303,7 +303,7 @@ internal sealed class StudentPhotoResolver : IDisposable
 
         var now = DateTime.UtcNow;
         if (_cache.TryGetValue(directory, out var cached)
-            && StudentPhotoCachePolicy.ShouldReuseCache(now, cached.Timestamp, CacheTtl))
+            && PhotoOverlayPolicies.ShouldReuseCache(now, cached.Timestamp, CacheTtl))
         {
             return cached.Index;
         }
@@ -321,7 +321,7 @@ internal sealed class StudentPhotoResolver : IDisposable
 
             now = DateTime.UtcNow;
             if (_cache.TryGetValue(directory, out cached)
-                && StudentPhotoCachePolicy.ShouldReuseCache(now, cached.Timestamp, CacheTtl))
+                && PhotoOverlayPolicies.ShouldReuseCache(now, cached.Timestamp, CacheTtl))
             {
                 return cached.Index;
             }
@@ -375,7 +375,7 @@ internal sealed class StudentPhotoResolver : IDisposable
     {
         var now = DateTime.UtcNow;
         if (_cache.TryGetValue(directory, out var found)
-            && StudentPhotoCachePolicy.ShouldReuseCache(now, found.Timestamp, CacheTtl))
+            && PhotoOverlayPolicies.ShouldReuseCache(now, found.Timestamp, CacheTtl))
         {
             cache = found;
             return true;

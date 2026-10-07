@@ -20,11 +20,11 @@ public partial class PaintOverlayWindow
 
         var previous = _lastBrushPredictionSample.Value;
         var previousVelocity = _lastBrushVelocityDipPerSec;
-        _lastBrushVelocityDipPerSec = BrushPredictionVelocityPolicy.Resolve(
+        _lastBrushVelocityDipPerSec = PresetSchemePolicies.ResolveBrushPredictionVelocity(
             _lastBrushVelocityDipPerSec,
             previous,
             input);
-        _lastBrushAccelerationDipPerSecSq = BrushPredictionVelocityPolicy.ResolveAcceleration(
+        _lastBrushAccelerationDipPerSecSq = PresetSchemePolicies.ResolveAcceleration(
             _lastBrushAccelerationDipPerSecSq,
             previous,
             input,

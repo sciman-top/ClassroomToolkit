@@ -143,7 +143,7 @@ public partial class PaintOverlayWindow
         _lastCalligraphyPreviewPoint = null;
         var photoInkModeActive = IsPhotoInkModeActive();
         if (!_suppressImmediatePhotoInkRedraw
-            && PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
+            && PhotoInkInteropPolicies.ShouldRequestImmediateRedraw(
                 photoInkModeActive,
                 RasterImage.RenderTransform,
                 _photoContentTransform,

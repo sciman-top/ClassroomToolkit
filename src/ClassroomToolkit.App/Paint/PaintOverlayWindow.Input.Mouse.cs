@@ -65,11 +65,11 @@ public partial class PaintOverlayWindow
             return;
         }
         var interactionState = CaptureInputInteractionState();
-        var shouldArmPending = PhotoRightClickContextMenuPolicy.ShouldArmPending(
+        var shouldArmPending = PhotoWindowPolicies.ShouldArmPending(
             interactionState.PhotoModeActive,
             _photoFullscreen,
             _mode);
-        var downExecutionPlan = PhotoRightButtonDownExecutionPolicy.Resolve(
+        var downExecutionPlan = PhotoWindowPolicies.ResolvePhotoRightButtonDownExecution(
             shouldArmPending,
             shouldAllowPan: ResolveShouldPanPhoto(interactionState));
         if (downExecutionPlan.ShouldArmPending)
@@ -134,8 +134,8 @@ public partial class PaintOverlayWindow
         System.Windows.Input.MouseButtonEventArgs e,
         InputInteractionState interactionState)
     {
-        var executionPlan = PhotoRightButtonUpExecutionPolicy.Resolve(
-            PhotoRightClickContextMenuPolicy.ShouldShowContextMenuOnUp(
+        var executionPlan = PhotoWindowPolicies.ResolvePhotoRightButtonUpExecution(
+            PhotoWindowPolicies.ShouldShowContextMenuOnUp(
                 _photoRightClickPending,
                 interactionState.PhotoModeActive,
                 _photoFullscreen,
@@ -160,7 +160,7 @@ public partial class PaintOverlayWindow
 
     private bool IsMousePhotoPanActive(InputInteractionState interactionState)
     {
-        return PhotoPanMouseRoutingPolicy.ShouldHandlePhotoPan(
+        return PhotoPanPolicies.ShouldHandlePhotoPan(
             _photoPanning,
             interactionState.PhotoModeActive,
             _mode,
@@ -169,7 +169,7 @@ public partial class PaintOverlayWindow
 
     private bool ResolveShouldPanPhoto(InputInteractionState interactionState)
     {
-        return StylusCursorPolicy.ShouldPanPhoto(
+        return PhotoInkInteropPolicies.ShouldPanPhoto(
             interactionState.PhotoModeActive,
             interactionState.BoardActive,
             _mode,
@@ -182,12 +182,12 @@ public partial class PaintOverlayWindow
         InputInteractionState interactionState)
     {
         var shouldAllowPhotoPan = ResolveShouldPanPhoto(interactionState);
-        var decision = PhotoPanMouseMoveRoutingPolicy.Resolve(
+        var decision = PhotoPanPolicies.ResolveMouseMoveRouting(
             _photoPanning,
             shouldAllowPhotoPan,
             e.LeftButton,
             e.RightButton);
-        var executionPlan = PhotoPanMouseExecutionPolicy.ResolveMove(decision);
+        var executionPlan = PhotoPanPolicies.ResolveMove(decision);
         if (executionPlan.Action == PhotoPanMouseExecutionAction.PassThrough)
         {
             return false;
@@ -210,11 +210,11 @@ public partial class PaintOverlayWindow
         InputInteractionState interactionState)
     {
         var shouldAllowPhotoPan = ResolveShouldPanPhoto(interactionState);
-        var shouldEndPan = PhotoPanTerminationPolicy.ShouldEndPan(
+        var shouldEndPan = PhotoPanPolicies.ShouldEndPanTermination(
             shouldAllowPhotoPan,
             e.LeftButton,
             e.RightButton);
-        var executionPlan = PhotoPanMouseExecutionPolicy.ResolveEnd(
+        var executionPlan = PhotoPanPolicies.ResolveEnd(
             _photoPanning,
             shouldEndPan);
         if (executionPlan.Action == PhotoPanMouseExecutionAction.PassThrough)
@@ -241,7 +241,7 @@ public partial class PaintOverlayWindow
         // events. TouchDown must remain unhandled for manipulation, so stop
         // that promotion here before it reaches ink or photo-pan routing.
         if (e.StylusDevice != null
-            && PhotoTouchInteractionPolicy.ShouldIgnorePromotedTouchStylus(
+            && PhotoWindowPolicies.ShouldIgnorePromotedTouchStylus(
                 e.StylusDevice.TabletDevice.Type))
         {
             e.Handled = true;

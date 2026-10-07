@@ -24,7 +24,7 @@ public sealed class PresentationTargetAdmissionTests
             IsFullscreen: true,
             Score: 100);
 
-        PresentationTargetAdmissionPolicy.IsFreshIdentityMatch(
+        PresentationPipelinePolicies.IsFreshIdentityMatch(
                 target,
                 currentCheck,
                 new PresentationClassifier(),
@@ -49,7 +49,7 @@ public sealed class PresentationTargetAdmissionTests
             IsFullscreen: true,
             Score: 100);
 
-        PresentationTargetAdmissionPolicy.IsFreshIdentityMatch(
+        PresentationPipelinePolicies.IsFreshIdentityMatch(
                 target,
                 currentCheck,
                 new PresentationClassifier(),
@@ -80,7 +80,7 @@ public sealed class PresentationTargetAdmissionTests
             AdditionalWpsProcessTokens: ["wps-editor"],
             AdditionalOfficeProcessTokens: []));
 
-        PresentationTargetAdmissionPolicy.IsFreshIdentityMatch(
+        PresentationPipelinePolicies.IsFreshIdentityMatch(
                 target,
                 currentCheck,
                 classifier,
@@ -94,7 +94,7 @@ public sealed class PresentationTargetAdmissionTests
         var target = CreateWpsTarget(processId: 1);
         var currentCheck = CreateWpsCheck(processId: 2);
 
-        PresentationTargetAdmissionPolicy.IsFreshIdentityMatch(
+        PresentationPipelinePolicies.IsFreshIdentityMatch(
                 target,
                 currentCheck,
                 new PresentationClassifier(),
@@ -117,7 +117,7 @@ public sealed class PresentationTargetAdmissionTests
             IsFullscreen: true,
             Score: 100);
 
-        PresentationTargetAdmissionPolicy.IsFreshIdentityMatch(
+        PresentationPipelinePolicies.IsFreshIdentityMatch(
                 target,
                 currentCheck,
                 new PresentationClassifier(),
@@ -140,7 +140,7 @@ public sealed class PresentationTargetAdmissionTests
             IsFullscreen: true,
             Score: 100);
 
-        PresentationTargetAdmissionPolicy.IsFreshIdentityMatch(
+        PresentationPipelinePolicies.IsFreshIdentityMatch(
                 target,
                 currentCheck,
                 new PresentationClassifier(),

@@ -30,11 +30,11 @@ public partial class PaintOverlayWindow
         }
         if (WindowState == WindowState.Minimized)
         {
-            _photoRestoreFullscreenPending = PhotoWindowStateRestorePolicy.ShouldArmFullscreenRestore(_photoFullscreen);
+            _photoRestoreFullscreenPending = PhotoWindowPolicies.ShouldArmFullscreenRestore(_photoFullscreen);
             SavePhotoTransformState(true);
             return;
         }
-        if (PhotoWindowStateRestorePolicy.ShouldRestoreFullscreen(_photoRestoreFullscreenPending, WindowState))
+        if (PhotoWindowPolicies.ShouldRestoreFullscreen(_photoRestoreFullscreenPending, WindowState))
         {
             _photoRestoreFullscreenPending = false;
             _photoFullscreen = true;

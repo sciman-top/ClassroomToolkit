@@ -84,7 +84,7 @@ public partial class MainWindow
         var previousRequestState = _zOrderRequestState;
         var interactionState = CaptureOverlayInteractionState();
         var dedupIntervalMs = MainWindowZOrderDedupIntervalPolicy.ResolveRequestIntervalMs(interactionState);
-        var admission = ZOrderRequestAdmissionPolicy.Resolve(
+        var admission = ZOrderRequestPolicies.ResolveAdmission(
             _zOrderPolicyApplying,
             _floatingDispatchQueueState.ApplyQueued,
             _zOrderRequestState,
@@ -159,7 +159,7 @@ public partial class MainWindow
         if (Dispatcher.HasShutdownStarted || Dispatcher.HasShutdownFinished)
         {
             System.Diagnostics.Debug.WriteLine(
-                DispatcherBeginInvokeDiagnosticsPolicy.FormatFailureMessage(
+                WindowingDiagnosticsPolicies.FormatFailureMessageDispatcherBeginInvokeDiagnostics(
                     operation,
                     "DispatcherShutdown",
                     "dispatcher is shutting down"));
@@ -174,7 +174,7 @@ public partial class MainWindow
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine(
-                DispatcherBeginInvokeDiagnosticsPolicy.FormatFailureMessage(
+                WindowingDiagnosticsPolicies.FormatFailureMessageDispatcherBeginInvokeDiagnostics(
                     operation,
                     ex.GetType().Name,
                     ex.Message));
@@ -218,12 +218,12 @@ public partial class MainWindow
         {
             var coordination = CaptureFloatingWindowCoordinationSnapshot();
             var launcherWindow = ResolveLauncherWindow(coordination.Launcher);
-            var suppressionDecision = OverlayActivationSuppressionPolicy.Resolve(
+            var suppressionDecision = OverlayActivationPolicies.ResolveSuppression(
                 _overlayActivatedRetouchState.SuppressNextApply);
             if (suppressionDecision.ShouldSuppress)
             {
                 System.Diagnostics.Debug.WriteLine(
-                    OverlayActivationDiagnosticsPolicy.FormatSuppressionMessage(
+                    OverlayActivationPolicies.FormatSuppressionMessage(
                         suppressionDecision.Reason));
             }
 
@@ -255,7 +255,7 @@ public partial class MainWindow
     private FloatingWindowRuntimeSnapshot CaptureFloatingWindowRuntimeSnapshot(
         LauncherWindowRuntimeSnapshot launcherSnapshot)
     {
-        return FloatingWindowRuntimeSnapshotPolicy.Resolve(
+        return FloatingWindowCoordinationPolicies.ResolveFloatingWindowRuntimeSnapshot(
             overlayVisible: _overlayWindow?.IsVisible == true,
             overlayActive: _overlayWindow?.IsActive == true,
             photoActive: _overlayWindow?.IsPhotoModeActive == true,
@@ -291,7 +291,7 @@ public partial class MainWindow
     private LauncherWindowRuntimeSnapshot CaptureLauncherWindowRuntimeSnapshot()
     {
         var nowUtc = GetCurrentUtcTimestamp();
-        var snapshot = LauncherWindowRuntimeSnapshotPolicy.Resolve(
+        var snapshot = LauncherWindowPolicies.ResolveRuntimeSnapshot(
             launcherMinimized: _settings.LauncherMinimized,
             mainVisible: IsVisible,
             mainMinimized: WindowState == WindowState.Minimized,
@@ -303,7 +303,7 @@ public partial class MainWindow
             ref _lastLauncherVisibleForTopmostUtc,
             nowUtc,
             snapshot.VisibleForTopmost);
-        if (LauncherWindowRuntimeSelectionLogPolicy.ShouldLog(snapshot.SelectionReason))
+        if (LauncherRuntimePolicies.ShouldLog(snapshot.SelectionReason))
         {
             System.Diagnostics.Debug.WriteLine(
                 $"[Launcher][Snapshot] selection={snapshot.SelectionReason}");
@@ -314,13 +314,13 @@ public partial class MainWindow
 
     private Window? ResolveLauncherWindow(LauncherWindowRuntimeSnapshot launcherSnapshot)
     {
-        var resolvedKind = LauncherWindowResolverPolicy.Resolve(
+        var resolvedKind = LauncherWindowPolicies.ResolveResolver(
             launcherSnapshot.WindowKind,
             bubbleExists: _bubbleWindow != null,
             bubbleVisible: _bubbleWindow?.IsVisible == true,
             mainVisible: IsVisible);
 
-        return LauncherWindowResolutionPolicy.ShouldUseBubbleWindow(
+        return LauncherRuntimePolicies.ShouldUseBubbleWindow(
             resolvedKind,
             bubbleWindowExists: _bubbleWindow != null)
             ? _bubbleWindow
@@ -334,7 +334,7 @@ public partial class MainWindow
         var launcherVisible = launcherWindow?.IsVisible == true;
         var imageManagerVisible = _imageManagerWindow?.IsVisible == true;
         var rollCallAuxOverlayVisible = _rollCallWindow?.HasVisibleAuxOverlay() == true;
-        var strictEnforceZOrder = enforceZOrder || FloatingTopmostWatchdogPolicy.ShouldForceRetouch(
+        var strictEnforceZOrder = enforceZOrder || FloatingTopmostPolicies.ShouldForceRetouch(
             toolbarVisible,
             rollCallVisible,
             launcherVisible,

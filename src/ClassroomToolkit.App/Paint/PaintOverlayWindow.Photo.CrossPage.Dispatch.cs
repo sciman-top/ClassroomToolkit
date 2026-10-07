@@ -19,7 +19,7 @@ public partial class PaintOverlayWindow
             return;
         }
 
-        var admissionDecision = CrossPageRequestAdmissionPolicy.Resolve(
+        var admissionDecision = CrossPageDisplayUpdatePolicies.ResolveCrossPageRequestAdmission(
             crossPageDisplayActive: IsCrossPageDisplayActive(),
             photoLoading: _photoLoading,
             hasPhotoBackgroundSource: PhotoBackground.Source != null,
@@ -44,7 +44,7 @@ public partial class PaintOverlayWindow
                 nowUtc);
         if (duplicateDecision.ShouldSkip)
         {
-            var replayQueueDecision = CrossPageDuplicateSkipReplayQueuePolicy.Resolve(
+            var replayQueueDecision = CrossPageReplayPolicies.ResolveCrossPageDuplicateSkipReplayQueue(
                 duplicateDecision,
                 request.Kind,
                 source);
@@ -74,21 +74,21 @@ public partial class PaintOverlayWindow
             MarkCrossPageFirstInputStage("crosspage-update-enter");
         }
         var elapsedMs = (nowUtc - _crossPageDisplayUpdateClockState.LastUpdateUtc).TotalMilliseconds;
-        var dispatchDecision = CrossPageDisplayUpdateThrottlePolicy.Resolve(
+        var dispatchDecision = CrossPageDisplayUpdatePolicies.ResolveThrottle(
             dispatchSnapshot,
             elapsedMs,
             draggingMinIntervalMs: CrossPageRuntimeDefaults.DraggingUpdateMinIntervalMs,
             normalMinIntervalMs: CrossPageRuntimeDefaults.UpdateMinIntervalMs);
         var sourceSuffix = CrossPageUpdateSourceParser.Parse(source).Suffix;
-        dispatchDecision = CrossPageImmediateDispatchPolicy.Resolve(dispatchDecision, sourceSuffix);
-        dispatchDecision = CrossPagePendingTakeoverPolicy.Resolve(
+        dispatchDecision = CrossPageReplayPolicies.ResolveCrossPageImmediateDispatch(dispatchDecision, sourceSuffix);
+        dispatchDecision = CrossPageInteractiveMiscPolicies.ResolveCrossPagePendingTakeover(
             dispatchDecision,
             sourceSuffix,
             _crossPageDisplayUpdateState,
             nowUtc);
         if (dispatchDecision.Mode == CrossPageDisplayUpdateDispatchMode.SkipPending)
         {
-            var replayQueueDecision = CrossPageReplayQueuePolicy.Resolve(request.Kind, source);
+            var replayQueueDecision = CrossPageReplayPolicies.ResolveQueue(request.Kind, source);
             CrossPageReplayPendingStateUpdater.ApplyQueueDecision(
                 ref _crossPageReplayState,
                 replayQueueDecision);
@@ -129,7 +129,7 @@ public partial class PaintOverlayWindow
                                 token,
                                 detail);
                         }, DispatcherPriority.Background);
-                        var recoveryDecision = CrossPageDelayedDispatchFailureRecoveryPolicy.Resolve(
+                        var recoveryDecision = CrossPageReplayPolicies.ResolveCrossPageDelayedDispatchFailureRecovery(
                             recoveryDispatchScheduled: scheduledRecovery,
                             dispatcherCheckAccess: Dispatcher.CheckAccess(),
                             dispatcherShutdownStarted: Dispatcher.HasShutdownStarted,
@@ -143,7 +143,7 @@ public partial class PaintOverlayWindow
                                 request.Kind,
                                 source,
                                 token,
-                                CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatInlineRecoveryDetail(
+                                CrossPageReplayPolicies.FormatInlineRecoveryDetail(
                                     tokenMatched));
                         }
                         return;
@@ -225,7 +225,7 @@ public partial class PaintOverlayWindow
         {
             return (
                 ShouldContinue: false,
-                FailureDetail: CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatDelayFailureDetail(
+                FailureDetail: CrossPageReplayPolicies.FormatDelayFailureDetail(
                     ex.GetType().Name));
         }
     }
@@ -244,7 +244,7 @@ public partial class PaintOverlayWindow
         }
 
         CrossPageDisplayUpdatePendingStateUpdater.MarkPendingCleared(ref _crossPageDisplayUpdateState);
-        var replayQueueDecision = CrossPageReplayQueuePolicy.Resolve(kind, source);
+        var replayQueueDecision = CrossPageReplayPolicies.ResolveQueue(kind, source);
         CrossPageReplayPendingStateUpdater.ApplyQueueDecision(
             ref _crossPageReplayState,
             replayQueueDecision);
@@ -311,7 +311,7 @@ public partial class PaintOverlayWindow
         string mode,
         bool emitAbortDiagnostics)
     {
-        var runGate = CrossPageDisplayRunGatePolicy.Resolve(IsCrossPageDisplayActive());
+        var runGate = CrossPageDisplayUpdatePolicies.ResolveCrossPageDisplayRunGate(IsCrossPageDisplayActive());
         if (!runGate.ShouldRun)
         {
             if (emitAbortDiagnostics)
@@ -342,7 +342,7 @@ public partial class PaintOverlayWindow
             fallback: false,
             onFailure: ex =>
             {
-                var replayQueueDecision = CrossPageDisplayUpdateRunFailureReplayPolicy.Resolve(source);
+                var replayQueueDecision = CrossPageDisplayUpdatePolicies.ResolveRunFailureReplay(source);
                 CrossPageReplayPendingStateUpdater.ApplyQueueDecision(
                     ref _crossPageReplayState,
                     replayQueueDecision);

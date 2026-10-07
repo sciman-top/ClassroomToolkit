@@ -17,7 +17,7 @@ public partial class PaintOverlayWindow
 {
     private bool ShouldRenderInteractiveInkInPhotoSpace()
     {
-        return PhotoInkRenderPolicy.ShouldRenderInteractiveInkInPhotoSpace(
+        return PhotoInkInteropPolicies.ShouldRenderInteractiveInkInPhotoSpace(
             IsPhotoInkModeActive(),
             RasterImage.RenderTransform,
             _photoContentTransform);
@@ -30,12 +30,12 @@ public partial class PaintOverlayWindow
             return ToPhotoGeometry(geometry) ?? geometry;
         }
 
-        if (PhotoInkPanCompensationGeometryPolicy.ShouldApplyCompensation(
+        if (PhotoInkInteropPolicies.ShouldApplyCompensation(
                 IsPhotoInkModeActive(),
                 RasterImage.RenderTransform,
                 _photoInkPanCompensation))
         {
-            return PhotoInkPanCompensationGeometryPolicy.AdjustToRasterSpace(
+            return PhotoInkInteropPolicies.AdjustToRasterSpace(
                 geometry,
                 _photoInkPanCompensation.X,
                 _photoInkPanCompensation.Y);

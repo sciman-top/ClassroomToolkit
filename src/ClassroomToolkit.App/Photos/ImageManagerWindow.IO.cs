@@ -71,7 +71,7 @@ public partial class ImageManagerWindow
         },
             fallback: false,
             onFailure: ex => System.Diagnostics.Debug.WriteLine(
-                ImageManagerDiagnosticsPolicy.FormatFileAttributeReadFailureMessage(
+                ImageManagerPolicies.FormatFileAttributeReadFailureMessage(
                     path,
                     ex.GetType().Name,
                     ex.Message)));
@@ -93,7 +93,7 @@ public partial class ImageManagerWindow
         },
             fallback: null,
             onFailure: ex => System.Diagnostics.Debug.WriteLine(
-                ImageManagerDiagnosticsPolicy.FormatThumbnailLoadFailureMessage(
+                ImageManagerPolicies.FormatThumbnailLoadFailureMessage(
                     path,
                     sourceType: "image",
                     ex.GetType().Name,
@@ -110,7 +110,7 @@ public partial class ImageManagerWindow
         },
             fallback: (null, 0),
             onFailure: ex => System.Diagnostics.Debug.WriteLine(
-                ImageManagerDiagnosticsPolicy.FormatThumbnailLoadFailureMessage(
+                ImageManagerPolicies.FormatThumbnailLoadFailureMessage(
                     path,
                     sourceType: "pdf",
                     ex.GetType().Name,
@@ -123,7 +123,7 @@ public partial class ImageManagerWindow
             () => File.GetLastWriteTime(path),
             fallback: DateTime.MinValue,
             onFailure: ex => System.Diagnostics.Debug.WriteLine(
-                ImageManagerDiagnosticsPolicy.FormatModifiedTimeReadFailureMessage(
+                ImageManagerPolicies.FormatModifiedTimeReadFailureMessage(
                     path,
                     ex.GetType().Name,
                     ex.Message)));

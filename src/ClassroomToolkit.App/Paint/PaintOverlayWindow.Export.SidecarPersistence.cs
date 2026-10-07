@@ -160,7 +160,7 @@ public partial class PaintOverlayWindow
                     out _,
                     out var runtimeHash,
                     out _);
-                if (!InkAutoSaveSnapshotAdmissionPolicy.ShouldPersistSnapshot(
+                if (!InkPersistencePolicies.ShouldPersistSnapshot(
                         runtimeStateKnown,
                         runtimeHash,
                         snapshot.SnapshotHash))
@@ -243,7 +243,7 @@ public partial class PaintOverlayWindow
                         var known = _inkDirtyPages.TryGetRuntimeState(snapshot.SourcePath,
                             snapshot.PageIndex, out _, out var hash, out _);
                         return isCurrent() && _inkSaveEnabled
-                            && InkAutoSaveSnapshotAdmissionPolicy.ShouldPersistSnapshot(known, hash, snapshot.SnapshotHash);
+                            && InkPersistencePolicies.ShouldPersistSnapshot(known, hash, snapshot.SnapshotHash);
                     }))
                 {
                     return false;

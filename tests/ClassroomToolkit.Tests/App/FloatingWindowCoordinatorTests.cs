@@ -160,7 +160,7 @@ public class FloatingWindowCoordinatorTests
             coordination,
             new FloatingWindowCoordinationState(
                 LastFrontSurface: ZOrderSurface.Whiteboard,
-                LastTopmostPlan: FloatingTopmostPlanPolicy.Resolve(
+                LastTopmostPlan: FloatingTopmostPolicies.ResolvePlan(
                     ZOrderSurface.Whiteboard,
                     coordination.TopmostVisibility)),
             forceEnforceZOrder: false,
@@ -182,7 +182,7 @@ public class FloatingWindowCoordinatorTests
             LauncherVisible: false,
             ImageManagerVisible: false,
             OverlayVisible: true);
-        var topmostPlan = FloatingTopmostPlanPolicy.Resolve(ZOrderSurface.Whiteboard, topmostVisibility);
+        var topmostPlan = FloatingTopmostPolicies.ResolvePlan(ZOrderSurface.Whiteboard, topmostVisibility);
         var coordination = new FloatingWindowCoordinationSnapshot(
             Runtime: new FloatingWindowRuntimeSnapshot(
                 OverlayVisible: true,

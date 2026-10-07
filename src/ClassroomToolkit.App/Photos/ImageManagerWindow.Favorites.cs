@@ -42,7 +42,7 @@ public partial class ImageManagerWindow
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine(
-                ImageManagerDiagnosticsPolicy.FormatFavoriteFolderDialogFailureMessage(
+                ImageManagerPolicies.FormatFavoriteFolderDialogFailureMessage(
                     ex.Message));
             return;
         }
@@ -57,7 +57,7 @@ public partial class ImageManagerWindow
                         WindowTopmostExecutor.ApplyNoActivate(this, enabled: restoreOwnerTopmost, enforceZOrder: true);
                     },
                     ex => Debug.WriteLine(
-                        ImageManagerDiagnosticsPolicy.FormatFavoriteFolderDialogFailureMessage(
+                        ImageManagerPolicies.FormatFavoriteFolderDialogFailureMessage(
                             $"restore-topmost-failed: {ex.Message}")));
             }
         }

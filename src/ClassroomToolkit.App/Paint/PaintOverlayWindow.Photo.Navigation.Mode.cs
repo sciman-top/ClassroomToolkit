@@ -30,7 +30,7 @@ public partial class PaintOverlayWindow
     {
         ArgumentNullException.ThrowIfNull(paths);
 
-        var normalized = PhotoCrossPageSequencePolicy.Normalize(paths, currentIndex);
+        var normalized = PhotoWindowPolicies.Normalize(paths, currentIndex);
         _photoSequencePaths = normalized.Sequence.ToList();
         _photoSequenceIndex = normalized.CurrentIndex;
         ClearNeighborImageCache();
@@ -56,7 +56,7 @@ public partial class PaintOverlayWindow
         _crossPageUpdateDeferredByInkInput = false;
         RecoverInkWalForDirectory(sourcePath);
         _foregroundPhotoActive = false;
-        var reentryPlan = PhotoOverlayReentryPolicy.Resolve(
+        var reentryPlan = PhotoOverlayTransitionsPolicies.ResolvePhotoOverlayReentry(
             windowMinimized: WindowState == WindowState.Minimized,
             photoModeActive: _photoModeActive,
             sameSourcePath: string.Equals(_currentDocumentPath, sourcePath, StringComparison.OrdinalIgnoreCase));
@@ -111,7 +111,7 @@ public partial class PaintOverlayWindow
         var hadUserTransformDirty = _photoUserTransformDirty;
         _photoUserTransformDirty = false;
         EnsurePhotoTransformsWritable();
-        var transformInitPlan = PhotoEnterTransformInitPolicy.Resolve(
+        var transformInitPlan = PhotoPanPolicies.ResolvePhotoEnterTransformInit(
             crossPageDisplayEnabled: IsCrossPageDisplaySettingEnabled(),
             rememberPhotoTransform: _rememberPhotoTransform,
             photoUnifiedTransformReady: _photoUnifiedTransformReady,
@@ -206,7 +206,7 @@ public partial class PaintOverlayWindow
         _foregroundPhotoActive = false;
         FlushPhotoTransformSave();
         SaveCurrentPageOnNavigate(forceBackground: false);
-        if (!InkPersistenceTogglePolicy.ShouldRetainRuntimeCacheOnPhotoExit(_inkSaveEnabled))
+        if (!InkPersistencePolicies.ShouldRetainRuntimeCacheOnPhotoExit(_inkSaveEnabled))
         {
             EvictRuntimeInkCacheForClosedPhotoSession();
         }

@@ -21,66 +21,6 @@ internal readonly record struct ImageManagerActivationDecision(
     bool ShouldActivate,
     ImageManagerActivationReason Reason);
 
-internal static class ImageManagerActivationPolicy
-{
-    internal static ImageManagerActivationDecision Resolve(
-        bool imageManagerTopmost,
-        bool imageManagerActive,
-        bool toolbarActive,
-        bool rollCallActive,
-        bool launcherActive)
-    {
-        if (!imageManagerTopmost)
-        {
-            return new ImageManagerActivationDecision(
-                ShouldActivate: false,
-                Reason: ImageManagerActivationReason.NotTopmostTarget);
-        }
-
-        if (imageManagerActive)
-        {
-            return new ImageManagerActivationDecision(
-                ShouldActivate: false,
-                Reason: ImageManagerActivationReason.AlreadyActive);
-        }
-
-        var guardDecision = FloatingActivationGuardPolicy.Resolve(
-            new FloatingUtilityActivitySnapshot(
-                ToolbarActive: toolbarActive,
-                RollCallActive: rollCallActive,
-                ImageManagerActive: false,
-                LauncherActive: launcherActive));
-        return guardDecision.IsBlocked
-            ? new ImageManagerActivationDecision(
-                ShouldActivate: false,
-                Reason: guardDecision.Reason switch
-                {
-                    FloatingActivationGuardReason.ToolbarActive => ImageManagerActivationReason.BlockedByToolbar,
-                    FloatingActivationGuardReason.RollCallActive => ImageManagerActivationReason.BlockedByRollCall,
-                    FloatingActivationGuardReason.LauncherActive => ImageManagerActivationReason.BlockedByLauncher,
-                    _ => ImageManagerActivationReason.BlockedByToolbar
-                })
-            : new ImageManagerActivationDecision(
-                ShouldActivate: true,
-                Reason: ImageManagerActivationReason.None);
-    }
-
-    internal static bool ShouldActivate(
-        bool imageManagerTopmost,
-        bool imageManagerActive,
-        bool toolbarActive,
-        bool rollCallActive,
-        bool launcherActive)
-    {
-        return Resolve(
-            imageManagerTopmost,
-            imageManagerActive,
-            toolbarActive,
-            rollCallActive,
-            launcherActive).ShouldActivate;
-    }
-}
-
 internal readonly record struct ImageManagerStateChangeContext(
     bool ImageManagerExists,
     WindowState ImageManagerWindowState,
@@ -95,45 +35,6 @@ internal readonly record struct ImageManagerStateChangeDecision(
     bool NormalizeOverlayWindowState,
     bool RequestZOrderApply,
     bool ForceEnforceZOrder);
-
-internal static class ImageManagerStateChangePolicy
-{
-    internal static ImageManagerStateChangeDecision Resolve(ImageManagerStateChangeContext context)
-    {
-        return Resolve(
-            imageManagerExists: context.ImageManagerExists,
-            imageManagerMinimized: context.ImageManagerMinimized,
-            overlayVisible: context.OverlayVisible,
-            overlayMinimized: context.OverlayMinimized);
-    }
-
-    internal static ImageManagerStateChangeDecision Resolve(
-        bool imageManagerExists,
-        bool imageManagerMinimized,
-        bool overlayVisible,
-        bool overlayMinimized)
-    {
-        var shouldRecoverOverlay = imageManagerExists
-            && imageManagerMinimized
-            && overlayVisible
-            && overlayMinimized;
-
-        return new ImageManagerStateChangeDecision(
-            NormalizeOverlayWindowState: shouldRecoverOverlay,
-            RequestZOrderApply: shouldRecoverOverlay,
-            ForceEnforceZOrder: shouldRecoverOverlay);
-    }
-}
-
-internal static class ImageManagerStateChangeSurfaceDecisionPolicy
-{
-    internal static SurfaceZOrderDecision Resolve(ImageManagerStateChangeDecision decision)
-    {
-        return ImageManagerSurfaceDecisionFactory.NoTouch(
-            requestZOrderApply: decision.RequestZOrderApply,
-            forceEnforceZOrder: decision.ForceEnforceZOrder);
-    }
-}
 
 internal enum ImageManagerStateChangeNormalizationExecutionKind
 {
@@ -176,14 +77,14 @@ internal static class ImageManagerStateChangeTransitionCoordinator
         }
 
         var appliedSurfaceDecision = false;
-        if (ImageManagerStateChangeSurfaceApplyPolicy.ShouldApply(
+        if (ImageManagerPolicies.ShouldApplyStateChangeSurfaceApply(
                 decision.RequestZOrderApply,
                 decision.ForceEnforceZOrder))
         {
             appliedSurfaceDecision = SafeActionExecutionExecutor.TryExecute(
                 () =>
                 {
-                    applySurfaceDecision(ImageManagerStateChangeSurfaceDecisionPolicy.Resolve(decision));
+                    applySurfaceDecision(ImageManagerWindowingPolicies.ResolveImageManagerStateChangeSurfaceDecision(decision));
                     return true;
                 },
                 fallback: false);
@@ -223,34 +124,6 @@ internal enum ImageManagerSurfaceTransitionKind
     StateChanged = 3
 }
 
-internal static class ImageManagerSurfaceTransitionPolicy
-{
-    internal static SurfaceZOrderDecision Resolve(
-        ImageManagerSurfaceTransitionKind kind,
-        bool overlayVisible)
-    {
-        return kind switch
-        {
-            ImageManagerSurfaceTransitionKind.Open => ImageManagerSurfaceDecisionFactory.TouchImageManager(
-                forceEnforceZOrder: false),
-            ImageManagerSurfaceTransitionKind.Activated => ImageManagerSurfaceDecisionFactory.TouchImageManager(
-                forceEnforceZOrder: ForegroundZOrderRetouchPolicy.ShouldForceOnImageManagerActivated(
-                    overlayVisible)),
-            ImageManagerSurfaceTransitionKind.Closed => ImageManagerSurfaceDecisionFactory.NoTouch(
-                requestZOrderApply: true,
-                forceEnforceZOrder: ForegroundZOrderRetouchPolicy.ShouldForceOnImageManagerClosed(
-                    overlayVisible)),
-            ImageManagerSurfaceTransitionKind.StateChanged => ImageManagerSurfaceDecisionFactory.NoTouch(
-                requestZOrderApply: overlayVisible,
-                forceEnforceZOrder: ForegroundZOrderRetouchPolicy.ShouldForceOnImageManagerStateChanged(
-                    overlayVisible)),
-            _ => ImageManagerSurfaceDecisionFactory.NoTouch(
-                requestZOrderApply: false,
-                forceEnforceZOrder: false)
-        };
-    }
-}
-
 internal enum ImageManagerTopmostReason
 {
     None = 0,
@@ -262,32 +135,6 @@ internal readonly record struct ImageManagerTopmostDecision(
     bool ShouldApply,
     ImageManagerTopmostReason Reason);
 
-internal static class ImageManagerTopmostPolicy
-{
-    internal static ImageManagerTopmostDecision Resolve(bool imageManagerVisible, ZOrderSurface frontSurface)
-    {
-        if (!imageManagerVisible)
-        {
-            return new ImageManagerTopmostDecision(
-                ShouldApply: false,
-                Reason: ImageManagerTopmostReason.ImageManagerHidden);
-        }
-
-        return frontSurface == ZOrderSurface.ImageManager
-            ? new ImageManagerTopmostDecision(
-                ShouldApply: true,
-                Reason: ImageManagerTopmostReason.None)
-            : new ImageManagerTopmostDecision(
-                ShouldApply: false,
-                Reason: ImageManagerTopmostReason.FrontSurfaceMismatch);
-    }
-
-    internal static bool ShouldApply(bool imageManagerVisible, ZOrderSurface frontSurface)
-    {
-        return Resolve(imageManagerVisible, frontSurface).ShouldApply;
-    }
-}
-
 internal readonly record struct ImageManagerVisibilityCloseContext(
     bool ImageManagerVisible,
     bool OwnerAlreadyOverlay);
@@ -296,22 +143,6 @@ internal readonly record struct ImageManagerVisibilityOpenContext(
     bool OverlayVisible,
     bool ImageManagerVisible,
     WindowState ImageManagerWindowState);
-
-internal static class ImageManagerVisibilitySurfaceDecisionPolicy
-{
-    internal static SurfaceZOrderDecision ResolveOpen(ImageManagerVisibilityTransitionPlan plan)
-    {
-        if (plan.TouchImageManagerSurface)
-        {
-            return ImageManagerSurfaceDecisionFactory.TouchImageManager(
-                forceEnforceZOrder: plan.ForceEnforceZOrder);
-        }
-
-        return ImageManagerSurfaceDecisionFactory.NoTouch(
-            requestZOrderApply: plan.RequestZOrderApply,
-            forceEnforceZOrder: plan.ForceEnforceZOrder);
-    }
-}
 
 internal readonly record struct ImageManagerVisibilityTransitionExecutionResult(
     bool AppliedOwnerSync,
@@ -348,11 +179,11 @@ internal static class ImageManagerVisibilityTransitionCoordinator
         normalizeWindowState();
 
         var appliedSurfaceDecision = false;
-        if (ClassroomToolkit.App.Photos.ImageManagerOpenSurfaceApplyPolicy.ShouldApply(
+        if (ClassroomToolkit.App.Photos.ImageManagerPolicies.ShouldApplyOpenSurfaceApply(
                 plan.TouchImageManagerSurface,
                 plan.RequestZOrderApply))
         {
-            applySurfaceDecision(ImageManagerVisibilitySurfaceDecisionPolicy.ResolveOpen(plan));
+            applySurfaceDecision(ImageManagerWindowingPolicies.ResolveOpenImageManagerVisibilitySurfaceDecision(plan));
             appliedSurfaceDecision = true;
         }
 
@@ -437,18 +268,169 @@ internal readonly record struct ImageManagerVisibilityTransitionPlan(
     bool ForceEnforceZOrder,
     bool TouchImageManagerSurface);
 
-internal static class ImageManagerVisibilityTransitionPolicy
+internal static class ImageManagerWindowingPolicies
 {
-    internal static ImageManagerVisibilityTransitionPlan ResolveOpen(
+    internal static ImageManagerActivationDecision ResolveImageManagerActivation(
+        bool imageManagerTopmost,
+        bool imageManagerActive,
+        bool toolbarActive,
+        bool rollCallActive,
+        bool launcherActive)
+    {
+        if (!imageManagerTopmost)
+        {
+            return new ImageManagerActivationDecision(
+                ShouldActivate: false,
+                Reason: ImageManagerActivationReason.NotTopmostTarget);
+        }
+
+        if (imageManagerActive)
+        {
+            return new ImageManagerActivationDecision(
+                ShouldActivate: false,
+                Reason: ImageManagerActivationReason.AlreadyActive);
+        }
+
+        var guardDecision = FloatingWindowCoordinationPolicies.ResolveFloatingActivationGuard(
+            new FloatingUtilityActivitySnapshot(
+                ToolbarActive: toolbarActive,
+                RollCallActive: rollCallActive,
+                ImageManagerActive: false,
+                LauncherActive: launcherActive));
+        return guardDecision.IsBlocked
+            ? new ImageManagerActivationDecision(
+                ShouldActivate: false,
+                Reason: guardDecision.Reason switch
+                {
+                    FloatingActivationGuardReason.ToolbarActive => ImageManagerActivationReason.BlockedByToolbar,
+                    FloatingActivationGuardReason.RollCallActive => ImageManagerActivationReason.BlockedByRollCall,
+                    FloatingActivationGuardReason.LauncherActive => ImageManagerActivationReason.BlockedByLauncher,
+                    _ => ImageManagerActivationReason.BlockedByToolbar
+                })
+            : new ImageManagerActivationDecision(
+                ShouldActivate: true,
+                Reason: ImageManagerActivationReason.None);
+    }
+
+    internal static bool ShouldActivate(
+        bool imageManagerTopmost,
+        bool imageManagerActive,
+        bool toolbarActive,
+        bool rollCallActive,
+        bool launcherActive)
+    {
+        return ResolveImageManagerActivation(
+            imageManagerTopmost,
+            imageManagerActive,
+            toolbarActive,
+            rollCallActive,
+            launcherActive).ShouldActivate;
+    }
+
+    internal static ImageManagerStateChangeDecision ResolveImageManagerStateChange(ImageManagerStateChangeContext context)
+    {
+        return ResolveImageManagerStateChange(
+            imageManagerExists: context.ImageManagerExists,
+            imageManagerMinimized: context.ImageManagerMinimized,
+            overlayVisible: context.OverlayVisible,
+            overlayMinimized: context.OverlayMinimized);
+    }
+
+    internal static ImageManagerStateChangeDecision ResolveImageManagerStateChange(
+        bool imageManagerExists,
+        bool imageManagerMinimized,
+        bool overlayVisible,
+        bool overlayMinimized)
+    {
+        var shouldRecoverOverlay = imageManagerExists
+            && imageManagerMinimized
+            && overlayVisible
+            && overlayMinimized;
+
+        return new ImageManagerStateChangeDecision(
+            NormalizeOverlayWindowState: shouldRecoverOverlay,
+            RequestZOrderApply: shouldRecoverOverlay,
+            ForceEnforceZOrder: shouldRecoverOverlay);
+    }
+
+    internal static SurfaceZOrderDecision ResolveImageManagerStateChangeSurfaceDecision(ImageManagerStateChangeDecision decision)
+    {
+        return ImageManagerSurfaceDecisionFactory.NoTouch(
+            requestZOrderApply: decision.RequestZOrderApply,
+            forceEnforceZOrder: decision.ForceEnforceZOrder);
+    }
+
+    internal static SurfaceZOrderDecision ResolveImageManagerSurfaceTransition(
+        ImageManagerSurfaceTransitionKind kind,
+        bool overlayVisible)
+    {
+        return kind switch
+        {
+            ImageManagerSurfaceTransitionKind.Open => ImageManagerSurfaceDecisionFactory.TouchImageManager(
+                forceEnforceZOrder: false),
+            ImageManagerSurfaceTransitionKind.Activated => ImageManagerSurfaceDecisionFactory.TouchImageManager(
+                forceEnforceZOrder: ForegroundZOrderRetouchPolicy.ShouldForceOnImageManagerActivated(
+                    overlayVisible)),
+            ImageManagerSurfaceTransitionKind.Closed => ImageManagerSurfaceDecisionFactory.NoTouch(
+                requestZOrderApply: true,
+                forceEnforceZOrder: ForegroundZOrderRetouchPolicy.ShouldForceOnImageManagerClosed(
+                    overlayVisible)),
+            ImageManagerSurfaceTransitionKind.StateChanged => ImageManagerSurfaceDecisionFactory.NoTouch(
+                requestZOrderApply: overlayVisible,
+                forceEnforceZOrder: ForegroundZOrderRetouchPolicy.ShouldForceOnImageManagerStateChanged(
+                    overlayVisible)),
+            _ => ImageManagerSurfaceDecisionFactory.NoTouch(
+                requestZOrderApply: false,
+                forceEnforceZOrder: false)
+        };
+    }
+
+    internal static ImageManagerTopmostDecision ResolveImageManagerTopmost(bool imageManagerVisible, ZOrderSurface frontSurface)
+    {
+        if (!imageManagerVisible)
+        {
+            return new ImageManagerTopmostDecision(
+                ShouldApply: false,
+                Reason: ImageManagerTopmostReason.ImageManagerHidden);
+        }
+
+        return frontSurface == ZOrderSurface.ImageManager
+            ? new ImageManagerTopmostDecision(
+                ShouldApply: true,
+                Reason: ImageManagerTopmostReason.None)
+            : new ImageManagerTopmostDecision(
+                ShouldApply: false,
+                Reason: ImageManagerTopmostReason.FrontSurfaceMismatch);
+    }
+
+    internal static bool ShouldApply(bool imageManagerVisible, ZOrderSurface frontSurface)
+    {
+        return ResolveImageManagerTopmost(imageManagerVisible, frontSurface).ShouldApply;
+    }
+
+    internal static SurfaceZOrderDecision ResolveOpenImageManagerVisibilitySurfaceDecision(ImageManagerVisibilityTransitionPlan plan)
+    {
+        if (plan.TouchImageManagerSurface)
+        {
+            return ImageManagerSurfaceDecisionFactory.TouchImageManager(
+                forceEnforceZOrder: plan.ForceEnforceZOrder);
+        }
+
+        return ImageManagerSurfaceDecisionFactory.NoTouch(
+            requestZOrderApply: plan.RequestZOrderApply,
+            forceEnforceZOrder: plan.ForceEnforceZOrder);
+    }
+
+    internal static ImageManagerVisibilityTransitionPlan ResolveOpenImageManagerVisibilityTransition(
         ImageManagerVisibilityOpenContext context)
     {
-        return ResolveOpen(
+        return ResolveOpenImageManagerVisibilityTransition(
             context.OverlayVisible,
             context.ImageManagerVisible,
             context.ImageManagerWindowState);
     }
 
-    internal static ImageManagerVisibilityTransitionPlan ResolveOpen(
+    internal static ImageManagerVisibilityTransitionPlan ResolveOpenImageManagerVisibilityTransition(
         bool overlayVisible,
         bool imageManagerVisible,
         WindowState imageManagerWindowState)

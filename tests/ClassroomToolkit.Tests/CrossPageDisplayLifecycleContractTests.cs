@@ -10,15 +10,15 @@ public sealed class CrossPageDisplayLifecycleContractTests
     [Fact]
     public void CrossPageDisplayClearPolicy_ShouldClearNeighborPages_WhenSinglePageOrInvalidCurrentFrame()
     {
-        CrossPageDisplayClearPolicy.ShouldClearNeighborPages(
+        CrossPageDisplayUpdatePolicies.ShouldClearNeighborPages(
             totalPages: 1,
             hasCurrentBitmap: true,
             currentPageHeight: 100).Should().BeTrue();
-        CrossPageDisplayClearPolicy.ShouldClearNeighborPages(
+        CrossPageDisplayUpdatePolicies.ShouldClearNeighborPages(
             totalPages: 5,
             hasCurrentBitmap: false,
             currentPageHeight: 100).Should().BeTrue();
-        CrossPageDisplayClearPolicy.ShouldClearNeighborPages(
+        CrossPageDisplayUpdatePolicies.ShouldClearNeighborPages(
             totalPages: 5,
             hasCurrentBitmap: true,
             currentPageHeight: 0).Should().BeTrue();
@@ -36,10 +36,10 @@ public sealed class CrossPageDisplayLifecycleContractTests
     [Fact]
     public void CrossPageNeighborInkRenderAdmissionPolicy_ShouldRejectStaleDocumentCacheKey()
     {
-        CrossPageNeighborInkRenderAdmissionPolicy.ShouldRejectStaleCacheKey(
+        CrossPageNeighborInkPolicies.ShouldRejectStaleCacheKey(
             cacheKey: "docA|3",
             expectedCacheKey: "docB|3").Should().BeTrue();
-        CrossPageNeighborInkRenderAdmissionPolicy.ShouldRejectStaleCacheKey(
+        CrossPageNeighborInkPolicies.ShouldRejectStaleCacheKey(
             cacheKey: "docA|3",
             expectedCacheKey: "docA|3").Should().BeFalse();
     }

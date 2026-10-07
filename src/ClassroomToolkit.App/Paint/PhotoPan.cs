@@ -12,9 +12,126 @@ internal readonly record struct PhotoEnterTransformInitPlan(
     bool ShouldTryStoredTransform,
     bool ShouldResetIdentity);
 
-internal static class PhotoEnterTransformInitPolicy
+internal static class PhotoHorizontalPanRangeDefaults
 {
-    internal static PhotoEnterTransformInitPlan Resolve(
+    internal const double MinSlackDip = 24.0;
+    internal const double SlackRatio = 0.06;
+}
+
+internal static class PhotoInertiaProfileDefaults
+{
+    internal const string Standard = "standard";
+    internal const string Sensitive = "sensitive";
+    internal const string Heavy = "heavy";
+
+    internal static string Normalize(string? rawProfile)
+    {
+        var normalized = (rawProfile ?? string.Empty).Trim().ToUpperInvariant();
+        return normalized switch
+        {
+            "SENSITIVE" => Sensitive,
+            "HEAVY" => Heavy,
+            _ => Standard
+        };
+    }
+}
+
+internal static class PhotoPanDragActivationDefaults
+{
+    internal const double CrossPageDragDeltaYThresholdDip = 5.0;
+}
+
+internal static class PhotoPanInertiaDefaults
+{
+    internal const int MouseTickIntervalMs = 16;
+    internal const double MouseDecelerationDipPerMs2 = 0.0022;
+    internal const double MouseStopSpeedDipPerMs = 0.012;
+    internal const double MouseFrameElapsedMinMs = 1.0;
+    internal const double MouseFrameElapsedMaxMs = 34.0;
+    internal const double MouseMaxDurationMs = 1100.0;
+    internal const double MouseMaxTranslationPerFrameDip = 150.0;
+    internal const double MouseMinReleaseSpeedDipPerMs = 0.06;
+    internal const double MouseMaxReleaseSpeedDipPerMs = 4.4;
+    internal const double MouseMinVelocitySampleDistanceDip = 0.9;
+    internal const double MouseMaxVelocitySampleAgeMs = 140;
+    internal const double MouseMinVelocitySampleIntervalMs = 6;
+    internal const double MouseVelocitySampleWindowMs = 120;
+    internal const double MouseVelocitySampleHistoryMaxAgeMs = 220;
+    internal const int MouseVelocitySampleCapacity = 12;
+    internal const double MouseVelocityRecentWeightGain = 0.75;
+    internal const double TouchMinVelocitySampleDistanceDip = 0.55;
+    internal const double TouchMaxVelocitySampleAgeMs = 220;
+    internal const double TouchVelocitySampleWindowMs = 170;
+    internal const double TouchVelocityRecentWeightGain = 1.0;
+    internal const double GestureTranslationDecelerationDipPerMs2 = 0.0034;
+    internal const double GestureCrossPageTranslationDecelerationDipPerMs2 = 0.0029;
+}
+
+internal readonly record struct PhotoPanVelocitySample(
+    System.Windows.Point Position,
+    long TimestampTicks);
+
+internal readonly record struct PhotoPanInertiaTuning(
+    double MouseDecelerationDipPerMs2,
+    double MouseStopSpeedDipPerMs,
+    double MouseMinReleaseSpeedDipPerMs,
+    double MouseMaxReleaseSpeedDipPerMs,
+    double MouseMaxDurationMs,
+    double MouseMaxTranslationPerFrameDip,
+    double GestureTranslationDecelerationDipPerMs2,
+    double GestureCrossPageTranslationDecelerationDipPerMs2)
+{
+    internal static PhotoPanInertiaTuning Default => new(
+        PhotoPanInertiaDefaults.MouseDecelerationDipPerMs2,
+        PhotoPanInertiaDefaults.MouseStopSpeedDipPerMs,
+        PhotoPanInertiaDefaults.MouseMinReleaseSpeedDipPerMs,
+        PhotoPanInertiaDefaults.MouseMaxReleaseSpeedDipPerMs,
+        PhotoPanInertiaDefaults.MouseMaxDurationMs,
+        PhotoPanInertiaDefaults.MouseMaxTranslationPerFrameDip,
+        PhotoPanInertiaDefaults.GestureTranslationDecelerationDipPerMs2,
+        PhotoPanInertiaDefaults.GestureCrossPageTranslationDecelerationDipPerMs2);
+}
+
+internal enum PhotoPanMouseExecutionAction
+{
+    PassThrough,
+    UpdatePan,
+    EndPan
+}
+
+internal readonly record struct PhotoPanMouseExecutionPlan(
+    PhotoPanMouseExecutionAction Action,
+    bool ShouldMarkHandled);
+
+internal enum PhotoPanMouseMoveRoutingDecision
+{
+    PassThrough,
+    UpdatePan,
+    EndPan
+}
+
+internal enum PhotoPanPointerKind
+{
+    Mouse,
+    Stylus,
+    Touch
+}
+
+internal readonly record struct PhotoPanReleaseTuning(
+    double DecelerationDipPerMs2,
+    double StopSpeedDipPerMs,
+    double MinReleaseSpeedDipPerMs,
+    double MaxReleaseSpeedDipPerMs,
+    double MaxDurationMs,
+    double MaxTranslationPerFrameDip,
+    double VelocitySampleWindowMs,
+    double MaxVelocitySampleAgeMs,
+    double MinVelocitySampleDistanceDip,
+    double VelocityRecentWeightGain);
+
+internal static class PhotoPanPolicies
+{
+    internal static PhotoEnterTransformInitPlan ResolvePhotoEnterTransformInit(
         bool crossPageDisplayEnabled,
         bool rememberPhotoTransform,
         bool photoUnifiedTransformReady,
@@ -67,17 +184,8 @@ internal static class PhotoEnterTransformInitPolicy
             ShouldTryStoredTransform: true,
             ShouldResetIdentity: false);
     }
-}
 
-internal static class PhotoHorizontalPanRangeDefaults
-{
-    internal const double MinSlackDip = 24.0;
-    internal const double SlackRatio = 0.06;
-}
-
-internal static class PhotoHorizontalPanRangePolicy
-{
-    internal static (double MinX, double MaxX) Resolve(
+    internal static (double MinX, double MaxX) ResolvePhotoHorizontalPanRange(
         double viewportWidth,
         double scaledWidth,
         bool includeSlack)
@@ -100,33 +208,7 @@ internal static class PhotoHorizontalPanRangePolicy
 
         return ((viewportWidth - scaledWidth) - slack, slack);
     }
-}
 
-internal static class PhotoInertiaProfileDefaults
-{
-    internal const string Standard = "standard";
-    internal const string Sensitive = "sensitive";
-    internal const string Heavy = "heavy";
-
-    internal static string Normalize(string? rawProfile)
-    {
-        var normalized = (rawProfile ?? string.Empty).Trim().ToUpperInvariant();
-        return normalized switch
-        {
-            "SENSITIVE" => Sensitive,
-            "HEAVY" => Heavy,
-            _ => Standard
-        };
-    }
-}
-
-internal static class PhotoPanDragActivationDefaults
-{
-    internal const double CrossPageDragDeltaYThresholdDip = 5.0;
-}
-
-internal static class PhotoPanDragActivationPolicy
-{
     internal static bool ShouldActivateCrossPageDrag(
         bool crossPageDisplayActive,
         double deltaYDip,
@@ -135,40 +217,7 @@ internal static class PhotoPanDragActivationPolicy
         return crossPageDisplayActive
             && System.Math.Abs(deltaYDip) > thresholdDip;
     }
-}
 
-internal static class PhotoPanInertiaDefaults
-{
-    internal const int MouseTickIntervalMs = 16;
-    internal const double MouseDecelerationDipPerMs2 = 0.0022;
-    internal const double MouseStopSpeedDipPerMs = 0.012;
-    internal const double MouseFrameElapsedMinMs = 1.0;
-    internal const double MouseFrameElapsedMaxMs = 34.0;
-    internal const double MouseMaxDurationMs = 1100.0;
-    internal const double MouseMaxTranslationPerFrameDip = 150.0;
-    internal const double MouseMinReleaseSpeedDipPerMs = 0.06;
-    internal const double MouseMaxReleaseSpeedDipPerMs = 4.4;
-    internal const double MouseMinVelocitySampleDistanceDip = 0.9;
-    internal const double MouseMaxVelocitySampleAgeMs = 140;
-    internal const double MouseMinVelocitySampleIntervalMs = 6;
-    internal const double MouseVelocitySampleWindowMs = 120;
-    internal const double MouseVelocitySampleHistoryMaxAgeMs = 220;
-    internal const int MouseVelocitySampleCapacity = 12;
-    internal const double MouseVelocityRecentWeightGain = 0.75;
-    internal const double TouchMinVelocitySampleDistanceDip = 0.55;
-    internal const double TouchMaxVelocitySampleAgeMs = 220;
-    internal const double TouchVelocitySampleWindowMs = 170;
-    internal const double TouchVelocityRecentWeightGain = 1.0;
-    internal const double GestureTranslationDecelerationDipPerMs2 = 0.0034;
-    internal const double GestureCrossPageTranslationDecelerationDipPerMs2 = 0.0029;
-}
-
-internal readonly record struct PhotoPanVelocitySample(
-    System.Windows.Point Position,
-    long TimestampTicks);
-
-internal static class PhotoPanInertiaMotionPolicy
-{
     internal static bool TryResolveReleaseVelocity(
         IReadOnlyList<PhotoPanVelocitySample> samples,
         long releaseTimestampTicks,
@@ -194,7 +243,7 @@ internal static class PhotoPanInertiaMotionPolicy
             samples,
             releaseTimestampTicks,
             stopwatchFrequency,
-            PhotoPanReleaseTuningPolicy.Resolve(PhotoPanPointerKind.Mouse, tuning),
+            PhotoPanPolicies.ResolveReleaseTuning(PhotoPanPointerKind.Mouse, tuning),
             out velocityDipPerMs);
     }
 
@@ -328,7 +377,7 @@ internal static class PhotoPanInertiaMotionPolicy
             lastTimestampTicks,
             releaseTimestampTicks,
             stopwatchFrequency,
-            PhotoPanReleaseTuningPolicy.Resolve(PhotoPanPointerKind.Mouse, tuning),
+            PhotoPanPolicies.ResolveReleaseTuning(PhotoPanPointerKind.Mouse, tuning),
             out velocityDipPerMs);
     }
 
@@ -364,7 +413,7 @@ internal static class PhotoPanInertiaMotionPolicy
         return ResolveTranslation(
             velocityDipPerMs,
             elapsedMs,
-            PhotoPanReleaseTuningPolicy.Resolve(PhotoPanPointerKind.Mouse, tuning));
+            PhotoPanPolicies.ResolveReleaseTuning(PhotoPanPointerKind.Mouse, tuning));
     }
 
     internal static Vector ResolveTranslation(
@@ -444,7 +493,7 @@ internal static class PhotoPanInertiaMotionPolicy
     {
         return ShouldStopByDuration(
             durationMs,
-            PhotoPanReleaseTuningPolicy.Resolve(PhotoPanPointerKind.Mouse, tuning));
+            PhotoPanPolicies.ResolveReleaseTuning(PhotoPanPointerKind.Mouse, tuning));
     }
 
     internal static bool ShouldStopByDuration(double durationMs, PhotoPanReleaseTuning tuning)
@@ -470,7 +519,7 @@ internal static class PhotoPanInertiaMotionPolicy
         return ResolveVelocityAfterDeceleration(
             velocityDipPerMs,
             elapsedMs,
-            PhotoPanReleaseTuningPolicy.Resolve(PhotoPanPointerKind.Mouse, tuning));
+            PhotoPanPolicies.ResolveReleaseTuning(PhotoPanPointerKind.Mouse, tuning));
     }
 
     internal static Vector ResolveVelocityAfterDeceleration(
@@ -492,31 +541,7 @@ internal static class PhotoPanInertiaMotionPolicy
 
         return velocityDipPerMs * (nextSpeed / speed);
     }
-}
 
-internal readonly record struct PhotoPanInertiaTuning(
-    double MouseDecelerationDipPerMs2,
-    double MouseStopSpeedDipPerMs,
-    double MouseMinReleaseSpeedDipPerMs,
-    double MouseMaxReleaseSpeedDipPerMs,
-    double MouseMaxDurationMs,
-    double MouseMaxTranslationPerFrameDip,
-    double GestureTranslationDecelerationDipPerMs2,
-    double GestureCrossPageTranslationDecelerationDipPerMs2)
-{
-    internal static PhotoPanInertiaTuning Default => new(
-        PhotoPanInertiaDefaults.MouseDecelerationDipPerMs2,
-        PhotoPanInertiaDefaults.MouseStopSpeedDipPerMs,
-        PhotoPanInertiaDefaults.MouseMinReleaseSpeedDipPerMs,
-        PhotoPanInertiaDefaults.MouseMaxReleaseSpeedDipPerMs,
-        PhotoPanInertiaDefaults.MouseMaxDurationMs,
-        PhotoPanInertiaDefaults.MouseMaxTranslationPerFrameDip,
-        PhotoPanInertiaDefaults.GestureTranslationDecelerationDipPerMs2,
-        PhotoPanInertiaDefaults.GestureCrossPageTranslationDecelerationDipPerMs2);
-}
-
-internal static class PhotoPanInertiaProfilePolicy
-{
     private static readonly PhotoPanInertiaTuning Sensitive = new(
         MouseDecelerationDipPerMs2: 0.0026,
         MouseStopSpeedDipPerMs: 0.013,
@@ -537,7 +562,7 @@ internal static class PhotoPanInertiaProfilePolicy
         GestureTranslationDecelerationDipPerMs2: 0.0026,
         GestureCrossPageTranslationDecelerationDipPerMs2: 0.0022);
 
-    internal static PhotoPanInertiaTuning Resolve(string? profile)
+    internal static PhotoPanInertiaTuning ResolveInertiaProfile(string? profile)
     {
         return PhotoInertiaProfileDefaults.Normalize(profile) switch
         {
@@ -546,10 +571,7 @@ internal static class PhotoPanInertiaProfilePolicy
             _ => PhotoPanInertiaTuning.Default
         };
     }
-}
 
-internal static class PhotoPanInteractiveRefreshPolicy
-{
     internal static bool ShouldRefresh(
         double lastRefreshTranslateX,
         double lastRefreshTranslateY,
@@ -560,11 +582,8 @@ internal static class PhotoPanInteractiveRefreshPolicy
         return System.Math.Abs(currentTranslateX - lastRefreshTranslateX) >= thresholdDip
             || System.Math.Abs(currentTranslateY - lastRefreshTranslateY) >= thresholdDip;
     }
-}
 
-internal static class PhotoPanModeSwitchPolicy
-{
-    internal static bool ShouldEndPan(
+    internal static bool ShouldEndPanModeSwitch(
         bool photoPanning,
         bool photoModeActive,
         bool boardActive,
@@ -576,27 +595,13 @@ internal static class PhotoPanModeSwitchPolicy
             return false;
         }
 
-        return !StylusCursorPolicy.ShouldPanPhoto(
+        return !PhotoInkInteropPolicies.ShouldPanPhoto(
             photoModeActive,
             boardActive,
             mode,
             inkOperationActive);
     }
-}
 
-internal enum PhotoPanMouseExecutionAction
-{
-    PassThrough,
-    UpdatePan,
-    EndPan
-}
-
-internal readonly record struct PhotoPanMouseExecutionPlan(
-    PhotoPanMouseExecutionAction Action,
-    bool ShouldMarkHandled);
-
-internal static class PhotoPanMouseExecutionPolicy
-{
     internal static PhotoPanMouseExecutionPlan ResolveMove(PhotoPanMouseMoveRoutingDecision decision)
     {
         return decision switch
@@ -628,18 +633,8 @@ internal static class PhotoPanMouseExecutionPolicy
             Action: PhotoPanMouseExecutionAction.EndPan,
             ShouldMarkHandled: true);
     }
-}
 
-internal enum PhotoPanMouseMoveRoutingDecision
-{
-    PassThrough,
-    UpdatePan,
-    EndPan
-}
-
-internal static class PhotoPanMouseMoveRoutingPolicy
-{
-    internal static PhotoPanMouseMoveRoutingDecision Resolve(
+    internal static PhotoPanMouseMoveRoutingDecision ResolveMouseMoveRouting(
         bool isMousePhotoPanActive,
         bool shouldAllowPhotoPan,
         MouseButtonState leftButton,
@@ -650,17 +645,14 @@ internal static class PhotoPanMouseMoveRoutingPolicy
             return PhotoPanMouseMoveRoutingDecision.PassThrough;
         }
 
-        return PhotoPanTerminationPolicy.ShouldEndPan(
+        return PhotoPanPolicies.ShouldEndPanTermination(
             shouldAllowPhotoPan,
             leftButton,
             rightButton)
             ? PhotoPanMouseMoveRoutingDecision.EndPan
             : PhotoPanMouseMoveRoutingDecision.UpdatePan;
     }
-}
 
-internal static class PhotoPanMouseRoutingPolicy
-{
     internal static bool ShouldHandlePhotoPan(
         bool photoPanning,
         bool photoModeActive,
@@ -672,30 +664,8 @@ internal static class PhotoPanMouseRoutingPolicy
                && mode == PaintToolMode.Cursor
                && !inkOperationActive;
     }
-}
 
-internal enum PhotoPanPointerKind
-{
-    Mouse,
-    Stylus,
-    Touch
-}
-
-internal readonly record struct PhotoPanReleaseTuning(
-    double DecelerationDipPerMs2,
-    double StopSpeedDipPerMs,
-    double MinReleaseSpeedDipPerMs,
-    double MaxReleaseSpeedDipPerMs,
-    double MaxDurationMs,
-    double MaxTranslationPerFrameDip,
-    double VelocitySampleWindowMs,
-    double MaxVelocitySampleAgeMs,
-    double MinVelocitySampleDistanceDip,
-    double VelocityRecentWeightGain);
-
-internal static class PhotoPanReleaseTuningPolicy
-{
-    internal static PhotoPanReleaseTuning Resolve(
+    internal static PhotoPanReleaseTuning ResolveReleaseTuning(
         PhotoPanPointerKind pointerKind,
         PhotoPanInertiaTuning tuning)
     {
@@ -733,11 +703,8 @@ internal static class PhotoPanReleaseTuningPolicy
                 VelocityRecentWeightGain: PhotoPanInertiaDefaults.MouseVelocityRecentWeightGain)
         };
     }
-}
 
-internal static class PhotoPanTerminationPolicy
-{
-    internal static bool ShouldEndPan(
+    internal static bool ShouldEndPanTermination(
         bool shouldAllowPhotoPan,
         MouseButtonState leftButton,
         MouseButtonState rightButton)
@@ -750,10 +717,7 @@ internal static class PhotoPanTerminationPolicy
         return leftButton != MouseButtonState.Pressed
                && rightButton != MouseButtonState.Pressed;
     }
-}
 
-internal static class PhotoViewportStepPolicy
-{
     internal const double OverlapRatio = 0.12;
     internal const double MinStepDip = 24.0;
 

@@ -411,7 +411,7 @@ internal static class StylusOrientationResolver
             resolvedMin = info.Minimum;
             resolvedMax = info.Maximum;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.Windowing.WindowingExceptionFilterPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.Windowing.WindowingDiagnosticsPolicies.IsNonFatal(ex))
         {
             return false;
         }

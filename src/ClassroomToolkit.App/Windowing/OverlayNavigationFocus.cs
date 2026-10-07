@@ -100,7 +100,7 @@ internal static partial class OverlayNavigationFocusPolicy
                 Reason: OverlayNavigationActivateReason.OverlayAlreadyActive);
         }
 
-        var guardDecision = FloatingActivationGuardPolicy.Resolve(utilityActivity);
+        var guardDecision = FloatingWindowCoordinationPolicies.ResolveFloatingActivationGuard(utilityActivity);
         return guardDecision.IsBlocked
             ? new OverlayNavigationActivateDecision(
                 ShouldActivateOverlay: false,
@@ -121,7 +121,7 @@ internal static partial class OverlayNavigationFocusPolicy
                 Reason: OverlayNavigationKeyboardFocusReason.OverlayNotVisible);
         }
 
-        var guardDecision = FloatingActivationGuardPolicy.Resolve(utilityActivity);
+        var guardDecision = FloatingWindowCoordinationPolicies.ResolveFloatingActivationGuard(utilityActivity);
         return guardDecision.IsBlocked
             ? new OverlayNavigationKeyboardFocusDecision(
                 ShouldKeyboardFocusOverlay: false,

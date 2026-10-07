@@ -38,7 +38,7 @@ public partial class PaintOverlayWindow
 
     private bool ShouldRefreshCrossPagePdfDisplay()
     {
-        return CrossPagePdfVisiblePrefetchUpdatePolicy.ShouldRefreshCrossPageDisplay(
+        return CrossPageDisplayUpdatePolicies.ShouldRefreshCrossPageDisplay(
             photoModeActive: _photoModeActive,
             photoDocumentIsPdf: _photoDocumentIsPdf,
             boardActive: IsBoardActive(),

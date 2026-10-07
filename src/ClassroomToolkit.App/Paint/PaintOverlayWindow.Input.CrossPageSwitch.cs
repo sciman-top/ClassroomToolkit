@@ -18,7 +18,7 @@ public partial class PaintOverlayWindow
         var hasBitmap = currentBitmap != null;
         var hasCurrentRect = hasBitmap && TryBuildImageScreenRect(currentBitmap!, _photoContentTransform, out var currentRectValue);
         Rect? currentRect = hasCurrentRect ? currentRectValue : null;
-        if (!CrossPageInputSwitchRequestPolicy.ShouldSwitchForInput(
+        if (!CrossPageInputSwitchPolicies.ShouldSwitchForInput(
                 interactionState.PhotoModeActive,
                 interactionState.CrossPageDisplayEnabled,
                 interactionState.BoardActive,
@@ -36,7 +36,7 @@ public partial class PaintOverlayWindow
         var resolvedBitmap = currentBitmap!;
         var currentPage = GetCurrentPageIndexForCrossPage();
         var targetPage = ResolveCrossPageTargetForInput(position.Y, currentPage, resolvedBitmap);
-        var boundedTargetPage = CrossPageInputSwitchTargetPolicy.ResolveNeighborTargetPage(currentPage, targetPage);
+        var boundedTargetPage = CrossPageInputSwitchPolicies.ResolveNeighborTargetPage(currentPage, targetPage);
         BitmapSource? preloadedBitmap = null;
         if (TryResolveVisibleImagePageFromPointer(
                 position,
@@ -65,7 +65,7 @@ public partial class PaintOverlayWindow
         var normalizedWidthDip = GetCrossPageNormalizedWidthDip(currentBitmap);
         var currentPageTop = _photoTranslate.Y;
         var currentPageHeight = GetScaledPageHeight(currentBitmap, normalizedWidthDip);
-        var executionPlan = CrossPageInputSwitchExecutionPolicy.Resolve(
+        var executionPlan = CrossPageInputSwitchPolicies.ResolveExecution(
             currentPage,
             targetPage,
             _mode,
@@ -90,7 +90,7 @@ public partial class PaintOverlayWindow
                 fallbackHeight: currentPageHeight > 0
                     ? currentPageHeight
                     : PhotoTransformViewportDefaults.MinUsableViewportDip);
-            targetTop = CrossPageInteractiveSwitchClampPolicy.ClampTranslateY(
+            targetTop = CrossPageInputSwitchPolicies.ClampTranslateY(
                 targetTop,
                 targetPage,
                 totalPages,
@@ -102,7 +102,7 @@ public partial class PaintOverlayWindow
         var seamY = targetPage > currentPage
             ? currentPageTop + currentPageHeight
             : currentPageTop;
-        if (CrossPageInputSwitchBounceGuardPolicy.ShouldSuppress(
+        if (CrossPageInputSwitchPolicies.ShouldSuppress(
                 currentPage,
                 targetPage,
                 _lastInputSwitchFromPage,
@@ -160,13 +160,13 @@ public partial class PaintOverlayWindow
             _lastPointerPosition = previousPointerPosition;
             MarkCrossPageFirstInputStage("save-old-page-end");
             MarkCrossPageFirstInputStage("navigate-start");
-            var switchNavigationPlan = CrossPageInputSwitchNavigationPolicy.Resolve(
+            var switchNavigationPlan = CrossPageInputSwitchPolicies.ResolveNavigation(
                 _mode,
                 _strokeInProgress,
                 _isErasing,
                 _isRegionSelecting,
                 inputTriggeredByActiveInkMutation: switchTriggeredByActiveInkMutation);
-            var clearPreservedNeighborInkFrames = CrossPageMutationNeighborInkCarryoverPolicy.ShouldClearPreservedNeighborInkFrames(
+            var clearPreservedNeighborInkFrames = CrossPageNeighborInkPolicies.ShouldClearPreservedNeighborInkFrames(
                 pageChanged: currentPage != targetPage,
                 interactiveSwitch: switchNavigationPlan.InteractiveSwitch,
                 inputTriggeredByActiveInkMutation: switchTriggeredByActiveInkMutation,
@@ -237,7 +237,7 @@ public partial class PaintOverlayWindow
                 out var candidatePage);
             var hasRect = hasBitmap && TryBuildImageScreenRect(bitmap!, img.RenderTransform, out var rect);
             var pointerInsideRect = hasRect && rect.Contains(pointer);
-            if (CrossPageNeighborPageCandidatePolicy.ShouldUseCandidate(
+            if (CrossPageNeighborInkPolicies.ShouldUseCandidate(
                     img.Visibility,
                     hasBitmap,
                     hasCandidatePage,
@@ -277,10 +277,10 @@ public partial class PaintOverlayWindow
         InputEventArgs e,
         bool hideEraserPreviewWhenBlocked = false)
     {
-        var sourceGateDecision = OverlayPointerSourceGatePolicy.Resolve(
+        var sourceGateDecision = OverlayInputRoutingPolicies.ResolveOverlayPointerSourceGate(
             _photoLoading,
             ShouldIgnoreInputFromPhotoControls(e.OriginalSource as DependencyObject));
-        return OverlayPointerSourceHandlingPolicy.Resolve(
+        return OverlayInputRoutingPolicies.ResolveOverlayPointerSourceHandling(
             sourceGateDecision,
             hideEraserPreviewWhenBlocked);
     }
@@ -293,7 +293,7 @@ public partial class PaintOverlayWindow
     public bool CanRoutePresentationInputFromAuxWindow()
     {
         var interactionState = CaptureInputInteractionState();
-        return OverlayPresentationRoutingPolicy.CanRouteFromAuxWindow(
+        return OverlayInputRoutingPolicies.CanRouteFromAuxWindow(
             _sessionCoordinator.CurrentState.NavigationMode,
             interactionState.PhotoModeActive,
             interactionState.BoardActive);
@@ -301,7 +301,7 @@ public partial class PaintOverlayWindow
 
     public void UpdatePhotoPostInputRefreshDelayMs(int delayMs)
     {
-        _photoPostInputRefreshDelayMs = CrossPagePostInputRefreshDelayClampPolicy.Clamp(delayMs);
+        _photoPostInputRefreshDelayMs = CrossPageRefreshCoordinationPolicies.Clamp(delayMs);
     }
 
     public void UpdatePhotoInputTelemetryEnabled(bool enabled)

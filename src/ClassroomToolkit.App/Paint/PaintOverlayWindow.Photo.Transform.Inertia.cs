@@ -52,8 +52,8 @@ public partial class PaintOverlayWindow
     private bool TryStartPhotoPanInertiaFromRelease()
     {
         var nowTicks = Stopwatch.GetTimestamp();
-        var releaseTuning = PhotoPanReleaseTuningPolicy.Resolve(_photoPanActivePointerKind, _photoPanInertiaTuning);
-        if (!PhotoPanInertiaMotionPolicy.TryResolveReleaseVelocity(
+        var releaseTuning = PhotoPanPolicies.ResolveReleaseTuning(_photoPanActivePointerKind, _photoPanInertiaTuning);
+        if (!PhotoPanPolicies.TryResolveReleaseVelocity(
                 _photoPanVelocitySamples,
                 nowTicks,
                 Stopwatch.Frequency,
@@ -88,11 +88,11 @@ public partial class PaintOverlayWindow
         }
 
         var nowUtc = GetCurrentUtcTimestamp();
-        var releaseTuning = PhotoPanReleaseTuningPolicy.Resolve(_photoPanActivePointerKind, _photoPanInertiaTuning);
+        var releaseTuning = PhotoPanPolicies.ResolveReleaseTuning(_photoPanActivePointerKind, _photoPanInertiaTuning);
         if (_photoPanInertiaStartUtc != PhotoInputConflictDefaults.UnsetTimestampUtc)
         {
             var durationMs = (nowUtc - _photoPanInertiaStartUtc).TotalMilliseconds;
-            if (PhotoPanInertiaMotionPolicy.ShouldStopByDuration(durationMs, releaseTuning))
+            if (PhotoPanPolicies.ShouldStopByDuration(durationMs, releaseTuning))
             {
                 StopPhotoPanInertia(flushTransformSave: true, resetInkPanCompensation: true);
                 return;
@@ -111,14 +111,14 @@ public partial class PaintOverlayWindow
             _photoPanInertiaLastRenderingTime = renderingArgs.RenderingTime;
         }
 
-        elapsedMs = PhotoPanInertiaMotionPolicy.ResolveFrameElapsedMilliseconds(elapsedMs);
+        elapsedMs = PhotoPanPolicies.ResolveFrameElapsedMilliseconds(elapsedMs);
         if (elapsedMs <= 0)
         {
             return;
         }
         _photoPanInertiaLastTickUtc = nowUtc;
 
-        if (!PhotoPanInertiaMotionPolicy.TryResolveInertiaStep(
+        if (!PhotoPanPolicies.TryResolveInertiaStep(
             _photoPanInertiaVelocityDipPerMs,
             elapsedMs,
             releaseTuning,
@@ -145,7 +145,7 @@ public partial class PaintOverlayWindow
 
         UpdatePhotoInkPanCompensation();
         MarkPhotoInteractionForRenderQuality();
-        var shouldRefresh = PhotoPanInteractiveRefreshPolicy.ShouldRefresh(
+        var shouldRefresh = PhotoPanPolicies.ShouldRefresh(
             _lastPhotoInteractiveRefreshTranslateX,
             _lastPhotoInteractiveRefreshTranslateY,
             _photoTranslate.X,
@@ -154,7 +154,7 @@ public partial class PaintOverlayWindow
         {
             SyncPhotoInteractiveRefreshAnchor();
             UpdateNeighborTransformsForPan();
-            if (PhotoInkPanRedrawPolicy.ShouldRequest(
+            if (PhotoInkInteropPolicies.ShouldRequest(
                     IsPhotoInkModeActive(),
                     _photoTranslate.X,
                     _photoTranslate.Y,

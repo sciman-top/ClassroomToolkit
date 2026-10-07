@@ -21,7 +21,7 @@ public partial class PaintOverlayWindow
         var handledByPhotoPan = !_photoLoading && TryHandleStylusPhotoPan(e, StylusPhotoPanPhase.Down);
         var shouldIgnoreFromPhotoControls = ShouldIgnoreInputFromPhotoControls(e.OriginalSource as DependencyObject);
         var stylusPoints = e.GetStylusPoints(OverlayRoot);
-        var executionPlan = StylusDownExecutionPolicy.Resolve(
+        var executionPlan = StylusExecutionPolicies.ResolveStylusDownExecution(
             _photoLoading,
             handledByPhotoPan,
             shouldIgnoreFromPhotoControls,
@@ -68,7 +68,7 @@ public partial class PaintOverlayWindow
         var handledByPhotoPan = !_photoLoading && TryHandleStylusPhotoPan(e, StylusPhotoPanPhase.Move);
         var stylusPoints = e.GetStylusPoints(OverlayRoot);
         var interactionState = CaptureInputInteractionState();
-        var executionPlan = StylusMoveExecutionPolicy.Resolve(
+        var executionPlan = StylusExecutionPolicies.ResolveStylusMoveExecution(
             _photoLoading,
             handledByPhotoPan,
             IsInkOperationActive(),
@@ -102,8 +102,8 @@ public partial class PaintOverlayWindow
         MarkInkInput();
         long nowTicks = Stopwatch.GetTimestamp();
         long spanTicks = ResolveStylusBatchSpanTicks(nowTicks, stylusPoints.Count);
-        long stepTicks = StylusBatchDispatchPolicy.ResolveStepTicks(spanTicks, stylusPoints.Count);
-        long batchStartTicks = StylusBatchDispatchPolicy.ResolveBatchStartTicks(nowTicks, stepTicks, stylusPoints.Count);
+        long stepTicks = StylusExecutionPolicies.ResolveStepTicks(spanTicks, stylusPoints.Count);
+        long batchStartTicks = StylusExecutionPolicies.ResolveBatchStartTicks(nowTicks, stepTicks, stylusPoints.Count);
         BrushInputSample? lastChangedSample = null;
         BrushInputSample? previousSample = (_lastPointerPosition.HasValue && _stylusSampleTimestampState.HasTimestamp)
             ? BrushInputSample.CreatePointer(_lastPointerPosition.Value, _stylusSampleTimestampState.LastTimestampTicks)
@@ -138,8 +138,8 @@ public partial class PaintOverlayWindow
     {
         long nowTicks = Stopwatch.GetTimestamp();
         long spanTicks = ResolveStylusBatchSpanTicks(nowTicks, stylusPoints.Count);
-        long stepTicks = StylusBatchDispatchPolicy.ResolveStepTicks(spanTicks, stylusPoints.Count);
-        long batchStartTicks = StylusBatchDispatchPolicy.ResolveBatchStartTicks(nowTicks, stepTicks, stylusPoints.Count);
+        long stepTicks = StylusExecutionPolicies.ResolveStepTicks(spanTicks, stylusPoints.Count);
+        long batchStartTicks = StylusExecutionPolicies.ResolveBatchStartTicks(nowTicks, stepTicks, stylusPoints.Count);
 
         for (int index = 0; index < stylusPoints.Count; index++)
         {
@@ -161,7 +161,7 @@ public partial class PaintOverlayWindow
 
         var handledByPhotoPan = !_photoLoading && TryHandleStylusPhotoPan(e, StylusPhotoPanPhase.Up);
         var stylusPoints = e.GetStylusPoints(OverlayRoot);
-        var executionPlan = StylusUpExecutionPolicy.Resolve(
+        var executionPlan = StylusExecutionPolicies.ResolveStylusUpExecution(
             _photoLoading,
             handledByPhotoPan,
             IsInkOperationActive(),
@@ -199,7 +199,7 @@ public partial class PaintOverlayWindow
     {
         var interactionState = CaptureInputInteractionState();
         var shouldPanPhoto = ResolveShouldPanPhoto(interactionState);
-        var panDecision = StylusPhotoPanRoutingPolicy.Resolve(
+        var panDecision = PhotoInkInteropPolicies.ResolveStylusPhotoPanRouting(
             shouldPanPhoto,
             _photoPanning,
             phase);
@@ -210,11 +210,11 @@ public partial class PaintOverlayWindow
                 ShouldContinue: true,
                 ShouldMarkHandled: false,
                 ShouldHideEraserPreview: false);
-        var executionPlan = StylusPhotoPanExecutionPolicy.Resolve(
+        var executionPlan = PhotoInkInteropPolicies.ResolveStylusPhotoPanExecution(
             panDecision,
             pointerSourcePlan.ShouldContinue,
             pointerSourcePlan.ShouldMarkHandled,
-            PhotoPanBeginGuardPolicy.ShouldBegin(shouldPanPhoto, _photoPanning));
+            PhotoInkInteropPolicies.ShouldBegin(shouldPanPhoto, _photoPanning));
         if (executionPlan.ShouldMarkHandled)
         {
             e.Handled = true;
@@ -242,7 +242,7 @@ public partial class PaintOverlayWindow
 
     private InputInteractionState CaptureInputInteractionState()
     {
-        return InputInteractionStatePolicy.Resolve(
+        return PointerToolExecutionPolicies.ResolveInputInteractionState(
             photoModeActive: _photoModeActive,
             boardActive: IsBoardActive(),
             crossPageDisplayEnabled: IsCrossPageDisplaySettingEnabled());
@@ -250,7 +250,7 @@ public partial class PaintOverlayWindow
 
     private long ResolveStylusBatchSpanTicks(long nowTicks, int sampleCount)
     {
-        return StylusSampleTimestampPolicy.ResolveBatchSpanTicks(
+        return StylusExecutionPolicies.ResolveBatchSpanTicks(
             Stopwatch.Frequency,
             nowTicks,
             sampleCount,
@@ -259,7 +259,7 @@ public partial class PaintOverlayWindow
 
     private long EnsureMonotonicStylusTimestamp(long timestampTicks)
     {
-        return StylusSampleTimestampPolicy.EnsureMonotonicTimestamp(
+        return StylusExecutionPolicies.EnsureMonotonicTimestamp(
             timestampTicks,
             _stylusSampleTimestampState);
     }
@@ -282,17 +282,17 @@ public partial class PaintOverlayWindow
             current.TimestampTicks - previous.TimestampTicks);
         double dtMs = totalTicks * 1000.0 / Math.Max(Stopwatch.Frequency, 1);
         double speedDipPerMs = distance / Math.Max(StylusInterpolationDefaults.MinDtMsForSpeed, dtMs);
-        double interpolationStepDip = StylusInterpolationPolicy.ResolveInterpolationStepDip(
+        double interpolationStepDip = StylusExecutionPolicies.ResolveInterpolationStepDip(
             _brushSize,
             distance,
             totalTicks,
             Stopwatch.Frequency);
-        if (!StylusInterpolationPolicy.ShouldInterpolate(distance, interpolationStepDip))
+        if (!StylusExecutionPolicies.ShouldInterpolate(distance, interpolationStepDip))
         {
             return;
         }
 
-        int maxSegments = StylusInterpolationPolicy.ResolveMaxSegments(speedDipPerMs, dtMs);
+        int maxSegments = StylusExecutionPolicies.ResolveMaxSegments(speedDipPerMs, dtMs);
 
         int segmentCount = Math.Clamp(
             (int)Math.Ceiling(distance / interpolationStepDip),
@@ -339,7 +339,7 @@ public partial class PaintOverlayWindow
             return BrushInputSample.CreatePointer(
                 position,
                 timestampTicks,
-                StylusInterpolationPolicy.LerpNullableAngle(previous.AzimuthRadians, current.AzimuthRadians, t),
+                StylusExecutionPolicies.LerpNullableAngle(previous.AzimuthRadians, current.AzimuthRadians, t),
                 LerpNullable(previous.AltitudeRadians, current.AltitudeRadians, t),
                 LerpNullable(previous.TiltXRadians, current.TiltXRadians, t),
                 LerpNullable(previous.TiltYRadians, current.TiltYRadians, t));
@@ -350,7 +350,7 @@ public partial class PaintOverlayWindow
             position,
             timestampTicks,
             pressure,
-            StylusInterpolationPolicy.LerpNullableAngle(previous.AzimuthRadians, current.AzimuthRadians, t),
+            StylusExecutionPolicies.LerpNullableAngle(previous.AzimuthRadians, current.AzimuthRadians, t),
             LerpNullable(previous.AltitudeRadians, current.AltitudeRadians, t),
             LerpNullable(previous.TiltXRadians, current.TiltXRadians, t),
             LerpNullable(previous.TiltYRadians, current.TiltYRadians, t));
@@ -371,6 +371,6 @@ public partial class PaintOverlayWindow
     private static bool ShouldIgnorePromotedTouchStylus(StylusDevice? stylusDevice)
     {
         return stylusDevice != null
-            && PhotoTouchInteractionPolicy.ShouldIgnorePromotedTouchStylus(stylusDevice.TabletDevice.Type);
+            && PhotoWindowPolicies.ShouldIgnorePromotedTouchStylus(stylusDevice.TabletDevice.Type);
     }
 }

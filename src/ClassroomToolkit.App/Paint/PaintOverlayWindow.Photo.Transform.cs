@@ -30,7 +30,7 @@ public partial class PaintOverlayWindow
             return false;
         }
         EnsurePhotoTransformsWritable();
-        var step = PhotoViewportStepPolicy.ResolveStep(viewportHeight);
+        var step = PhotoPanPolicies.ResolveStep(viewportHeight);
         var originalY = _photoTranslate.Y;
         _photoTranslate.Y -= direction * step;
 
@@ -80,7 +80,7 @@ public partial class PaintOverlayWindow
 
     private void UpdatePhotoInkPanCompensation()
     {
-        var delta = PhotoInkPanCompensationPolicy.Resolve(
+        var delta = PhotoInkInteropPolicies.ResolvePhotoInkPanCompensation(
             IsPhotoInkModeActive(),
             _photoTranslate.X,
             _photoTranslate.Y,

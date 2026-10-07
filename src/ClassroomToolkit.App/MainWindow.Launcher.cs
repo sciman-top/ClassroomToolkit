@@ -240,7 +240,7 @@ public partial class MainWindow
 
     private void EnsureWithinWorkArea()
     {
-        var resolvedPosition = LauncherWorkAreaClampPolicy.Resolve(
+        var resolvedPosition = LauncherRuntimePolicies.ResolveLauncherWorkAreaClamp(
             Left,
             Top,
             Width,
@@ -271,7 +271,7 @@ public partial class MainWindow
     {
         var currentVisibleState = _bubbleWindow?.IsVisible == true;
         var nowUtc = GetCurrentUtcTimestamp();
-        var gateDecision = LauncherBubbleZOrderApplyGatePolicy.Resolve(
+        var gateDecision = LauncherBubblePolicies.ResolveZOrderApplyGate(
             currentVisibleState,
             _bubbleVisibilityState.SuppressVisibleChangedApply,
             _bubbleVisibilityState.SuppressVisibleChangedUntilUtc,
@@ -281,18 +281,18 @@ public partial class MainWindow
         if (!gateDecision.ShouldApply)
         {
             System.Diagnostics.Debug.WriteLine(
-                LauncherBubbleDiagnosticsPolicy.FormatVisibleChangedGateSkipMessage(
+                LauncherBubblePolicies.FormatVisibleChangedGateSkipMessage(
                     gateDecision.Reason,
                     gateDecision.VisibleChangedReason));
             return;
         }
 
         var interactionState = CaptureOverlayInteractionState();
-        var dedupIntervalMs = LauncherBubbleVisibleChangedDedupIntervalPolicy.ResolveMs(
+        var dedupIntervalMs = LauncherBubblePolicies.ResolveMs(
             overlayVisible: interactionState.OverlayVisible,
             photoModeActive: interactionState.PhotoModeActive,
             whiteboardActive: interactionState.WhiteboardActive);
-        var dedupDecision = LauncherBubbleVisibleChangedDedupPolicy.Resolve(
+        var dedupDecision = LauncherBubblePolicies.ResolveVisibleChangedDedup(
             currentVisibleState,
             _bubbleVisibilityState.VisibleChangedState,
             nowUtc,
@@ -303,12 +303,12 @@ public partial class MainWindow
         if (!dedupDecision.ShouldApply)
         {
             System.Diagnostics.Debug.WriteLine(
-                LauncherBubbleDiagnosticsPolicy.FormatVisibleChangedDedupSkipMessage(
+                LauncherBubblePolicies.FormatVisibleChangedDedupSkipMessage(
                     dedupDecision.Reason));
             return;
         }
 
-        var decision = LauncherBubbleVisibilityPolicy.Resolve(
+        var decision = LauncherBubblePolicies.ResolveVisibility(
             bubbleVisible: currentVisibleState);
         FloatingZOrderApplyExecutor.Apply(
             decision.RequestZOrderApply,
@@ -324,7 +324,7 @@ public partial class MainWindow
             return;
         }
 
-        var minimizeDecision = LauncherVisibilityTransitionPolicy.ResolveMinimizeDecision(
+        var minimizeDecision = LauncherWindowPolicies.ResolveMinimizeDecision(
             CaptureLauncherMinimizeTransitionContext(_bubbleWindow));
         var transitionPlan = minimizeDecision.Plan;
         var hasSavedBubblePosition = _settings.LauncherBubbleX != AppSettings.UnsetPosition
@@ -343,7 +343,7 @@ public partial class MainWindow
 
     private void RestoreLauncher()
     {
-        var restoreDecision = LauncherVisibilityTransitionPolicy.ResolveRestoreDecision(
+        var restoreDecision = LauncherWindowPolicies.ResolveRestoreDecision(
             CaptureLauncherRestoreTransitionContext());
         var transitionPlan = restoreDecision.Plan;
         System.Diagnostics.Debug.WriteLine(
@@ -422,7 +422,7 @@ public partial class MainWindow
                 ref _bubbleVisibilityState,
                 suppress: false);
             var interactionState = CaptureOverlayInteractionState();
-            var cooldownMs = LauncherBubbleVisibleChangedSuppressionPolicy.ResolveCooldownMs(
+            var cooldownMs = LauncherBubblePolicies.ResolveCooldownMs(
                 overlayVisible: interactionState.OverlayVisible,
                 photoModeActive: interactionState.PhotoModeActive,
                 whiteboardActive: interactionState.WhiteboardActive);
@@ -446,7 +446,7 @@ public partial class MainWindow
     private void ScheduleAutoExitTimer()
     {
         _autoExitTimer.Stop();
-        var timerPlan = LauncherAutoExitTimerPlanPolicy.Resolve(_settings.LauncherAutoExitSeconds);
+        var timerPlan = LauncherRuntimePolicies.ResolveLauncherAutoExitTimerPlan(_settings.LauncherAutoExitSeconds);
         if (timerPlan.ShouldStart)
         {
             _autoExitTimer.Interval = timerPlan.Interval;
@@ -458,7 +458,7 @@ public partial class MainWindow
     {
         var startupWarningAlreadyShown =
             System.Windows.Application.Current.Properties.Contains(App.StartupCompatibilityWarningShownPropertyKey);
-        if (!StartupDiagnosticsGatePolicy.ShouldRun(Environment.GetEnvironmentVariable("CTOOL_NO_STARTUP_DIAG")))
+        if (!StartupDiagnosticsPolicies.ShouldRun(Environment.GetEnvironmentVariable("CTOOL_NO_STARTUP_DIAG")))
         {
             return;
         }

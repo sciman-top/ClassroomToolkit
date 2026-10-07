@@ -15,7 +15,7 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        var enable = OverlayInputPassthroughPolicy.ShouldEnable(
+        var enable = OverlayInputRoutingPolicies.ShouldEnable(
             _mode,
             _boardOpacity,
             _photoModeActive);
@@ -31,7 +31,7 @@ public partial class PaintOverlayWindow
             return;
         }
 
-        OverlayRoot.IsHitTestVisible = OverlayHitTestPolicy.ShouldEnableOverlayHitTest(
+        OverlayRoot.IsHitTestVisible = OverlayInputRoutingPolicies.ShouldEnableOverlayHitTest(
             _mode,
             _photoModeActive,
             _photoLoading);
@@ -55,15 +55,15 @@ public partial class PaintOverlayWindow
     private bool ShouldBlockFocus()
     {
         var navigationMode = _sessionCoordinator.CurrentState.NavigationMode;
-        var presentationAllowed = PresentationChannelAvailabilityPolicy.IsAnyChannelEnabled(
+        var presentationAllowed = OverlayInputRoutingPolicies.IsAnyChannelEnabled(
             _presentationOptions.AllowOffice,
             _presentationOptions.AllowWps);
-        var allowResolver = OverlayFocusResolverGatePolicy.ShouldResolvePresentationTarget(
+        var allowResolver = OverlayInputRoutingPolicies.ShouldResolvePresentationTarget(
             presentationAllowed,
-            UiSessionPresentationInputPolicy.AllowsPresentationInput(navigationMode));
+            UiSessionPolicies.AllowsPresentationInput(navigationMode));
         var (presentationTargetValid, wpsRawTargetValid) = ResolvePresentationFocusTargets(allowResolver);
 
-        return OverlayFocusAcceptancePolicy.ShouldBlockFocus(
+        return OverlayInputRoutingPolicies.ShouldBlockFocus(
             navigationMode,
             _inputPassthroughEnabled,
             _mode,
@@ -88,7 +88,7 @@ public partial class PaintOverlayWindow
             ? ResolveOfficeTarget()
             : PresentationTarget.Empty;
         var presentationTargetValid = wpsTarget.IsValid || officeTarget.IsValid;
-        if (!WpsRawFallbackTargetPolicy.ShouldResolveWpsRawTarget(
+        if (!WpsHookPolicies.ShouldResolveWpsRawTarget(
                 presentationTargetValid,
                 _presentationOptions.AllowWps))
         {
@@ -96,7 +96,7 @@ public partial class PaintOverlayWindow
         }
 
         var wpsFallbackTarget = ResolveWpsTarget();
-        var wpsRawTargetValid = WpsRawFallbackTargetPolicy.IsValid(
+        var wpsRawTargetValid = WpsHookPolicies.IsValid(
             wpsFallbackTarget.IsValid,
             ResolveWpsSendMode(wpsFallbackTarget));
         return (presentationTargetValid, wpsRawTargetValid);
@@ -108,7 +108,7 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        if (!OverlayWindowStyleApplyPolicy.ShouldApply(
+        if (!OverlayInputRoutingPolicies.ShouldApplyOverlayWindowStyleApply(
                 _inputPassthroughEnabled,
                 _focusBlocked,
                 _lastAppliedInputPassthroughEnabled,
@@ -116,7 +116,7 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        var styleMask = OverlayWindowStyleBitsPolicy.Resolve(_inputPassthroughEnabled, _focusBlocked);
+        var styleMask = OverlayInputRoutingPolicies.ResolveOverlayWindowStyleBits(_inputPassthroughEnabled, _focusBlocked);
 
         var updated = WindowStyleExecutor.TryUpdateStyleBits(
             _hwnd,
@@ -135,7 +135,7 @@ public partial class PaintOverlayWindow
     {
         ArgumentNullException.ThrowIfNull(action);
 
-        if (!DispatcherInvokeAvailabilityPolicy.CanBeginInvoke(
+        if (!OverlayInputRoutingPolicies.CanBeginInvoke(
                 Dispatcher.HasShutdownStarted,
                 Dispatcher.HasShutdownFinished))
         {

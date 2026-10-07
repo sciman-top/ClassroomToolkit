@@ -24,9 +24,69 @@ internal readonly record struct ZOrderRequestBurstDedupDecision(
     DateTime LastRequestUtc,
     ZOrderRequestAdmissionReason Reason);
 
-internal static class ZOrderRequestBurstDedupPolicy
+internal enum ZOrderRequestAdmissionReason
 {
-    internal static ZOrderRequestBurstDedupDecision Resolve(
+    None = 0,
+    ReentryBlocked = 1,
+    DedupSameForceWithinWindow = 2,
+    DedupWeakerAfterForceWithinWindow = 3,
+    QueuedNoHistory = 4,
+    QueuedDedupDisabled = 5,
+    QueuedForceEscalationWithinWindow = 6,
+    QueuedOutsideDedupWindow = 7,
+    ReentryApplyingAndQueued = 8
+}
+
+internal readonly record struct ZOrderRequestAdmissionDecision(
+    bool ShouldQueue,
+    DateTime LastRequestUtc,
+    bool LastForceEnforceZOrder,
+    ZOrderRequestAdmissionReason Reason);
+
+internal static class ZOrderApplyGuardStateUpdater
+{
+    internal static bool TryEnter(ref bool applying)
+    {
+        if (applying)
+        {
+            return false;
+        }
+
+        applying = true;
+        return true;
+    }
+
+    internal static void Exit(ref bool applying)
+    {
+        applying = false;
+    }
+}
+
+internal enum ZOrderApplyReentryReason
+{
+    None = 0,
+    NotApplying = 1,
+    ForcedDuringApplying = 2,
+    FollowUpSlotAvailable = 3,
+    ApplyingAndQueued = 4
+}
+
+internal readonly record struct ZOrderApplyReentryDecision(
+    bool ShouldAcceptRequest,
+    ZOrderApplyReentryReason Reason);
+
+public enum ZOrderSurface
+{
+    None,
+    PresentationFullscreen,
+    PhotoFullscreen,
+    Whiteboard,
+    ImageManager
+}
+
+internal static class ZOrderRequestPolicies
+{
+    internal static ZOrderRequestBurstDedupDecision ResolveBurstDedup(
         DateTime lastRequestUtc,
         bool lastForceEnforceZOrder,
         DateTime nowUtc,
@@ -76,30 +136,8 @@ internal static class ZOrderRequestBurstDedupPolicy
             LastRequestUtc: nowUtc,
             Reason: queuedReason);
     }
-}
 
-internal enum ZOrderRequestAdmissionReason
-{
-    None = 0,
-    ReentryBlocked = 1,
-    DedupSameForceWithinWindow = 2,
-    DedupWeakerAfterForceWithinWindow = 3,
-    QueuedNoHistory = 4,
-    QueuedDedupDisabled = 5,
-    QueuedForceEscalationWithinWindow = 6,
-    QueuedOutsideDedupWindow = 7,
-    ReentryApplyingAndQueued = 8
-}
-
-internal readonly record struct ZOrderRequestAdmissionDecision(
-    bool ShouldQueue,
-    DateTime LastRequestUtc,
-    bool LastForceEnforceZOrder,
-    ZOrderRequestAdmissionReason Reason);
-
-internal static class ZOrderRequestAdmissionPolicy
-{
-    internal static ZOrderRequestAdmissionDecision Resolve(
+    internal static ZOrderRequestAdmissionDecision ResolveAdmission(
         bool zOrderApplying,
         bool applyQueued,
         ZOrderRequestRuntimeState state,
@@ -107,7 +145,7 @@ internal static class ZOrderRequestAdmissionPolicy
         bool forceEnforceZOrder,
         int dedupIntervalMs = ZOrderRequestBurstThresholds.RequestDedupMs)
     {
-        return Resolve(
+        return ResolveAdmission(
             zOrderApplying,
             applyQueued,
             state.LastRequestUtc,
@@ -117,7 +155,7 @@ internal static class ZOrderRequestAdmissionPolicy
             dedupIntervalMs);
     }
 
-    internal static ZOrderRequestAdmissionDecision Resolve(
+    internal static ZOrderRequestAdmissionDecision ResolveAdmission(
         bool zOrderApplying,
         bool applyQueued,
         DateTime lastRequestUtc,
@@ -126,7 +164,7 @@ internal static class ZOrderRequestAdmissionPolicy
         bool forceEnforceZOrder,
         int dedupIntervalMs = ZOrderRequestBurstThresholds.RequestDedupMs)
     {
-        var reentryDecision = ZOrderApplyReentryPolicy.Resolve(
+        var reentryDecision = ZOrderRequestPolicies.ResolveZOrderApplyReentry(
             zOrderApplying,
             applyQueued,
             forceEnforceZOrder);
@@ -142,7 +180,7 @@ internal static class ZOrderRequestAdmissionPolicy
                 Reason: reason);
         }
 
-        var dedup = ZOrderRequestBurstDedupPolicy.Resolve(
+        var dedup = ZOrderRequestPolicies.ResolveBurstDedup(
             lastRequestUtc,
             lastForceEnforceZOrder,
             nowUtc,
@@ -154,43 +192,8 @@ internal static class ZOrderRequestAdmissionPolicy
             LastForceEnforceZOrder: dedup.LastForceEnforceZOrder,
             Reason: dedup.Reason);
     }
-}
 
-internal static class ZOrderApplyGuardStateUpdater
-{
-    internal static bool TryEnter(ref bool applying)
-    {
-        if (applying)
-        {
-            return false;
-        }
-
-        applying = true;
-        return true;
-    }
-
-    internal static void Exit(ref bool applying)
-    {
-        applying = false;
-    }
-}
-
-internal enum ZOrderApplyReentryReason
-{
-    None = 0,
-    NotApplying = 1,
-    ForcedDuringApplying = 2,
-    FollowUpSlotAvailable = 3,
-    ApplyingAndQueued = 4
-}
-
-internal readonly record struct ZOrderApplyReentryDecision(
-    bool ShouldAcceptRequest,
-    ZOrderApplyReentryReason Reason);
-
-internal static class ZOrderApplyReentryPolicy
-{
-    internal static ZOrderApplyReentryDecision Resolve(
+    internal static ZOrderApplyReentryDecision ResolveZOrderApplyReentry(
         bool zOrderApplying,
         bool applyQueued,
         bool forceEnforceZOrder)
@@ -224,18 +227,9 @@ internal static class ZOrderApplyReentryPolicy
         bool applyQueued,
         bool forceEnforceZOrder)
     {
-        return Resolve(
+        return ResolveZOrderApplyReentry(
             zOrderApplying,
             applyQueued,
             forceEnforceZOrder).ShouldAcceptRequest;
     }
-}
-
-public enum ZOrderSurface
-{
-    None,
-    PresentationFullscreen,
-    PhotoFullscreen,
-    Whiteboard,
-    ImageManager
 }

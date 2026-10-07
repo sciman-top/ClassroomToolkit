@@ -56,7 +56,7 @@ public partial class PaintOverlayWindow
             _currentCacheScope = InkCacheScope.None;
             _currentCacheKey = string.Empty;
             _boardSuspendedPhotoCache = _photoModeActive;
-            if (BoardTransitionCrossPagePolicy.ShouldHandleCrossPageArtifacts(
+            if (CrossPageInteractiveMiscPolicies.ShouldHandleCrossPageArtifacts(
                     _photoModeActive,
                     IsCrossPageDisplaySettingEnabled()))
             {
@@ -94,7 +94,7 @@ public partial class PaintOverlayWindow
                 _currentCacheKey = BuildPhotoModeCacheKey(_currentDocumentPath, _currentPageIndex, _photoDocumentIsPdf);
                 LoadCurrentPageIfExists();
             }
-            if (BoardTransitionCrossPagePolicy.ShouldHandleCrossPageArtifacts(
+            if (CrossPageInteractiveMiscPolicies.ShouldHandleCrossPageArtifacts(
                     _photoModeActive,
                     IsCrossPageDisplaySettingEnabled()))
             {

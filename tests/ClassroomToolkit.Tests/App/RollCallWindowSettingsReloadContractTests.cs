@@ -39,7 +39,7 @@ public sealed class RollCallWindowSettingsReloadContractTests
     [Fact]
     public void WarmupThenExit_Path_ShouldBeProtectedBySnapshotGuard_BeforePersistMutation()
     {
-        var mainWindowSource = MainWindowContractSourceReader.ReadCombinedSource();
+        var mainWindowSource = ReadCombinedMainWindowSource();
         var stateSource = File.ReadAllText(GetStateSourcePath());
 
         mainWindowSource.Should().Contain("private void WarmupRollCallData()");
@@ -140,5 +140,27 @@ public sealed class RollCallWindowSettingsReloadContractTests
             "src",
             "ClassroomToolkit.App",
             "RollCallWindow.Windowing.cs");
+    }
+
+    private static string ReadCombinedMainWindowSource()
+    {
+        var coreSource = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "MainWindow.xaml.cs"));
+        var lifecycleSource = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "MainWindow.Lifecycle.cs"));
+        var zOrderSource = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "MainWindow.ZOrder.cs"));
+        var rollCallSource = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "MainWindow.RollCall.cs"));
+
+        return string.Concat(coreSource, "\n", lifecycleSource, "\n", zOrderSource, "\n", rollCallSource);
     }
 }

@@ -6,20 +6,6 @@ System.Windows.Point;
 
 namespace ClassroomToolkit.App.Paint;
 
-internal static class CrossPageInputDisplayPolicy
-{
-    internal static bool IsActive(
-        bool photoModeActive,
-        bool boardActive,
-        bool crossPageDisplayEnabled)
-    {
-        return PhotoInteractionModePolicy.IsCrossPageDisplayActive(
-            photoModeActive,
-            boardActive,
-            crossPageDisplayEnabled);
-    }
-}
-
 internal static class CrossPageInputNavigation
 {
     internal static int ResolveTargetPage(
@@ -110,9 +96,57 @@ internal readonly record struct CrossPageInputResumeExecutionPlan(
     bool ShouldClearPendingBrushState,
     bool ShouldUpdateBrushAfterContinuation);
 
-internal static class CrossPageInputResumePolicy
+internal static class CrossPageInputSwitchDefaults
 {
-    internal static CrossPageInputResumeExecutionPlan Resolve(
+    internal const double MinPositiveHysteresisDip = 0;
+}
+
+internal readonly record struct CrossPageInputSwitchExecutionPlan(
+    bool ShouldSwitch,
+    bool ShouldResolveBrushContinuation,
+    bool DeferCrossPageDisplayUpdate);
+
+internal readonly record struct CrossPageInputSwitchNavigationPlan(
+    bool InteractiveSwitch,
+    bool DeferCrossPageDisplayUpdate);
+
+internal static class CrossPageInputSwitchThresholds
+{
+    internal const double PointerHysteresisDip = 10.0;
+    internal const double OutOfPageMoveSuppressMarginDip = 2.0;
+    internal const int OutOfPageMoveSuppressPostSwitchGraceMs = 120;
+    internal const double ReverseSwitchSeamBandDip = 18.0;
+    internal const int ReverseSwitchCooldownMs = 90;
+}
+
+internal static class CrossPageInteractiveSwitchClampDefaults
+{
+    internal const int MinPageIndex = 1;
+    internal const double MinFallbackPageHeight = 1.0;
+    internal const double MinResolvedPageHeight = 0.0;
+}
+
+internal enum CrossPageInteractiveSwitchRefreshMode
+{
+    DeferredByInput,
+    ImmediateDirect,
+    ImmediateScheduled
+}
+
+internal static class CrossPageInputSwitchPolicies
+{
+    internal static bool IsActive(
+        bool photoModeActive,
+        bool boardActive,
+        bool crossPageDisplayEnabled)
+    {
+        return PhotoWindowPolicies.IsCrossPageDisplayActive(
+            photoModeActive,
+            boardActive,
+            crossPageDisplayEnabled);
+    }
+
+    internal static CrossPageInputResumeExecutionPlan ResolveCrossPageInputResume(
         bool switchedPage,
         PaintToolMode mode,
         bool strokeInProgress,
@@ -150,10 +184,7 @@ internal static class CrossPageInputResumePolicy
             ShouldClearPendingBrushState: false,
             ShouldUpdateBrushAfterContinuation: false);
     }
-}
 
-internal static class CrossPageInputSwitchAdmissionPolicy
-{
     internal static bool ShouldProceed(
         bool canSwitchByGate,
         bool hasBitmap,
@@ -167,10 +198,7 @@ internal static class CrossPageInputSwitchAdmissionPolicy
 
         return !hasCurrentRect || shouldSwitchByPointer;
     }
-}
 
-internal static class CrossPageInputSwitchBounceGuardPolicy
-{
     internal static bool ShouldSuppress(
         int currentPage,
         int targetPage,
@@ -206,21 +234,8 @@ internal static class CrossPageInputSwitchBounceGuardPolicy
 
         return Math.Abs(pointerY - seamY) <= seamBandDip;
     }
-}
 
-internal static class CrossPageInputSwitchDefaults
-{
-    internal const double MinPositiveHysteresisDip = 0;
-}
-
-internal readonly record struct CrossPageInputSwitchExecutionPlan(
-    bool ShouldSwitch,
-    bool ShouldResolveBrushContinuation,
-    bool DeferCrossPageDisplayUpdate);
-
-internal static class CrossPageInputSwitchExecutionPolicy
-{
-    internal static CrossPageInputSwitchExecutionPlan Resolve(
+    internal static CrossPageInputSwitchExecutionPlan ResolveExecution(
         int currentPage,
         int targetPage,
         PaintToolMode mode,
@@ -241,10 +256,7 @@ internal static class CrossPageInputSwitchExecutionPolicy
             ShouldResolveBrushContinuation: shouldResolveBrushContinuation,
             DeferCrossPageDisplayUpdate: deferCrossPageDisplayUpdate);
     }
-}
 
-internal static class CrossPageInputSwitchGatePolicy
-{
     internal static bool CanSwitchForInput(
         bool photoModeActive,
         bool crossPageDisplayEnabled,
@@ -265,15 +277,8 @@ internal static class CrossPageInputSwitchGatePolicy
         // Avoid competing state updates between drag/pan and cross-page ink routing.
         return !photoPanning && !crossPageDragging;
     }
-}
 
-internal readonly record struct CrossPageInputSwitchNavigationPlan(
-    bool InteractiveSwitch,
-    bool DeferCrossPageDisplayUpdate);
-
-internal static class CrossPageInputSwitchNavigationPolicy
-{
-    internal static CrossPageInputSwitchNavigationPlan Resolve(
+    internal static CrossPageInputSwitchNavigationPlan ResolveNavigation(
         PaintToolMode mode,
         bool strokeInProgress,
         bool isErasing,
@@ -309,10 +314,7 @@ internal static class CrossPageInputSwitchNavigationPolicy
             InteractiveSwitch: true,
             DeferCrossPageDisplayUpdate: true);
     }
-}
 
-internal static class CrossPageInputSwitchPolicy
-{
     internal static bool ShouldSwitchByPointer(
         Rect currentPageRect,
         WpfPoint pointer,
@@ -327,10 +329,7 @@ internal static class CrossPageInputSwitchPolicy
         expanded.Inflate(hysteresisDip, hysteresisDip);
         return !expanded.Contains(pointer);
     }
-}
 
-internal static class CrossPageInputSwitchRequestPolicy
-{
     internal static bool ShouldSwitchForInput(
         bool photoModeActive,
         bool crossPageDisplayEnabled,
@@ -343,7 +342,7 @@ internal static class CrossPageInputSwitchRequestPolicy
         WpfPoint pointer,
         double pointerHysteresisDip)
     {
-        var canSwitchByGate = CrossPageInputSwitchGatePolicy.CanSwitchForInput(
+        var canSwitchByGate = CrossPageInputSwitchPolicies.CanSwitchForInput(
             photoModeActive,
             crossPageDisplayEnabled,
             boardActive,
@@ -354,21 +353,18 @@ internal static class CrossPageInputSwitchRequestPolicy
         var shouldSwitchByPointer = true;
         if (hasCurrentRect && currentPageRect is Rect resolvedRect)
         {
-            shouldSwitchByPointer = CrossPageInputSwitchPolicy.ShouldSwitchByPointer(
+            shouldSwitchByPointer = CrossPageInputSwitchPolicies.ShouldSwitchByPointer(
                 resolvedRect,
                 pointer,
                 pointerHysteresisDip);
         }
-        return CrossPageInputSwitchAdmissionPolicy.ShouldProceed(
+        return CrossPageInputSwitchPolicies.ShouldProceed(
             canSwitchByGate,
             hasBitmap,
             hasCurrentRect,
             shouldSwitchByPointer);
     }
-}
 
-internal static class CrossPageInputSwitchTargetPolicy
-{
     internal static int ResolveNeighborTargetPage(
         int currentPage,
         int requestedPage)
@@ -385,26 +381,7 @@ internal static class CrossPageInputSwitchTargetPolicy
 
         return currentPage - 1;
     }
-}
 
-internal static class CrossPageInputSwitchThresholds
-{
-    internal const double PointerHysteresisDip = 10.0;
-    internal const double OutOfPageMoveSuppressMarginDip = 2.0;
-    internal const int OutOfPageMoveSuppressPostSwitchGraceMs = 120;
-    internal const double ReverseSwitchSeamBandDip = 18.0;
-    internal const int ReverseSwitchCooldownMs = 90;
-}
-
-internal static class CrossPageInteractiveSwitchClampDefaults
-{
-    internal const int MinPageIndex = 1;
-    internal const double MinFallbackPageHeight = 1.0;
-    internal const double MinResolvedPageHeight = 0.0;
-}
-
-internal static class CrossPageInteractiveSwitchClampPolicy
-{
     internal static double ClampTranslateY(
         double candidateTranslateY,
         int targetPage,
@@ -461,18 +438,8 @@ internal static class CrossPageInteractiveSwitchClampPolicy
             ? height
             : fallbackPageHeight;
     }
-}
 
-internal enum CrossPageInteractiveSwitchRefreshMode
-{
-    DeferredByInput,
-    ImmediateDirect,
-    ImmediateScheduled
-}
-
-internal static class CrossPageInteractiveSwitchRefreshPolicy
-{
-    internal static CrossPageInteractiveSwitchRefreshMode Resolve(
+    internal static CrossPageInteractiveSwitchRefreshMode ResolveCrossPageInteractiveSwitchRefresh(
         PaintToolMode mode,
         bool deferCrossPageDisplayUpdate)
     {

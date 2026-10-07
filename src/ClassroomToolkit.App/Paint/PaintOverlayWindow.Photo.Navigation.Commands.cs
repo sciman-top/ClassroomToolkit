@@ -17,7 +17,7 @@ public partial class PaintOverlayWindow
             return;
         }
         e.Handled = true;
-        var plan = PhotoTitleBarDragZOrderPolicy.Resolve(
+        var plan = PhotoWindowPolicies.ResolvePhotoTitleBarDragZOrder(
             _photoModeActive,
             _photoFullscreen,
             e.ChangedButton);

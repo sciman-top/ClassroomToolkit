@@ -5,7 +5,26 @@ using System;
 
 namespace ClassroomToolkit.App.Paint;
 
-internal static class BoardTransitionCrossPagePolicy
+internal static class CrossPageBoundsCacheDefaults
+{
+    internal const int InteractiveReuseMaxAgeMs = 120;
+    internal const double KeyEpsilon = 0.01;
+}
+
+internal readonly record struct CrossPageRegionEraseNavigationPlan(
+    bool InteractiveSwitch,
+    bool DeferCrossPageDisplayUpdate);
+
+internal static class CrossPageViewportBoundsDefaults
+{
+    internal const double VisibilityMarginDip = 16.0;
+    internal const double CenterRatio = 0.5;
+    internal const double TranslateClampEpsilonDip = 0.5;
+    internal const double ClampSlackMinDip = 32.0;
+    internal const double ClampSlackViewportRatio = 0.5;
+}
+
+internal static class CrossPageInteractiveMiscPolicies
 {
     internal static bool ShouldHandleCrossPageArtifacts(
         bool photoModeActive,
@@ -15,16 +34,7 @@ internal static class BoardTransitionCrossPagePolicy
         // is the active scene source, regardless of the new board active flag.
         return photoModeActive && crossPageDisplayEnabled;
     }
-}
 
-internal static class CrossPageBoundsCacheDefaults
-{
-    internal const int InteractiveReuseMaxAgeMs = 120;
-    internal const double KeyEpsilon = 0.01;
-}
-
-internal static class CrossPageFrameSourceAssignmentPolicy
-{
     internal static bool ShouldAssign(
         ImageSource? currentSource,
         ImageSource? nextSource,
@@ -42,10 +52,7 @@ internal static class CrossPageFrameSourceAssignmentPolicy
 
         return !ReferenceEquals(currentSource, nextSource);
     }
-}
 
-internal static class CrossPageOutOfPageMoveSuppressionPolicy
-{
     internal static bool ShouldSuppress(
         bool crossPageDisplayActive,
         bool photoFullscreenActive,
@@ -69,13 +76,10 @@ internal static class CrossPageOutOfPageMoveSuppressionPolicy
 
         return !pointerInsideCurrentPageRect;
     }
-}
 
-internal static class CrossPagePendingTakeoverPolicy
-{
     internal const int ImmediateTakeoverThresholdMs = 120;
 
-    internal static CrossPageDisplayUpdateDispatchDecision Resolve(
+    internal static CrossPageDisplayUpdateDispatchDecision ResolveCrossPagePendingTakeover(
         CrossPageDisplayUpdateDispatchDecision decision,
         CrossPageUpdateDispatchSuffix suffix,
         CrossPageDisplayUpdateRuntimeState pendingState,
@@ -107,24 +111,14 @@ internal static class CrossPagePendingTakeoverPolicy
             Mode: CrossPageDisplayUpdateDispatchMode.Direct,
             DelayMs: 0);
     }
-}
 
-internal readonly record struct CrossPageRegionEraseNavigationPlan(
-    bool InteractiveSwitch,
-    bool DeferCrossPageDisplayUpdate);
-
-internal static class CrossPageRegionEraseNavigationPolicy
-{
-    internal static CrossPageRegionEraseNavigationPlan Resolve()
+    internal static CrossPageRegionEraseNavigationPlan ResolveCrossPageRegionEraseNavigation()
     {
         return new CrossPageRegionEraseNavigationPlan(
             InteractiveSwitch: false,
             DeferCrossPageDisplayUpdate: false);
     }
-}
 
-internal static class CrossPageRegionEraseOrderPolicy
-{
     internal static IReadOnlyList<int> ResolveBatchOrder(
         IEnumerable<int> pages,
         int currentPage)
@@ -148,10 +142,7 @@ internal static class CrossPageRegionEraseOrderPolicy
         ordered.Add(currentPage);
         return ordered;
     }
-}
 
-internal static class CrossPageRegionErasePolicy
-{
     internal static bool ShouldUseCrossPageErase(
         bool photoInkModeActive,
         bool crossPageDisplayEnabled)
@@ -167,19 +158,7 @@ internal static class CrossPageRegionErasePolicy
         return ShouldUseCrossPageErase(photoInkModeActive, crossPageDisplayEnabled)
                && targetPage > 0;
     }
-}
 
-internal static class CrossPageViewportBoundsDefaults
-{
-    internal const double VisibilityMarginDip = 16.0;
-    internal const double CenterRatio = 0.5;
-    internal const double TranslateClampEpsilonDip = 0.5;
-    internal const double ClampSlackMinDip = 32.0;
-    internal const double ClampSlackViewportRatio = 0.5;
-}
-
-internal static class CrossPageViewportBoundsPolicy
-{
     internal static double ResolveSlackDip(double viewportHeight)
     {
         return Math.Max(
@@ -191,10 +170,7 @@ internal static class CrossPageViewportBoundsPolicy
     {
         return Math.Abs(originalY - clampedY) > CrossPageViewportBoundsDefaults.TranslateClampEpsilonDip;
     }
-}
 
-internal static class CrossPageZoomLayoutScalePolicy
-{
     internal static bool ShouldSynchronize(double scaleFactor)
     {
         return double.IsFinite(scaleFactor)

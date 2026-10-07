@@ -9,217 +9,6 @@ using System;
 
 namespace ClassroomToolkit.App.Paint;
 
-internal static class PresentationFocusMonitorActivationPolicy
-{
-    internal static bool ShouldMonitor(
-        bool overlayVisible,
-        bool allowOffice,
-        bool allowWps,
-        bool photoFullscreenActive)
-    {
-        return overlayVisible && (allowOffice || allowWps || photoFullscreenActive);
-    }
-}
-
-internal static class PresentationFocusMonitorPolicy
-{
-    internal static bool ShouldAttemptRestore(
-        bool restoreEnabled,
-        bool photoModeActive,
-        bool boardActive,
-        bool foregroundOwnedByCurrentProcess,
-        DateTime nowUtc,
-        DateTime nextAttemptUtc)
-    {
-        if (!restoreEnabled || photoModeActive || boardActive)
-        {
-            return false;
-        }
-
-        if (nowUtc < nextAttemptUtc)
-        {
-            return false;
-        }
-
-        return foregroundOwnedByCurrentProcess;
-    }
-
-    internal static DateTime ComputeNextAttemptUtc(DateTime nowUtc, int cooldownMs)
-    {
-        return nowUtc.AddMilliseconds(cooldownMs);
-    }
-}
-
-internal static class PresentationFocusRestorePolicy
-{
-    internal static bool CanRestore(
-        UiSessionState sessionState,
-        bool photoModeActive,
-        bool boardActive,
-        bool isVisible,
-        bool presentationAllowed,
-        bool targetIsValid,
-        bool targetIsSlideshow,
-        bool targetIsFullscreen,
-        bool requireFullscreen,
-        bool forceForeground,
-        bool foregroundOwnedByCurrentProcess,
-        bool dragOperationActive)
-    {
-        if (!isVisible || photoModeActive || boardActive || dragOperationActive)
-        {
-            return false;
-        }
-
-        if (!presentationAllowed)
-        {
-            return false;
-        }
-
-        if (sessionState.ToolMode != UiToolMode.Cursor)
-        {
-            return false;
-        }
-
-        if (!UiSessionPresentationInputPolicy.AllowsPresentationInput(sessionState.NavigationMode))
-        {
-            return false;
-        }
-
-        if (!targetIsValid || !targetIsSlideshow)
-        {
-            return false;
-        }
-
-        if (requireFullscreen && !targetIsFullscreen)
-        {
-            return false;
-        }
-
-        if (!forceForeground && !foregroundOwnedByCurrentProcess)
-        {
-            return false;
-        }
-
-        return true;
-    }
-}
-
-internal static class PresentationFollowMonitorPolicy
-{
-    /// <summary>
-    /// 放映在副屏而覆盖层停留在主屏时，批注会画在放映画面之外。
-    /// 进入放映全屏时覆盖层应搬到放映窗所在显示器；板书/照片模式有自己的
-    /// 几何语义，不参与跟随。
-    /// </summary>
-    internal static bool ShouldFollow(
-        bool photoModeActive,
-        bool boardActive,
-        bool overlayVisible,
-        bool windowStateMinimized)
-    {
-        return !photoModeActive && !boardActive && overlayVisible && !windowStateMinimized;
-    }
-
-    internal static bool ShouldMove(Rect currentMonitorRect, Rect targetMonitorRect)
-    {
-        return !currentMonitorRect.Equals(targetMonitorRect);
-    }
-}
-
-internal static class PresentationFullscreenTypeResolutionPolicy
-{
-    internal static PresentationType Resolve(
-        bool wpsFullscreen,
-        bool officeFullscreen,
-        PresentationType currentPresentationType,
-        PresentationType foregroundType = PresentationType.None,
-        bool foregroundIsFullscreen = false)
-    {
-        // When both applications have a fullscreen candidate, the fresh
-        // foreground window is the only safe discriminator.  A cached current
-        // type may belong to the previous monitor or slideshow session.
-        if (foregroundIsFullscreen
-            && foregroundType == PresentationType.Wps
-            && wpsFullscreen)
-        {
-            return PresentationType.Wps;
-        }
-
-        if (foregroundIsFullscreen
-            && foregroundType == PresentationType.Office
-            && officeFullscreen)
-        {
-            return PresentationType.Office;
-        }
-
-        if (wpsFullscreen && !officeFullscreen)
-        {
-            return PresentationType.Wps;
-        }
-
-        if (officeFullscreen && !wpsFullscreen)
-        {
-            return PresentationType.Office;
-        }
-
-        if (wpsFullscreen
-            && officeFullscreen
-            && currentPresentationType is PresentationType.Wps or PresentationType.Office)
-        {
-            return currentPresentationType;
-        }
-
-        return PresentationType.None;
-    }
-}
-
-internal static class PresentationFullscreenWindowAdmissionPolicy
-{
-    internal static bool ShouldTreatAsPresentationFullscreen(
-        bool targetIsValid,
-        bool targetHasInfo,
-        bool isFullscreen,
-        bool classifiesAsSlideshow,
-        bool classifiesAsOffice,
-        bool classifiesAsDedicatedWpsRuntime)
-    {
-        if (!targetIsValid || !targetHasInfo || !isFullscreen)
-        {
-            return false;
-        }
-
-        if (classifiesAsSlideshow)
-        {
-            return true;
-        }
-
-        // Office slideshow may switch runtime classes in pen/annotation mode.
-        if (classifiesAsOffice)
-        {
-            return true;
-        }
-
-        // Newer WPS builds host slideshow in a dedicated wpp/wppt runtime whose
-        // top-level window may expose only generic Qt classes.
-        return classifiesAsDedicatedWpsRuntime;
-    }
-}
-
-internal static class PresentationInkExitSnapshotPolicy
-{
-    /// <summary>
-    /// 放映批注没有逐页落盘（CacheScope=None），退出放映会清空表面；
-    /// 有墨迹时必须先留一张 PNG 快照兜底，避免教师批注静默丢失。
-    /// 只看位图表面是否有墨迹：出厂默认 ink_record_enabled=false 时
-    /// 笔画不进入向量表（strokeCount 恒为 0），不能作为判据。
-    /// </summary>
-    internal static bool ShouldCapture(bool hasDrawing)
-    {
-        return hasDrawing;
-    }
-}
-
 internal static class PresentationInkSnapshotNamer
 {
     internal static string BuildFileName(DateTime localTime)
@@ -234,22 +23,6 @@ internal static class PresentationInkSnapshotNamer
 /// intentionally insufficient: settings dialogs, roll-call windows and text
 /// editors can all belong to this process while still owning unrelated input.
 /// </summary>
-internal static class PresentationInputFocusPolicy
-{
-    internal static bool IsAuthorizedForeground(
-        IntPtr foregroundWindow,
-        IntPtr overlayWindow,
-        IntPtr toolbarWindow)
-    {
-        if (foregroundWindow == IntPtr.Zero)
-        {
-            return false;
-        }
-
-        return foregroundWindow == overlayWindow
-               || foregroundWindow == toolbarWindow;
-    }
-}
 
 internal sealed class PresentationInputPipeline
 {
@@ -424,286 +197,12 @@ internal sealed class PresentationInputPipeline
     }
 }
 
-internal static class PresentationKeyCommandPolicy
-{
-    internal static bool TryMap(Key key, out PresentationCommand command)
-    {
-        if (key == Key.Right || key == Key.Down || key == Key.Space || key == Key.Enter || key == Key.PageDown)
-        {
-            command = PresentationCommand.Next;
-            return true;
-        }
-        if (key == Key.Left || key == Key.Up || key == Key.PageUp)
-        {
-            command = PresentationCommand.Previous;
-            return true;
-        }
-        if (key == Key.Home)
-        {
-            command = PresentationCommand.First;
-            return true;
-        }
-        if (key == Key.End)
-        {
-            command = PresentationCommand.Last;
-            return true;
-        }
-
-        command = default;
-        return false;
-    }
-}
-
-internal static class PresentationNavigationAdmissionPolicy
-{
-    internal static bool ShouldAttempt(
-        bool allowChannel,
-        bool boardActive,
-        bool targetIsValid,
-        bool targetHasInfo,
-        bool targetIsSlideshow,
-        bool allowBackground,
-        bool targetForeground)
-    {
-        if (!allowChannel || boardActive)
-        {
-            return false;
-        }
-
-        if (!targetIsValid || !targetHasInfo || !targetIsSlideshow)
-        {
-            return false;
-        }
-
-        if (!allowBackground && !targetForeground)
-        {
-            return false;
-        }
-
-        return true;
-    }
-}
-
-internal static class PresentationOverlayRetouchPolicy
-{
-    internal static bool ShouldRequest(
-        bool presentationActionApplied,
-        bool overlayVisible,
-        bool presentationFullscreenActive)
-    {
-        return presentationActionApplied
-            && overlayVisible
-            && presentationFullscreenActive;
-    }
-}
-
-internal static class PresentationReservedNavigationKeyPolicy
-{
-    private static readonly IReadOnlyCollection<VirtualKey> Empty = Array.Empty<VirtualKey>();
-
-    internal static IReadOnlyCollection<VirtualKey> ResolveRollCallGroupSwitchKeys(
-        bool enabled,
-        string? configuredKey)
-    {
-        if (!enabled)
-        {
-            return Empty;
-        }
-
-        var token = string.IsNullOrWhiteSpace(configuredKey)
-            ? "enter"
-            : configuredKey.Trim();
-        return KeyBindingParser.TryParse(token, out var binding) && binding != null
-            ? [binding.Key]
-            : Empty;
-    }
-}
-
 internal static class PresentationRuntimeDefaults
 {
     internal const int FocusMonitorIntervalMs = 500;
     internal const int FocusRestoreCooldownMs = 1200;
     internal const int WpsNavDebounceMs = 200;
     internal static readonly DateTime UnsetTimestampUtc = DateTime.MinValue;
-}
-
-internal static class PresentationSlideshowDetectionPolicy
-{
-    internal static bool IsSlideshow(
-        PresentationTarget target,
-        PresentationClassifier classifier,
-        Func<IntPtr, bool> isFullscreenWindow,
-        PresentationType? expectedType = null)
-    {
-        if (!target.IsValid || target.Info == null)
-        {
-            return false;
-        }
-
-        if (classifier.IsSlideshowWindow(target.Info))
-        {
-            return true;
-        }
-
-        if (!isFullscreenWindow(target.Handle))
-        {
-            return false;
-        }
-
-        var type = expectedType ?? classifier.Classify(target.Info);
-        return PresentationFullscreenWindowAdmissionPolicy.ShouldTreatAsPresentationFullscreen(
-            targetIsValid: true,
-            targetHasInfo: true,
-            isFullscreen: true,
-            classifiesAsSlideshow: false,
-            classifiesAsOffice: type == PresentationType.Office,
-            classifiesAsDedicatedWpsRuntime: type == PresentationType.Wps
-                && WpsPresentationRuntimePolicy.IsDedicatedSlideshowRuntime(target.Info.ProcessName));
-    }
-}
-
-internal static class PresentationTargetAdmissionPolicy
-{
-    internal static bool IsFreshIdentityMatch(
-        PresentationTarget target,
-        PresentationWindowCheck? currentCheck,
-        PresentationClassifier classifier,
-        PresentationType? expectedType)
-    {
-        ArgumentNullException.ThrowIfNull(classifier);
-
-        if (!target.IsValid || target.Info == null || currentCheck == null)
-        {
-            return false;
-        }
-
-        if (currentCheck.Type is PresentationType.None or PresentationType.Other)
-        {
-            return false;
-        }
-
-        // HWND values can be recycled after a window closes.  The process id,
-        // executable name, and native class identity must all still describe
-        // the cached target before input is admitted.
-        if (target.Info.ProcessId == 0
-            || currentCheck.ProcessId == 0
-            || target.Info.ProcessId != currentCheck.ProcessId
-            || !string.Equals(
-                NormalizeIdentity(target.Info.ProcessName),
-                NormalizeIdentity(currentCheck.ProcessName),
-                StringComparison.OrdinalIgnoreCase)
-            || !ClassIdentityMatches(target.Info.ClassNames, currentCheck.ClassNames))
-        {
-            return false;
-        }
-
-        // The cached PresentationTarget carries the metadata used by the planner.
-        // A recycled HWND must not be allowed to keep the old channel identity.
-        var cachedType = classifier.Classify(target.Info);
-        if (currentCheck.Type != cachedType)
-        {
-            return false;
-        }
-
-        if (expectedType.HasValue && currentCheck.Type != expectedType.Value)
-        {
-            return false;
-        }
-
-        if (currentCheck.ClassMatch)
-        {
-            return true;
-        }
-
-        return PresentationFullscreenWindowAdmissionPolicy.ShouldTreatAsPresentationFullscreen(
-            targetIsValid: target.IsValid,
-            targetHasInfo: target.Info != null,
-            isFullscreen: currentCheck.IsFullscreen,
-            classifiesAsSlideshow: false,
-            classifiesAsOffice: currentCheck.Type == PresentationType.Office,
-            classifiesAsDedicatedWpsRuntime: currentCheck.Type == PresentationType.Wps
-                && WpsPresentationRuntimePolicy.IsDedicatedSlideshowRuntime(currentCheck.ProcessName));
-    }
-
-    private static bool ClassIdentityMatches(
-        IReadOnlyList<string>? cachedClasses,
-        IReadOnlyList<string>? currentClasses)
-    {
-        var cached = NormalizeClasses(cachedClasses);
-        var current = NormalizeClasses(currentClasses);
-        return cached.Count > 0
-            && cached.Count == current.Count
-            && cached.SetEquals(current);
-    }
-
-    private static HashSet<string> NormalizeClasses(IReadOnlyList<string>? classes)
-    {
-        var normalized = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (classes == null)
-        {
-            return normalized;
-        }
-
-        for (var i = 0; i < classes.Count; i++)
-        {
-            var value = NormalizeIdentity(classes[i]);
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                normalized.Add(value);
-            }
-        }
-
-        return normalized;
-    }
-
-    private static string NormalizeIdentity(string? value)
-    {
-        return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
-    }
-}
-
-internal static class PresentationTargetChannelSelectionPolicy
-{
-    internal static PresentationType ResolveForFocus(
-        PresentationType foregroundType,
-        bool foregroundIsFullscreen,
-        PresentationType currentPresentationType,
-        bool allowWps,
-        bool allowOffice)
-    {
-        if (foregroundIsFullscreen && IsAllowed(foregroundType, allowWps, allowOffice))
-        {
-            return foregroundType;
-        }
-
-        if (IsAllowed(currentPresentationType, allowWps, allowOffice))
-        {
-            return currentPresentationType;
-        }
-
-        if (allowWps && !allowOffice)
-        {
-            return PresentationType.Wps;
-        }
-
-        if (allowOffice && !allowWps)
-        {
-            return PresentationType.Office;
-        }
-
-        // With both channels enabled and no foreground/current-session evidence,
-        // do not silently choose one application over the other.
-        return PresentationType.None;
-    }
-
-    private static bool IsAllowed(
-        PresentationType type,
-        bool allowWps,
-        bool allowOffice)
-    {
-        return (type == PresentationType.Wps && allowWps)
-            || (type == PresentationType.Office && allowOffice);
-    }
 }
 
 /// <summary>
@@ -814,8 +313,465 @@ internal sealed class PresentationTargetSessionBinding
     }
 }
 
-internal static class PresentationWheelInkConflictPolicy
+internal static class PresentationPipelinePolicies
 {
+    internal static bool ShouldMonitor(
+        bool overlayVisible,
+        bool allowOffice,
+        bool allowWps,
+        bool photoFullscreenActive)
+    {
+        return overlayVisible && (allowOffice || allowWps || photoFullscreenActive);
+    }
+
+    internal static bool ShouldAttemptRestore(
+        bool restoreEnabled,
+        bool photoModeActive,
+        bool boardActive,
+        bool foregroundOwnedByCurrentProcess,
+        DateTime nowUtc,
+        DateTime nextAttemptUtc)
+    {
+        if (!restoreEnabled || photoModeActive || boardActive)
+        {
+            return false;
+        }
+
+        if (nowUtc < nextAttemptUtc)
+        {
+            return false;
+        }
+
+        return foregroundOwnedByCurrentProcess;
+    }
+
+    internal static DateTime ComputeNextAttemptUtc(DateTime nowUtc, int cooldownMs)
+    {
+        return nowUtc.AddMilliseconds(cooldownMs);
+    }
+
+    internal static bool CanRestore(
+        UiSessionState sessionState,
+        bool photoModeActive,
+        bool boardActive,
+        bool isVisible,
+        bool presentationAllowed,
+        bool targetIsValid,
+        bool targetIsSlideshow,
+        bool targetIsFullscreen,
+        bool requireFullscreen,
+        bool forceForeground,
+        bool foregroundOwnedByCurrentProcess,
+        bool dragOperationActive)
+    {
+        if (!isVisible || photoModeActive || boardActive || dragOperationActive)
+        {
+            return false;
+        }
+
+        if (!presentationAllowed)
+        {
+            return false;
+        }
+
+        if (sessionState.ToolMode != UiToolMode.Cursor)
+        {
+            return false;
+        }
+
+        if (!UiSessionPolicies.AllowsPresentationInput(sessionState.NavigationMode))
+        {
+            return false;
+        }
+
+        if (!targetIsValid || !targetIsSlideshow)
+        {
+            return false;
+        }
+
+        if (requireFullscreen && !targetIsFullscreen)
+        {
+            return false;
+        }
+
+        if (!forceForeground && !foregroundOwnedByCurrentProcess)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 放映在副屏而覆盖层停留在主屏时，批注会画在放映画面之外。
+    /// 进入放映全屏时覆盖层应搬到放映窗所在显示器；板书/照片模式有自己的
+    /// 几何语义，不参与跟随。
+    /// </summary>
+    internal static bool ShouldFollow(
+        bool photoModeActive,
+        bool boardActive,
+        bool overlayVisible,
+        bool windowStateMinimized)
+    {
+        return !photoModeActive && !boardActive && overlayVisible && !windowStateMinimized;
+    }
+
+    internal static bool ShouldMove(Rect currentMonitorRect, Rect targetMonitorRect)
+    {
+        return !currentMonitorRect.Equals(targetMonitorRect);
+    }
+
+    internal static PresentationType Resolve(
+        bool wpsFullscreen,
+        bool officeFullscreen,
+        PresentationType currentPresentationType,
+        PresentationType foregroundType = PresentationType.None,
+        bool foregroundIsFullscreen = false)
+    {
+        // When both applications have a fullscreen candidate, the fresh
+        // foreground window is the only safe discriminator.  A cached current
+        // type may belong to the previous monitor or slideshow session.
+        if (foregroundIsFullscreen
+            && foregroundType == PresentationType.Wps
+            && wpsFullscreen)
+        {
+            return PresentationType.Wps;
+        }
+
+        if (foregroundIsFullscreen
+            && foregroundType == PresentationType.Office
+            && officeFullscreen)
+        {
+            return PresentationType.Office;
+        }
+
+        if (wpsFullscreen && !officeFullscreen)
+        {
+            return PresentationType.Wps;
+        }
+
+        if (officeFullscreen && !wpsFullscreen)
+        {
+            return PresentationType.Office;
+        }
+
+        if (wpsFullscreen
+            && officeFullscreen
+            && currentPresentationType is PresentationType.Wps or PresentationType.Office)
+        {
+            return currentPresentationType;
+        }
+
+        return PresentationType.None;
+    }
+
+    internal static bool ShouldTreatAsPresentationFullscreen(
+        bool targetIsValid,
+        bool targetHasInfo,
+        bool isFullscreen,
+        bool classifiesAsSlideshow,
+        bool classifiesAsOffice,
+        bool classifiesAsDedicatedWpsRuntime)
+    {
+        if (!targetIsValid || !targetHasInfo || !isFullscreen)
+        {
+            return false;
+        }
+
+        if (classifiesAsSlideshow)
+        {
+            return true;
+        }
+
+        // Office slideshow may switch runtime classes in pen/annotation mode.
+        if (classifiesAsOffice)
+        {
+            return true;
+        }
+
+        // Newer WPS builds host slideshow in a dedicated wpp/wppt runtime whose
+        // top-level window may expose only generic Qt classes.
+        return classifiesAsDedicatedWpsRuntime;
+    }
+
+    /// <summary>
+    /// 放映批注没有逐页落盘（CacheScope=None），退出放映会清空表面；
+    /// 有墨迹时必须先留一张 PNG 快照兜底，避免教师批注静默丢失。
+    /// 只看位图表面是否有墨迹：出厂默认 ink_record_enabled=false 时
+    /// 笔画不进入向量表（strokeCount 恒为 0），不能作为判据。
+    /// </summary>
+    internal static bool ShouldCapture(bool hasDrawing)
+    {
+        return hasDrawing;
+    }
+
+    internal static bool IsAuthorizedForeground(
+        IntPtr foregroundWindow,
+        IntPtr overlayWindow,
+        IntPtr toolbarWindow)
+    {
+        if (foregroundWindow == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        return foregroundWindow == overlayWindow
+               || foregroundWindow == toolbarWindow;
+    }
+
+    internal static bool TryMap(Key key, out PresentationCommand command)
+    {
+        if (key == Key.Right || key == Key.Down || key == Key.Space || key == Key.Enter || key == Key.PageDown)
+        {
+            command = PresentationCommand.Next;
+            return true;
+        }
+        if (key == Key.Left || key == Key.Up || key == Key.PageUp)
+        {
+            command = PresentationCommand.Previous;
+            return true;
+        }
+        if (key == Key.Home)
+        {
+            command = PresentationCommand.First;
+            return true;
+        }
+        if (key == Key.End)
+        {
+            command = PresentationCommand.Last;
+            return true;
+        }
+
+        command = default;
+        return false;
+    }
+
+    internal static bool ShouldAttempt(
+        bool allowChannel,
+        bool boardActive,
+        bool targetIsValid,
+        bool targetHasInfo,
+        bool targetIsSlideshow,
+        bool allowBackground,
+        bool targetForeground)
+    {
+        if (!allowChannel || boardActive)
+        {
+            return false;
+        }
+
+        if (!targetIsValid || !targetHasInfo || !targetIsSlideshow)
+        {
+            return false;
+        }
+
+        if (!allowBackground && !targetForeground)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    internal static bool ShouldRequest(
+        bool presentationActionApplied,
+        bool overlayVisible,
+        bool presentationFullscreenActive)
+    {
+        return presentationActionApplied
+            && overlayVisible
+            && presentationFullscreenActive;
+    }
+
+    private static readonly IReadOnlyCollection<VirtualKey> Empty = Array.Empty<VirtualKey>();
+
+    internal static IReadOnlyCollection<VirtualKey> ResolveRollCallGroupSwitchKeys(
+        bool enabled,
+        string? configuredKey)
+    {
+        if (!enabled)
+        {
+            return Empty;
+        }
+
+        var token = string.IsNullOrWhiteSpace(configuredKey)
+            ? "enter"
+            : configuredKey.Trim();
+        return KeyBindingParser.TryParse(token, out var binding) && binding != null
+            ? [binding.Key]
+            : Empty;
+    }
+
+    internal static bool IsSlideshow(
+        PresentationTarget target,
+        PresentationClassifier classifier,
+        Func<IntPtr, bool> isFullscreenWindow,
+        PresentationType? expectedType = null)
+    {
+        if (!target.IsValid || target.Info == null)
+        {
+            return false;
+        }
+
+        if (classifier.IsSlideshowWindow(target.Info))
+        {
+            return true;
+        }
+
+        if (!isFullscreenWindow(target.Handle))
+        {
+            return false;
+        }
+
+        var type = expectedType ?? classifier.Classify(target.Info);
+        return PresentationPipelinePolicies.ShouldTreatAsPresentationFullscreen(
+            targetIsValid: true,
+            targetHasInfo: true,
+            isFullscreen: true,
+            classifiesAsSlideshow: false,
+            classifiesAsOffice: type == PresentationType.Office,
+            classifiesAsDedicatedWpsRuntime: type == PresentationType.Wps
+                && WpsHookPolicies.IsDedicatedSlideshowRuntime(target.Info.ProcessName));
+    }
+
+    internal static bool IsFreshIdentityMatch(
+        PresentationTarget target,
+        PresentationWindowCheck? currentCheck,
+        PresentationClassifier classifier,
+        PresentationType? expectedType)
+    {
+        ArgumentNullException.ThrowIfNull(classifier);
+
+        if (!target.IsValid || target.Info == null || currentCheck == null)
+        {
+            return false;
+        }
+
+        if (currentCheck.Type is PresentationType.None or PresentationType.Other)
+        {
+            return false;
+        }
+
+        // HWND values can be recycled after a window closes.  The process id,
+        // executable name, and native class identity must all still describe
+        // the cached target before input is admitted.
+        if (target.Info.ProcessId == 0
+            || currentCheck.ProcessId == 0
+            || target.Info.ProcessId != currentCheck.ProcessId
+            || !string.Equals(
+                NormalizeIdentity(target.Info.ProcessName),
+                NormalizeIdentity(currentCheck.ProcessName),
+                StringComparison.OrdinalIgnoreCase)
+            || !ClassIdentityMatches(target.Info.ClassNames, currentCheck.ClassNames))
+        {
+            return false;
+        }
+
+        // The cached PresentationTarget carries the metadata used by the planner.
+        // A recycled HWND must not be allowed to keep the old channel identity.
+        var cachedType = classifier.Classify(target.Info);
+        if (currentCheck.Type != cachedType)
+        {
+            return false;
+        }
+
+        if (expectedType.HasValue && currentCheck.Type != expectedType.Value)
+        {
+            return false;
+        }
+
+        if (currentCheck.ClassMatch)
+        {
+            return true;
+        }
+
+        return PresentationPipelinePolicies.ShouldTreatAsPresentationFullscreen(
+            targetIsValid: target.IsValid,
+            targetHasInfo: target.Info != null,
+            isFullscreen: currentCheck.IsFullscreen,
+            classifiesAsSlideshow: false,
+            classifiesAsOffice: currentCheck.Type == PresentationType.Office,
+            classifiesAsDedicatedWpsRuntime: currentCheck.Type == PresentationType.Wps
+                && WpsHookPolicies.IsDedicatedSlideshowRuntime(currentCheck.ProcessName));
+    }
+
+    private static bool ClassIdentityMatches(
+        IReadOnlyList<string>? cachedClasses,
+        IReadOnlyList<string>? currentClasses)
+    {
+        var cached = NormalizeClasses(cachedClasses);
+        var current = NormalizeClasses(currentClasses);
+        return cached.Count > 0
+            && cached.Count == current.Count
+            && cached.SetEquals(current);
+    }
+
+    private static HashSet<string> NormalizeClasses(IReadOnlyList<string>? classes)
+    {
+        var normalized = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (classes == null)
+        {
+            return normalized;
+        }
+
+        for (var i = 0; i < classes.Count; i++)
+        {
+            var value = NormalizeIdentity(classes[i]);
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                normalized.Add(value);
+            }
+        }
+
+        return normalized;
+    }
+
+    private static string NormalizeIdentity(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? string.Empty : value.Trim();
+    }
+
+    internal static PresentationType ResolveForFocus(
+        PresentationType foregroundType,
+        bool foregroundIsFullscreen,
+        PresentationType currentPresentationType,
+        bool allowWps,
+        bool allowOffice)
+    {
+        if (foregroundIsFullscreen && IsAllowed(foregroundType, allowWps, allowOffice))
+        {
+            return foregroundType;
+        }
+
+        if (IsAllowed(currentPresentationType, allowWps, allowOffice))
+        {
+            return currentPresentationType;
+        }
+
+        if (allowWps && !allowOffice)
+        {
+            return PresentationType.Wps;
+        }
+
+        if (allowOffice && !allowWps)
+        {
+            return PresentationType.Office;
+        }
+
+        // With both channels enabled and no foreground/current-session evidence,
+        // do not silently choose one application over the other.
+        return PresentationType.None;
+    }
+
+    private static bool IsAllowed(
+        PresentationType type,
+        bool allowWps,
+        bool allowOffice)
+    {
+        return (type == PresentationType.Wps && allowWps)
+            || (type == PresentationType.Office && allowOffice);
+    }
+
     internal static bool ShouldSuppress(
         PaintToolMode mode,
         DateTime lastInkInputUtc,

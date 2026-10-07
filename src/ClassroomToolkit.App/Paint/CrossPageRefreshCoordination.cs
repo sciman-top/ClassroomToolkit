@@ -63,7 +63,7 @@ internal static class CrossPageDeferredRefreshCoordinator
 
         try
         {
-            var scheduleGate = CrossPageDeferredRefreshGatePolicy.ResolveBeforeSchedule(
+            var scheduleGate = CrossPageRefreshCoordinationPolicies.ResolveBeforeSchedule(
                 isCrossPageDisplayActive(),
                 isCrossPageInteractionActive());
             if (!scheduleGate.ShouldProceed)
@@ -81,7 +81,7 @@ internal static class CrossPageDeferredRefreshCoordinator
                     DelayMs: 0);
             }
 
-            var targetDelayMs = CrossPagePostInputDelayPolicy.ResolveMs(
+            var targetDelayMs = CrossPageRefreshCoordinationPolicies.ResolveMs(
                 source,
                 configuredDelayMs,
                 fallbackDelayMs: CrossPageRuntimeDefaults.PostInputRefreshDelayMs,
@@ -140,7 +140,7 @@ internal static class CrossPageDeferredRefreshCoordinator
                     return;
                 }
 
-                var delayedDispatchGate = CrossPageDeferredRefreshGatePolicy.ResolveBeforeDelayedDispatch(
+                var delayedDispatchGate = CrossPageRefreshCoordinationPolicies.ResolveBeforeDelayedDispatch(
                     isCrossPageDisplayActive(),
                     isCrossPageInteractionActive());
                 if (!delayedDispatchGate.ShouldProceed)
@@ -217,7 +217,7 @@ internal static class CrossPageDeferredRefreshCoordinator
             dispatcherShutdownFinished,
             diagnostics,
             abortDetail: failureDetail,
-            recoverDiagnosticsDetail: CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatInlineRecoveryDetail(
+            recoverDiagnosticsDetail: CrossPageReplayPolicies.FormatInlineRecoveryDetail(
                 tokenMatched: true));
     }
 
@@ -257,7 +257,7 @@ internal static class CrossPageDeferredRefreshCoordinator
         var scheduledRecovery = tryBeginInvoke(
             () => requestCrossPageDisplayUpdate(recoverySource),
             DispatcherPriority.Background);
-        var recoveryDecision = CrossPageDelayedDispatchFailureRecoveryPolicy.Resolve(
+        var recoveryDecision = CrossPageReplayPolicies.ResolveCrossPageDelayedDispatchFailureRecovery(
             recoveryDispatchScheduled: scheduledRecovery,
             dispatcherCheckAccess: dispatcherCheckAccess(),
             dispatcherShutdownStarted: dispatcherShutdownStarted(),
@@ -293,63 +293,6 @@ internal static class CrossPageDeferredRefreshCoordinator
 internal readonly record struct CrossPageDeferredRefreshGateDecision(
     bool ShouldProceed,
     string? Reason);
-
-internal static class CrossPageDeferredRefreshGatePolicy
-{
-    internal static CrossPageDeferredRefreshGateDecision ResolveBeforeSchedule(
-        bool crossPageDisplayActive,
-        bool interactionActive)
-    {
-        if (!crossPageDisplayActive)
-        {
-            return new CrossPageDeferredRefreshGateDecision(
-                ShouldProceed: false,
-                Reason: CrossPageDeferredDiagnosticReason.Inactive);
-        }
-
-        if (interactionActive)
-        {
-            return new CrossPageDeferredRefreshGateDecision(
-                ShouldProceed: false,
-                Reason: CrossPageDeferredDiagnosticReason.InteractionActive);
-        }
-
-        return new CrossPageDeferredRefreshGateDecision(
-            ShouldProceed: true,
-            Reason: null);
-    }
-
-    internal static CrossPageDeferredRefreshGateDecision ResolveBeforeDelayedDispatch(
-        bool crossPageDisplayActive,
-        bool interactionActive)
-    {
-        if (!crossPageDisplayActive || interactionActive)
-        {
-            return new CrossPageDeferredRefreshGateDecision(
-                ShouldProceed: false,
-                Reason: CrossPageDeferredDiagnosticReason.InactiveOrInteractionActive);
-        }
-
-        return new CrossPageDeferredRefreshGateDecision(
-            ShouldProceed: true,
-            Reason: null);
-    }
-}
-
-internal static class CrossPageDeferredRefreshPolicy
-{
-    internal static bool ShouldArmOnInteractiveSwitch(CrossPageInteractiveSwitchRefreshMode refreshMode)
-    {
-        return refreshMode == CrossPageInteractiveSwitchRefreshMode.DeferredByInput;
-    }
-
-    internal static bool ShouldRunOnPointerUp(
-        bool deferredByInkInput,
-        bool crossPageDisplayActive)
-    {
-        return deferredByInkInput && crossPageDisplayActive;
-    }
-}
 
 internal readonly record struct CrossPageMissingNeighborRefreshExecutionResult(
     bool Scheduled,
@@ -396,7 +339,7 @@ internal static class CrossPageMissingNeighborRefreshCoordinator
 
         try
         {
-            var decision = CrossPageMissingNeighborRefreshPolicy.Resolve(
+            var decision = CrossPageRefreshCoordinationPolicies.Resolve(
                 photoModeActive,
                 crossPageDisplayEnabled,
                 interactionActive,
@@ -503,7 +446,7 @@ internal static class CrossPageMissingNeighborRefreshCoordinator
         var scheduledRecovery = tryBeginInvoke(
             () => requestCrossPageDisplayUpdate(recoverySource),
             DispatcherPriority.Background);
-        var recoveryDecision = CrossPageDelayedDispatchFailureRecoveryPolicy.Resolve(
+        var recoveryDecision = CrossPageReplayPolicies.ResolveCrossPageDelayedDispatchFailureRecovery(
             recoveryDispatchScheduled: scheduledRecovery,
             dispatcherCheckAccess: dispatcherCheckAccess(),
             dispatcherShutdownStarted: dispatcherShutdownStarted(),
@@ -540,8 +483,122 @@ internal readonly record struct CrossPageMissingNeighborRefreshDecision(
     DateTime LastScheduledUtc,
     int DelayMs);
 
-internal static class CrossPageMissingNeighborRefreshPolicy
+internal static class CrossPageMissingNeighborRefreshThresholds
 {
+    internal const int MinIntervalMs = 140;
+    internal const int DelayMs = 120;
+    internal const int InteractionMinIntervalMs = 420;
+    internal const int InteractionDelayMs = 220;
+    internal const int InteractionMissingThreshold = 2;
+}
+
+internal static class CrossPagePostInputDelayThresholds
+{
+    internal const int FallbackDelayMs = CrossPageRuntimeDefaults.PostInputRefreshDelayMs;
+    internal const int NeighborRenderMinMs = 180;
+    internal const int NeighborMissingMinMs = 200;
+    internal const int ReplayMinMs = 220;
+}
+
+internal readonly record struct CrossPagePostInputRefreshSlotAcquireResult(
+    bool Acquired,
+    long PointerUpSequence);
+
+internal static class CrossPagePostInputRefreshSlotCoordinator
+{
+    internal delegate long ReadAppliedSequenceDelegate();
+    internal delegate long CompareExchangeAppliedSequenceDelegate(long nextValue, long comparand);
+
+    internal static CrossPagePostInputRefreshSlotAcquireResult TryAcquire(
+        long pointerUpSequence,
+        DateTime lastPointerUpUtc,
+        ReadAppliedSequenceDelegate readAppliedSequence,
+        CompareExchangeAppliedSequenceDelegate compareExchangeAppliedSequence)
+    {
+        ArgumentNullException.ThrowIfNull(readAppliedSequence);
+        ArgumentNullException.ThrowIfNull(compareExchangeAppliedSequence);
+
+        if (lastPointerUpUtc == CrossPageRuntimeDefaults.UnsetTimestampUtc)
+        {
+            return new CrossPagePostInputRefreshSlotAcquireResult(
+                Acquired: true,
+                PointerUpSequence: pointerUpSequence);
+        }
+
+        while (true)
+        {
+            var appliedSequence = readAppliedSequence();
+            if (appliedSequence == pointerUpSequence)
+            {
+                return new CrossPagePostInputRefreshSlotAcquireResult(
+                    Acquired: false,
+                    PointerUpSequence: pointerUpSequence);
+            }
+
+            var exchanged = compareExchangeAppliedSequence(pointerUpSequence, appliedSequence);
+            if (exchanged == appliedSequence)
+            {
+                return new CrossPagePostInputRefreshSlotAcquireResult(
+                    Acquired: true,
+                    PointerUpSequence: pointerUpSequence);
+            }
+        }
+    }
+}
+
+internal static class CrossPageRefreshCoordinationPolicies
+{
+    internal static CrossPageDeferredRefreshGateDecision ResolveBeforeSchedule(
+        bool crossPageDisplayActive,
+        bool interactionActive)
+    {
+        if (!crossPageDisplayActive)
+        {
+            return new CrossPageDeferredRefreshGateDecision(
+                ShouldProceed: false,
+                Reason: CrossPageDeferredDiagnosticReason.Inactive);
+        }
+
+        if (interactionActive)
+        {
+            return new CrossPageDeferredRefreshGateDecision(
+                ShouldProceed: false,
+                Reason: CrossPageDeferredDiagnosticReason.InteractionActive);
+        }
+
+        return new CrossPageDeferredRefreshGateDecision(
+            ShouldProceed: true,
+            Reason: null);
+    }
+
+    internal static CrossPageDeferredRefreshGateDecision ResolveBeforeDelayedDispatch(
+        bool crossPageDisplayActive,
+        bool interactionActive)
+    {
+        if (!crossPageDisplayActive || interactionActive)
+        {
+            return new CrossPageDeferredRefreshGateDecision(
+                ShouldProceed: false,
+                Reason: CrossPageDeferredDiagnosticReason.InactiveOrInteractionActive);
+        }
+
+        return new CrossPageDeferredRefreshGateDecision(
+            ShouldProceed: true,
+            Reason: null);
+    }
+
+    internal static bool ShouldArmOnInteractiveSwitch(CrossPageInteractiveSwitchRefreshMode refreshMode)
+    {
+        return refreshMode == CrossPageInteractiveSwitchRefreshMode.DeferredByInput;
+    }
+
+    internal static bool ShouldRunOnPointerUp(
+        bool deferredByInkInput,
+        bool crossPageDisplayActive)
+    {
+        return deferredByInkInput && crossPageDisplayActive;
+    }
+
     internal static CrossPageMissingNeighborRefreshDecision Resolve(
         bool photoModeActive,
         bool crossPageDisplayEnabled,
@@ -613,19 +670,7 @@ internal static class CrossPageMissingNeighborRefreshPolicy
             LastScheduledUtc: nowUtc,
             DelayMs: effectiveDelayMs);
     }
-}
 
-internal static class CrossPageMissingNeighborRefreshThresholds
-{
-    internal const int MinIntervalMs = 140;
-    internal const int DelayMs = 120;
-    internal const int InteractionMinIntervalMs = 420;
-    internal const int InteractionDelayMs = 220;
-    internal const int InteractionMissingThreshold = 2;
-}
-
-internal static class CrossPageNavigationCurrentInkRefreshPolicy
-{
     internal static bool ShouldRequest(
         bool pageChanged,
         bool interactiveSwitch,
@@ -646,10 +691,7 @@ internal static class CrossPageNavigationCurrentInkRefreshPolicy
             || mode == PaintToolMode.Eraser
             || mode == PaintToolMode.RegionErase;
     }
-}
 
-internal static class CrossPagePostInputDelayPolicy
-{
     internal static int ResolveMs(
         string source,
         int configuredDelayMs,
@@ -676,76 +718,19 @@ internal static class CrossPagePostInputDelayPolicy
             return Math.Max(baseline, CrossPagePostInputDelayThresholds.NeighborMissingMinMs);
         }
 
-        if (CrossPageUpdateReplayPolicy.IsReplayBaseSource(baseSource))
+        if (CrossPageDisplayUpdatePolicies.IsReplayBaseSource(baseSource))
         {
             return Math.Max(baseline, CrossPagePostInputDelayThresholds.ReplayMinMs);
         }
 
         return Math.Max(1, baseline);
     }
-}
 
-internal static class CrossPagePostInputDelayThresholds
-{
-    internal const int FallbackDelayMs = CrossPageRuntimeDefaults.PostInputRefreshDelayMs;
-    internal const int NeighborRenderMinMs = 180;
-    internal const int NeighborMissingMinMs = 200;
-    internal const int ReplayMinMs = 220;
-}
-
-internal static class CrossPagePostInputRefreshDelayClampPolicy
-{
     internal const int MinDelayMs = 40;
     internal const int MaxDelayMs = 400;
 
     internal static int Clamp(int delayMs)
     {
         return Math.Clamp(delayMs, MinDelayMs, MaxDelayMs);
-    }
-}
-
-internal readonly record struct CrossPagePostInputRefreshSlotAcquireResult(
-    bool Acquired,
-    long PointerUpSequence);
-
-internal static class CrossPagePostInputRefreshSlotCoordinator
-{
-    internal delegate long ReadAppliedSequenceDelegate();
-    internal delegate long CompareExchangeAppliedSequenceDelegate(long nextValue, long comparand);
-
-    internal static CrossPagePostInputRefreshSlotAcquireResult TryAcquire(
-        long pointerUpSequence,
-        DateTime lastPointerUpUtc,
-        ReadAppliedSequenceDelegate readAppliedSequence,
-        CompareExchangeAppliedSequenceDelegate compareExchangeAppliedSequence)
-    {
-        ArgumentNullException.ThrowIfNull(readAppliedSequence);
-        ArgumentNullException.ThrowIfNull(compareExchangeAppliedSequence);
-
-        if (lastPointerUpUtc == CrossPageRuntimeDefaults.UnsetTimestampUtc)
-        {
-            return new CrossPagePostInputRefreshSlotAcquireResult(
-                Acquired: true,
-                PointerUpSequence: pointerUpSequence);
-        }
-
-        while (true)
-        {
-            var appliedSequence = readAppliedSequence();
-            if (appliedSequence == pointerUpSequence)
-            {
-                return new CrossPagePostInputRefreshSlotAcquireResult(
-                    Acquired: false,
-                    PointerUpSequence: pointerUpSequence);
-            }
-
-            var exchanged = compareExchangeAppliedSequence(pointerUpSequence, appliedSequence);
-            if (exchanged == appliedSequence)
-            {
-                return new CrossPagePostInputRefreshSlotAcquireResult(
-                    Acquired: true,
-                    PointerUpSequence: pointerUpSequence);
-            }
-        }
     }
 }

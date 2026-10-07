@@ -17,9 +17,9 @@ public sealed class UiSessionFuzzTests
         {
             coordinator.Dispatch(NextEvent(rng));
             coordinator.LastViolations.Should().BeEmpty($"step={i}, event={coordinator.CurrentState.Scene}/{coordinator.CurrentState.ToolMode}");
-            coordinator.CurrentState.FocusOwner.Should().Be(UiSessionFocusOwnerPolicy.Resolve(coordinator.CurrentState.Scene));
+            coordinator.CurrentState.FocusOwner.Should().Be(UiSessionPolicies.ResolveFocusOwner(coordinator.CurrentState.Scene));
             coordinator.CurrentState.NavigationMode.Should().Be(
-                UiSessionNavigationPolicy.Resolve(coordinator.CurrentState.Scene, coordinator.CurrentState.ToolMode));
+                UiSessionPolicies.ResolveNavigation(coordinator.CurrentState.Scene, coordinator.CurrentState.ToolMode));
         }
     }
 

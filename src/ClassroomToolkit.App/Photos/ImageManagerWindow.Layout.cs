@@ -297,7 +297,7 @@ public partial class ImageManagerWindow
                 return;
             }
 
-            var plan = ImageManagerRestoreBoundsPolicy.Resolve(
+            var plan = ImageManagerPolicies.Resolve(
                 restoredWidth: _restoredWindowWidth,
                 restoredHeight: _restoredWindowHeight,
                 defaultWidth: DefaultWindowWidth,

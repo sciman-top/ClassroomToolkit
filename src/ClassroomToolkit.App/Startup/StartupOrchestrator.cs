@@ -74,7 +74,7 @@ internal sealed class StartupOrchestrator
             return false;
         }
 
-        var visibleWarningReport = StartupCompatibilitySuppressionPolicy.FilterWarnings(
+        var visibleWarningReport = StartupDiagnosticsPolicies.FilterWarnings(
             startupCompatibility,
             settings?.StartupCompatibilitySuppressedIssueCodes);
         if (visibleWarningReport.HasWarnings)
@@ -100,7 +100,7 @@ internal sealed class StartupOrchestrator
             if (dialog.SuppressCurrentIssues && settings != null)
             {
                 settings.StartupCompatibilitySuppressedIssueCodes =
-                    StartupCompatibilitySuppressionPolicy.MergeSuppressedWarningCodes(
+                    StartupDiagnosticsPolicies.MergeSuppressedWarningCodes(
                         settings.StartupCompatibilitySuppressedIssueCodes,
                         visibleWarningReport);
                 try

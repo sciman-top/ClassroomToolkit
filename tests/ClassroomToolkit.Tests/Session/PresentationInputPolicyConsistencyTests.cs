@@ -14,8 +14,8 @@ public sealed class PresentationInputPolicyConsistencyTests
     [InlineData(UiNavigationMode.Hybrid)]
     public void RoutingPolicy_ShouldMatchSessionPresentationInputPolicy(UiNavigationMode navigationMode)
     {
-        var expected = UiSessionPresentationInputPolicy.AllowsPresentationInput(navigationMode);
-        var actual = OverlayPresentationRoutingPolicy.CanRouteFromOverlay(
+        var expected = UiSessionPolicies.AllowsPresentationInput(navigationMode);
+        var actual = OverlayInputRoutingPolicies.CanRouteFromOverlay(
             navigationMode,
             photoModeActive: false,
             boardActive: false,
@@ -33,8 +33,8 @@ public sealed class PresentationInputPolicyConsistencyTests
     public void FocusAcceptancePolicy_ShouldMatchSessionPresentationInputPolicy_WhenCursorGateIsOpen(
         UiNavigationMode navigationMode)
     {
-        var expected = UiSessionPresentationInputPolicy.AllowsPresentationInput(navigationMode);
-        var actual = OverlayFocusAcceptancePolicy.ShouldBlockFocus(
+        var expected = UiSessionPolicies.AllowsPresentationInput(navigationMode);
+        var actual = OverlayInputRoutingPolicies.ShouldBlockFocus(
             navigationMode,
             inputPassthroughEnabled: false,
             mode: PaintToolMode.Cursor,

@@ -58,7 +58,7 @@ public partial class PaintOverlayWindow
                 Debug.WriteLine($"[WpsNavHook] ignored stale-lifecycle source={source} dir={direction}");
                 return;
             }
-            if (!WpsHookEnableGatePolicy.ShouldAttemptResolveTarget(
+            if (!WpsHookPolicies.ShouldAttemptResolveTarget(
                     _presentationOptions.AllowWps,
                     IsBoardActive(),
                     IsVisible,
@@ -92,7 +92,7 @@ public partial class PaintOverlayWindow
                 Debug.WriteLine($"[WpsNavHook] target invalid source={source} dir={direction}");
                 return;
             }
-            if (WpsHookNavigationInjectionGatePolicy.ShouldSuppressInjection(
+            if (WpsHookPolicies.ShouldSuppressInjection(
                     targetIsForeground: IsTargetForeground(target),
                     foregroundInputAuthorized: IsPresentationInputFocusAuthorized(
                         capturedForegroundWindow ?? currentForeground.Handle),
@@ -237,7 +237,7 @@ public partial class PaintOverlayWindow
             return;
         }
         _presentationInputPipeline.ResetWpsHookFallback();
-        var shouldEnable = WpsHookEnableGatePolicy.ShouldAttemptResolveTarget(
+        var shouldEnable = WpsHookPolicies.ShouldAttemptResolveTarget(
             _presentationOptions.AllowWps,
             IsBoardActive(),
             IsVisible,
@@ -246,7 +246,7 @@ public partial class PaintOverlayWindow
         if (shouldEnable)
         {
             target = ResolveWpsTarget();
-            shouldEnable = WpsHookEnableGatePolicy.ShouldEnableWithTarget(
+            shouldEnable = WpsHookPolicies.ShouldEnableWithTarget(
                 shouldEnable,
                 target.IsValid,
                 IsPresentationSlideshow(target, PresentationType.Wps));
@@ -259,7 +259,7 @@ public partial class PaintOverlayWindow
             wheelForward = _presentationOptions.WheelAsKey;
         }
 
-        var decision = WpsHookInterceptPolicy.Resolve(
+        var decision = WpsHookPolicies.Resolve(
             shouldEnable,
             _mode,
             targetIsSlideshow: shouldEnable,
@@ -304,7 +304,7 @@ public partial class PaintOverlayWindow
             else
             {
                 _presentationInputPipeline.ResetWpsHookFallback();
-                WpsHookUnavailableNotificationPolicy.Reset(ref _wpsHookUnavailableNotifiedState);
+                WpsHookPolicies.Reset(ref _wpsHookUnavailableNotifiedState);
             }
             LogPresentationState($"wps-hook-enabled:{sendMode}");
             return;
@@ -353,7 +353,7 @@ public partial class PaintOverlayWindow
 
     private bool IsPresentationInputFocusAuthorized(IntPtr foregroundWindow)
     {
-        return PresentationInputFocusPolicy.IsAuthorizedForeground(
+        return PresentationPipelinePolicies.IsAuthorizedForeground(
             foregroundWindow,
             _hwnd,
             ResolveToolbarWindowHandle());
@@ -431,7 +431,7 @@ public partial class PaintOverlayWindow
 
     private void NotifyWpsHookUnavailable()
     {
-        if (!WpsHookUnavailableNotificationPolicy.ShouldNotify(ref _wpsHookUnavailableNotifiedState))
+        if (!WpsHookPolicies.ShouldNotify(ref _wpsHookUnavailableNotifiedState))
         {
             return;
         }
@@ -469,7 +469,7 @@ public partial class PaintOverlayWindow
     private bool ShouldSuppressWpsNav(int direction, IntPtr target)
     {
         var nowUtc = GetCurrentUtcTimestamp();
-        return WpsNavigationDebouncePolicy.ShouldSuppress(
+        return WpsHookPolicies.ShouldSuppress(
             direction,
             target,
             nowUtc,
@@ -480,7 +480,7 @@ public partial class PaintOverlayWindow
     private void RememberWpsNav(int direction, IntPtr target)
     {
         var nowUtc = GetCurrentUtcTimestamp();
-        var state = WpsNavigationDebouncePolicy.Remember(
+        var state = WpsHookPolicies.Remember(
             direction,
             target,
             nowUtc);
@@ -496,7 +496,7 @@ public partial class PaintOverlayWindow
 
     private bool WpsHookRecentlyFired()
     {
-        return WpsHookInputDebouncePolicy.IsRecent(
+        return WpsHookPolicies.IsRecent(
             _lastWpsHookInput,
             GetCurrentUtcTimestamp(),
             WpsNavDebounceMs);

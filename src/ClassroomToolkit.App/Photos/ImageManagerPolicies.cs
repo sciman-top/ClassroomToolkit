@@ -10,35 +10,6 @@ public interface IImageManagerWindowFactory
     ImageManagerWindow Create(IReadOnlyList<string> favorites, IReadOnlyList<string> recents);
 }
 
-internal static class ImageManagerOpenSurfaceApplyPolicy
-{
-    internal static bool ShouldApply(bool touchImageManagerSurface, bool requestZOrderApply)
-    {
-        return touchImageManagerSurface || requestZOrderApply;
-    }
-}
-
-internal static class ImageManagerStateChangeSurfaceApplyPolicy
-{
-    internal static bool ShouldApply(bool requestZOrderApply, bool forceEnforceZOrder)
-    {
-        return requestZOrderApply || forceEnforceZOrder;
-    }
-}
-
-internal static class ImageManagerActivationPolicy
-{
-    internal static bool ShouldOpenOnSingleClick(bool isFolder, bool isPdf, bool isImage)
-    {
-        return isFolder || isPdf || isImage;
-    }
-
-    internal static bool ShouldOpenOnDoubleClick(bool isFolder, bool isPdf, bool isImage)
-    {
-        return isFolder || isPdf || isImage;
-    }
-}
-
 internal sealed class ImageManagerWindowFactory : IImageManagerWindowFactory
 {
     private readonly InkPersistenceService _persistence;
@@ -80,8 +51,34 @@ internal static class ImageManagerInkCleanupExecutor
     }
 }
 
-internal static class ImageManagerDiagnosticsPolicy
+internal readonly record struct ImageManagerRestoreBoundsPlan(
+    double Width,
+    double Height,
+    double Left,
+    double Top);
+
+internal static class ImageManagerPolicies
 {
+    internal static bool ShouldApplyOpenSurfaceApply(bool touchImageManagerSurface, bool requestZOrderApply)
+    {
+        return touchImageManagerSurface || requestZOrderApply;
+    }
+
+    internal static bool ShouldApplyStateChangeSurfaceApply(bool requestZOrderApply, bool forceEnforceZOrder)
+    {
+        return requestZOrderApply || forceEnforceZOrder;
+    }
+
+    internal static bool ShouldOpenOnSingleClick(bool isFolder, bool isPdf, bool isImage)
+    {
+        return isFolder || isPdf || isImage;
+    }
+
+    internal static bool ShouldOpenOnDoubleClick(bool isFolder, bool isPdf, bool isImage)
+    {
+        return isFolder || isPdf || isImage;
+    }
+
     internal static string FormatFavoriteFolderDialogFailureMessage(string message)
     {
         return $"[ImageManager] favorite-folder-dialog-failed msg={message}";
@@ -121,16 +118,7 @@ internal static class ImageManagerDiagnosticsPolicy
     {
         return $"[ImageManager] modified-time-read-failed path={path} ex={exceptionType} msg={message}";
     }
-}
 
-internal readonly record struct ImageManagerRestoreBoundsPlan(
-    double Width,
-    double Height,
-    double Left,
-    double Top);
-
-internal static class ImageManagerRestoreBoundsPolicy
-{
     internal const double WorkAreaWidthRatio = 0.92;
     internal const double WorkAreaHeightRatio = 0.90;
 

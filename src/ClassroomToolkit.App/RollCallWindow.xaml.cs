@@ -184,7 +184,7 @@ public partial class RollCallWindow : Window
         SafeActionExecutionExecutor.TryExecute(
             action,
             ex => System.Diagnostics.Debug.WriteLine(
-                RollCallWindowDiagnosticsPolicy.FormatWindowLifecycleFailureMessage(
+                RollCallWindowingPolicies.FormatWindowLifecycleFailureMessage(
                     operation,
                     ex.GetType().Name,
                     ex.Message)));
@@ -219,7 +219,7 @@ public partial class RollCallWindow : Window
                 result = dialog.SafeShowDialog() == true;
             },
             ex => System.Diagnostics.Debug.WriteLine(
-                RollCallWindowDiagnosticsPolicy.FormatDialogShowFailureMessage(
+                RollCallWindowingPolicies.FormatDialogShowFailureMessage(
                     dialogName,
                     ex.GetType().Name,
                     ex.Message)));
@@ -232,7 +232,7 @@ public partial class RollCallWindow : Window
                     WindowTopmostExecutor.ApplyNoActivate(this, enabled: restoreOwnerTopmost, enforceZOrder: true);
                 },
                 ex => System.Diagnostics.Debug.WriteLine(
-                    RollCallWindowDiagnosticsPolicy.FormatDialogShowFailureMessage(
+                    RollCallWindowingPolicies.FormatDialogShowFailureMessage(
                         dialogName,
                         ex.GetType().Name,
                         ex.Message)));
@@ -250,7 +250,7 @@ public partial class RollCallWindow : Window
                 MessageBoxButton.OK,
                 MessageBoxImage.Information),
             ex => System.Diagnostics.Debug.WriteLine(
-                RollCallWindowDiagnosticsPolicy.FormatWindowLifecycleFailureMessage(
+                RollCallWindowingPolicies.FormatWindowLifecycleFailureMessage(
                     $"messagebox-{operation}",
                     ex.GetType().Name,
                     ex.Message)));
@@ -271,7 +271,7 @@ public partial class RollCallWindow : Window
                 confirmed = result == MessageBoxResult.OK;
             },
             ex => System.Diagnostics.Debug.WriteLine(
-                RollCallWindowDiagnosticsPolicy.FormatConfirmationFailureMessage(
+                RollCallWindowingPolicies.FormatConfirmationFailureMessage(
                     operation,
                     ex.GetType().Name,
                     ex.Message)));
@@ -398,7 +398,7 @@ public partial class RollCallWindow : Window
         {
             _initialized = false;
             System.Diagnostics.Debug.WriteLine(
-                RollCallWindowDiagnosticsPolicy.FormatInitializationFailureMessage(
+                RollCallWindowingPolicies.FormatInitializationFailureMessage(
                     ex.GetType().Name,
                     ex.Message));
             var owner = System.Windows.Application.Current?.MainWindow;

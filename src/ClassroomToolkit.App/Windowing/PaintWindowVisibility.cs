@@ -24,7 +24,18 @@ internal readonly record struct PaintWindowHidePlan(
     bool HideOverlay,
     bool HideToolbar);
 
-internal static class PaintWindowVisibilityPolicy
+internal readonly record struct PaintVisibilityTransitionPlan(
+    bool ShowOverlay,
+    bool HideOverlay,
+    bool SyncFloatingOwnersVisible,
+    bool CaptureToolbarPosition,
+    bool NormalizeToolbarWindowState,
+    bool ShowToolbar,
+    bool TouchPhotoFullscreenSurface,
+    bool RequestZOrderApply,
+    bool ForceEnforceZOrder);
+
+internal static class PaintWindowVisibilityPolicies
 {
     internal static PaintWindowShowPlan ResolveShow(PaintWindowVisibilityShowContext context)
     {
@@ -64,20 +75,14 @@ internal static class PaintWindowVisibilityPolicy
             HideOverlay: overlayVisible,
             HideToolbar: toolbarVisible);
     }
-}
 
-internal static class PaintWindowCreationPolicy
-{
     internal static bool ShouldEnsureWindows(
         bool hasOverlayWindow,
         bool hasToolbarWindow)
     {
         return !hasOverlayWindow || !hasToolbarWindow;
     }
-}
 
-internal static class PaintWindowEnsureSkipPolicy
-{
     internal static bool ShouldSkip(
         bool hasOverlayWindow,
         bool hasToolbarWindow,
@@ -91,21 +96,7 @@ internal static class PaintWindowEnsureSkipPolicy
                && !shouldWireOverlayLifecycle
                && !shouldWireToolbarLifecycle;
     }
-}
 
-internal readonly record struct PaintVisibilityTransitionPlan(
-    bool ShowOverlay,
-    bool HideOverlay,
-    bool SyncFloatingOwnersVisible,
-    bool CaptureToolbarPosition,
-    bool NormalizeToolbarWindowState,
-    bool ShowToolbar,
-    bool TouchPhotoFullscreenSurface,
-    bool RequestZOrderApply,
-    bool ForceEnforceZOrder);
-
-internal static class PaintVisibilityTransitionPolicy
-{
     internal static PaintVisibilityTransitionPlan ResolveEnsureOverlayVisible(bool overlayVisible)
     {
         return new PaintVisibilityTransitionPlan(

@@ -9,7 +9,7 @@ public sealed class CrossPageDisplayRunGatePolicyTests
     [Fact]
     public void Resolve_ShouldAllowRun_WhenDisplayIsActive()
     {
-        var decision = CrossPageDisplayRunGatePolicy.Resolve(crossPageDisplayActive: true);
+        var decision = CrossPageDisplayUpdatePolicies.ResolveCrossPageDisplayRunGate(crossPageDisplayActive: true);
 
         decision.ShouldRun.Should().BeTrue();
         decision.AbortReason.Should().BeNull();
@@ -18,7 +18,7 @@ public sealed class CrossPageDisplayRunGatePolicyTests
     [Fact]
     public void Resolve_ShouldBlockRun_WhenDisplayIsInactive()
     {
-        var decision = CrossPageDisplayRunGatePolicy.Resolve(crossPageDisplayActive: false);
+        var decision = CrossPageDisplayUpdatePolicies.ResolveCrossPageDisplayRunGate(crossPageDisplayActive: false);
 
         decision.ShouldRun.Should().BeFalse();
         decision.AbortReason.Should().Be(CrossPageDeferredDiagnosticReason.Inactive);
@@ -31,7 +31,7 @@ public sealed class CrossPageDisplayUpdateRunFailureReplayPolicyTests
     [Fact]
     public void Resolve_ShouldQueueVisualSyncReplay_ForVisualSyncSource()
     {
-        var decision = CrossPageDisplayUpdateRunFailureReplayPolicy.Resolve(
+        var decision = CrossPageDisplayUpdatePolicies.ResolveRunFailureReplay(
             CrossPageUpdateSources.InkStateChanged);
 
         decision.QueueVisualSyncReplay.Should().BeTrue();
@@ -41,7 +41,7 @@ public sealed class CrossPageDisplayUpdateRunFailureReplayPolicyTests
     [Fact]
     public void Resolve_ShouldQueueInteractionReplay_ForInteractionSource()
     {
-        var decision = CrossPageDisplayUpdateRunFailureReplayPolicy.Resolve(
+        var decision = CrossPageDisplayUpdatePolicies.ResolveRunFailureReplay(
             CrossPageUpdateSources.PhotoPan);
 
         decision.QueueVisualSyncReplay.Should().BeFalse();
@@ -51,7 +51,7 @@ public sealed class CrossPageDisplayUpdateRunFailureReplayPolicyTests
     [Fact]
     public void Resolve_ShouldQueueNone_ForBackgroundSource()
     {
-        var decision = CrossPageDisplayUpdateRunFailureReplayPolicy.Resolve(
+        var decision = CrossPageDisplayUpdatePolicies.ResolveRunFailureReplay(
             CrossPageUpdateSources.NeighborRender);
 
         decision.QueueVisualSyncReplay.Should().BeFalse();

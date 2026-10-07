@@ -500,7 +500,7 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
         catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             LogSettingsSaveFailed(_logger, ex, null);
-            var notificationPlan = SettingsSaveFailureNotificationPolicy.Resolve(_settingsSaveFailedNotified);
+            var notificationPlan = NotificationAndExitPolicies.Resolve(_settingsSaveFailedNotified);
             SettingsSaveFailureNotificationStateUpdater.ApplyNotificationPlan(
                 ref _settingsSaveFailedNotified,
                 notificationPlan);
@@ -645,7 +645,7 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
             OverlayVisible: OverlayWindow.IsVisible,
             ToolbarExists: ToolbarWindow != null,
             ToolbarOwnerAlreadyOverlay: ToolbarWindow?.Owner == OverlayWindow);
-        var showPlan = PaintWindowVisibilityPolicy.ResolveShow(showContext);
+        var showPlan = PaintWindowVisibilityPolicies.ResolveShow(showContext);
         if (showPlan.ShowOverlay)
         {
             OverlayWindow.Show();
@@ -682,7 +682,7 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
         var hideContext = new PaintWindowVisibilityHideContext(
             OverlayVisible: OverlayWindow.IsVisible,
             ToolbarVisible: ToolbarWindow?.IsVisible == true);
-        var hidePlan = PaintWindowVisibilityPolicy.ResolveHide(hideContext);
+        var hidePlan = PaintWindowVisibilityPolicies.ResolveHide(hideContext);
         if (hidePlan.HideOverlay)
         {
             OverlayWindow.Hide();

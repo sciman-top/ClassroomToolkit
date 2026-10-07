@@ -67,7 +67,7 @@ public partial class PaintOverlayWindow
     public void UpdatePhotoInertiaProfile(string profile)
     {
         _photoInertiaProfile = PhotoInertiaProfileDefaults.Normalize(profile);
-        _photoPanInertiaTuning = PhotoPanInertiaProfilePolicy.Resolve(_photoInertiaProfile);
+        _photoPanInertiaTuning = PhotoPanPolicies.ResolveInertiaProfile(_photoInertiaProfile);
         StopPhotoPanInertia(flushTransformSave: false, resetInkPanCompensation: false);
     }
 
@@ -289,7 +289,7 @@ public partial class PaintOverlayWindow
         var layoutScaleFactor = previousScale > 0
             ? currentScale / previousScale
             : 1.0;
-        if (CrossPageZoomLayoutScalePolicy.ShouldSynchronize(layoutScaleFactor))
+        if (CrossPageInteractiveMiscPolicies.ShouldSynchronize(layoutScaleFactor))
         {
             SyncNeighborLayoutForZoom(layoutScaleFactor);
         }

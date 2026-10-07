@@ -7,19 +7,49 @@ internal readonly record struct CrossPagePointerUpDecision(
     bool ShouldFlushReplay,
     bool ShouldRequestImmediateRefresh);
 
-internal static class CrossPagePointerUpDecisionPolicy
+internal readonly record struct CrossPagePointerUpDeferredRefreshDecision(
+    bool ShouldConsumeDeferredFlag,
+    bool ShouldRequestPostRefresh);
+
+internal readonly record struct CrossPagePointerUpDeferredStateResult(
+    bool NextDeferredByInkInput,
+    bool DeferredRefreshRequested,
+    bool ShouldLogStableRecover);
+
+internal readonly record struct CrossPagePointerUpExecutionPlan(
+    bool ShouldTrackPointerUp,
+    bool ShouldApplyFastRefresh,
+    bool ShouldScheduleDeferredRefresh,
+    string DeferredRefreshSource,
+    bool ShouldFlushReplay,
+    bool ShouldRequestInkContextRefresh);
+
+internal readonly record struct CrossPagePointerUpPostExecutionPlan(
+    bool ShouldTrackPointerUp,
+    bool ShouldApplyFastRefresh,
+    bool ShouldScheduleDeferredRefresh,
+    string DeferredRefreshSource,
+    bool ShouldFlushReplay,
+    bool ShouldEndFirstInputTrace,
+    bool ShouldRequestInkContextRefresh);
+
+internal readonly record struct CrossPagePointerUpState(
+    bool CrossPageDisplayActive,
+    bool PhotoTransformActive);
+
+internal static class CrossPagePointerUpPolicies
 {
-    internal static CrossPagePointerUpDecision Resolve(
+    internal static CrossPagePointerUpDecision ResolveDecision(
         bool crossPageDisplayActive,
         bool hadInkOperation,
         bool deferredRefreshRequested,
         bool updatePending)
     {
-        var shouldSchedule = CrossPagePointerUpRefreshPolicy.ShouldSchedulePostInputRefresh(
+        var shouldSchedule = CrossPagePointerUpPolicies.ShouldSchedulePostInputRefresh(
             crossPageDisplayActive,
             hadInkOperation,
             deferredRefreshRequested);
-        var shouldRequestImmediateRefresh = CrossPagePointerUpImmediateRefreshPolicy.ShouldRequest(
+        var shouldRequestImmediateRefresh = CrossPagePointerUpPolicies.ShouldRequest(
             crossPageDisplayActive,
             hadInkOperation,
             deferredRefreshRequested,
@@ -31,15 +61,8 @@ internal static class CrossPagePointerUpDecisionPolicy
             ShouldFlushReplay: crossPageDisplayActive,
             ShouldRequestImmediateRefresh: shouldRequestImmediateRefresh);
     }
-}
 
-internal readonly record struct CrossPagePointerUpDeferredRefreshDecision(
-    bool ShouldConsumeDeferredFlag,
-    bool ShouldRequestPostRefresh);
-
-internal static class CrossPagePointerUpDeferredRefreshPolicy
-{
-    internal static CrossPagePointerUpDeferredRefreshDecision Resolve(
+    internal static CrossPagePointerUpDeferredRefreshDecision ResolveDeferredRefresh(
         bool deferredByInkInput,
         bool crossPageDisplayActive)
     {
@@ -50,29 +73,21 @@ internal static class CrossPagePointerUpDeferredRefreshPolicy
                 ShouldRequestPostRefresh: false);
         }
 
-        var shouldRequest = CrossPageDeferredRefreshPolicy.ShouldRunOnPointerUp(
+        var shouldRequest = CrossPageRefreshCoordinationPolicies.ShouldRunOnPointerUp(
             deferredByInkInput: deferredByInkInput,
             crossPageDisplayActive: crossPageDisplayActive);
         return new CrossPagePointerUpDeferredRefreshDecision(
             ShouldConsumeDeferredFlag: true,
             ShouldRequestPostRefresh: shouldRequest);
     }
-}
 
-internal readonly record struct CrossPagePointerUpDeferredStateResult(
-    bool NextDeferredByInkInput,
-    bool DeferredRefreshRequested,
-    bool ShouldLogStableRecover);
-
-internal static class CrossPagePointerUpDeferredStatePolicy
-{
-    internal static CrossPagePointerUpDeferredStateResult Resolve(
+    internal static CrossPagePointerUpDeferredStateResult ResolveDeferredState(
         bool deferredByInkInput,
         bool crossPageDisplayActive)
     {
         var deferredRefreshRequested = deferredByInkInput;
         var nextDeferredByInkInput = deferredByInkInput;
-        var decision = CrossPagePointerUpDeferredRefreshPolicy.Resolve(
+        var decision = CrossPagePointerUpPolicies.ResolveDeferredRefresh(
             deferredByInkInput: deferredByInkInput,
             crossPageDisplayActive: crossPageDisplayActive);
         if (decision.ShouldConsumeDeferredFlag)
@@ -89,19 +104,8 @@ internal static class CrossPagePointerUpDeferredStatePolicy
             DeferredRefreshRequested: deferredRefreshRequested,
             ShouldLogStableRecover: decision.ShouldConsumeDeferredFlag && decision.ShouldRequestPostRefresh);
     }
-}
 
-internal readonly record struct CrossPagePointerUpExecutionPlan(
-    bool ShouldTrackPointerUp,
-    bool ShouldApplyFastRefresh,
-    bool ShouldScheduleDeferredRefresh,
-    string DeferredRefreshSource,
-    bool ShouldFlushReplay,
-    bool ShouldRequestInkContextRefresh);
-
-internal static class CrossPagePointerUpExecutionPlanPolicy
-{
-    internal static CrossPagePointerUpExecutionPlan Resolve(
+    internal static CrossPagePointerUpExecutionPlan ResolveExecutionPlan(
         CrossPagePointerUpDecision decision,
         bool hadInkOperation,
         bool pendingInkContextCheck)
@@ -110,14 +114,11 @@ internal static class CrossPagePointerUpExecutionPlanPolicy
             ShouldTrackPointerUp: decision.ShouldTrackPointerUp,
             ShouldApplyFastRefresh: decision.ShouldSchedulePostInputRefresh,
             ShouldScheduleDeferredRefresh: decision.ShouldSchedulePostInputRefresh,
-            DeferredRefreshSource: CrossPagePointerUpRefreshSourcePolicy.Resolve(hadInkOperation),
+            DeferredRefreshSource: CrossPagePointerUpPolicies.ResolveRefreshSource(hadInkOperation),
             ShouldFlushReplay: decision.ShouldFlushReplay,
             ShouldRequestInkContextRefresh: pendingInkContextCheck);
     }
-}
 
-internal static class CrossPagePointerUpImmediateRefreshPolicy
-{
     internal static bool ShouldRequest(
         bool crossPageDisplayActive,
         bool hadInkOperation,
@@ -136,20 +137,8 @@ internal static class CrossPagePointerUpImmediateRefreshPolicy
 
         return hadInkOperation || deferredRefreshRequested;
     }
-}
 
-internal readonly record struct CrossPagePointerUpPostExecutionPlan(
-    bool ShouldTrackPointerUp,
-    bool ShouldApplyFastRefresh,
-    bool ShouldScheduleDeferredRefresh,
-    string DeferredRefreshSource,
-    bool ShouldFlushReplay,
-    bool ShouldEndFirstInputTrace,
-    bool ShouldRequestInkContextRefresh);
-
-internal static class CrossPagePointerUpPostExecutionPolicy
-{
-    internal static CrossPagePointerUpPostExecutionPlan Resolve(
+    internal static CrossPagePointerUpPostExecutionPlan ResolvePostExecution(
         CrossPagePointerUpExecutionPlan executionPlan,
         bool crossPageFirstInputTraceActive)
     {
@@ -162,10 +151,7 @@ internal static class CrossPagePointerUpPostExecutionPolicy
             ShouldEndFirstInputTrace: crossPageFirstInputTraceActive,
             ShouldRequestInkContextRefresh: executionPlan.ShouldRequestInkContextRefresh);
     }
-}
 
-internal static class CrossPagePointerUpRefreshPolicy
-{
     internal static bool ShouldSchedulePostInputRefresh(
         bool crossPageDisplayActive,
         bool hadInkOperation,
@@ -178,31 +164,21 @@ internal static class CrossPagePointerUpRefreshPolicy
 
         return hadInkOperation || deferredRefreshRequested;
     }
-}
 
-internal static class CrossPagePointerUpRefreshSourcePolicy
-{
     internal const string PointerUp = "pointer-up";
     internal const string PointerUpInk = "pointer-up-ink";
 
-    internal static string Resolve(bool hadInkOperation)
+    internal static string ResolveRefreshSource(bool hadInkOperation)
     {
         return hadInkOperation ? PointerUpInk : PointerUp;
     }
-}
 
-internal readonly record struct CrossPagePointerUpState(
-    bool CrossPageDisplayActive,
-    bool PhotoTransformActive);
-
-internal static class CrossPagePointerUpStatePolicy
-{
-    internal static CrossPagePointerUpState Resolve(
+    internal static CrossPagePointerUpState ResolveState(
         bool photoModeActive,
         bool boardActive,
         bool crossPageDisplayEnabled)
     {
-        var photoTransformActive = PhotoInteractionModePolicy.IsPhotoTransformEnabled(
+        var photoTransformActive = PhotoWindowPolicies.IsPhotoTransformEnabled(
             photoModeActive,
             boardActive);
         var crossPageDisplayActive = crossPageDisplayEnabled && photoTransformActive;

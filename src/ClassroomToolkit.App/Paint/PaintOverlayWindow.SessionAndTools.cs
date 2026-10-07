@@ -30,7 +30,7 @@ public partial class PaintOverlayWindow
             return;
         }
 
-        if (UiSessionFloatingZOrderRequestPolicy.TryResolveForOverlayTopmost(topmostRequired, out var request))
+        if (UiSessionPolicies.TryResolveForOverlayTopmost(topmostRequired, out var request))
         {
             SafeActionExecutionExecutor.TryExecute(
                 () => FloatingZOrderRequested?.Invoke(request),
@@ -40,7 +40,7 @@ public partial class PaintOverlayWindow
 
     private void EnsureOverlayTopmost(bool enforceZOrder)
     {
-        if (!OverlayTopmostApplyGatePolicy.ShouldApply(IsVisible, WindowState))
+        if (!OverlayInputRoutingPolicies.ShouldApplyOverlayTopmostApplyGate(IsVisible, WindowState))
         {
             return;
         }
@@ -62,7 +62,7 @@ public partial class PaintOverlayWindow
 
     private void ApplySessionWidgetVisibility(UiSessionWidgetVisibility _)
     {
-        if (UiSessionFloatingZOrderRequestPolicy.TryResolveForWidgetVisibility(_, out var request))
+        if (UiSessionPolicies.TryResolveForWidgetVisibility(_, out var request))
         {
             SafeActionExecutionExecutor.TryExecute(
                 () => FloatingZOrderRequested?.Invoke(request),

@@ -120,7 +120,7 @@ public sealed partial class AppSettingsService
         settings.PresetRecommendationVersion = GetInt(
             paint,
             "preset_recommendation_version",
-            legacyPresetRecommendationInitialized ? PresetSchemeInitializationPolicy.CurrentVersion : settings.PresetRecommendationVersion);
+            legacyPresetRecommendationInitialized ? PresetSchemePolicies.CurrentVersion : settings.PresetRecommendationVersion);
         settings.ShapeType = GetShapeType(GetString(paint, "shape_type", settings.ShapeType.ToString()));
         settings.PaintToolbarX = GetInt(paint, "x", settings.PaintToolbarX);
         settings.PaintToolbarY = GetInt(paint, "y", settings.PaintToolbarY);

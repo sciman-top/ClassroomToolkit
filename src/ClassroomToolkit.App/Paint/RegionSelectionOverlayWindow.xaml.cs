@@ -141,7 +141,7 @@ public partial class RegionSelectionOverlayWindow : Window
         ReleaseMouseCapture();
         var endPoint = e.GetPosition(this);
         UpdateSelectionRect(_startPoint, endPoint);
-        if (RegionSelectionCompletionPolicy.ResolvePointerRelease(_selectionRect.Width, _selectionRect.Height)
+        if (SceneResolversPolicies.ResolvePointerRelease(_selectionRect.Width, _selectionRect.Height)
             == RegionSelectionCompletionDecision.KeepWaiting)
         {
             ResetSelectionAndContinue();
@@ -199,7 +199,7 @@ public partial class RegionSelectionOverlayWindow : Window
         ReleaseTouchCapture(e.TouchDevice);
         var endPoint = e.GetTouchPoint(this).Position;
         UpdateSelectionRect(_startPoint, endPoint);
-        if (RegionSelectionCompletionPolicy.ResolvePointerRelease(_selectionRect.Width, _selectionRect.Height)
+        if (SceneResolversPolicies.ResolvePointerRelease(_selectionRect.Width, _selectionRect.Height)
             == RegionSelectionCompletionDecision.KeepWaiting)
         {
             ResetSelectionAndContinue();

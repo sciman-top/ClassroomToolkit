@@ -57,7 +57,7 @@ public partial class PaintOverlayWindow
             if (_photoFullscreen)
             {
                 // Reassert topmost with force only when overlay is not topmost yet.
-                var enforceTopmost = OverlayTopmostEnforcePolicy.ResolveForPhotoFullscreen(Topmost);
+                var enforceTopmost = OverlayActivationPolicies.ResolveForPhotoFullscreen(Topmost);
                 EnsureOverlayTopmost(enforceZOrder: enforceTopmost);
                 SchedulePhotoFullscreenBoundsEnforcement();
             }
@@ -86,9 +86,9 @@ public partial class PaintOverlayWindow
         }
 
         UpdateInputPassthrough();
-        if (PhotoWindowModeZOrderRetouchPolicy.ShouldRequest(_photoModeActive, fullscreenChanged))
+        if (PhotoWindowPolicies.ShouldRequest(_photoModeActive, fullscreenChanged))
         {
-            var forceEnforce = PhotoWindowModeZOrderRetouchPolicy.ShouldForceEnforce(_photoFullscreen);
+            var forceEnforce = PhotoWindowPolicies.ShouldForceEnforce(_photoFullscreen);
             SafeActionExecutionExecutor.TryExecute(
                 () => FloatingZOrderRequested?.Invoke(new FloatingZOrderRequest(forceEnforce)),
                 ex => Debug.WriteLine($"[FloatingZOrderRequested] photo-window-mode callback failed: {ex.GetType().Name} - {ex.Message}"));
@@ -155,7 +155,7 @@ public partial class PaintOverlayWindow
 
     private void UpdatePhotoContentTransforms(bool enabled)
     {
-        var applyPhotoTransform = PhotoContentTransformPolicy.ShouldApplyPhotoTransform(
+        var applyPhotoTransform = PhotoWindowPolicies.ShouldApplyPhotoTransform(
             enabledRequested: enabled,
             photoModeActive: _photoModeActive,
             boardActive: IsBoardActive(),
@@ -173,7 +173,7 @@ public partial class PaintOverlayWindow
 
     private void RefreshPhotoBackgroundVisibility()
     {
-        PhotoBackground.Visibility = PhotoBackgroundVisibilityPolicy.Resolve(
+        PhotoBackground.Visibility = PhotoWindowPolicies.ResolvePhotoBackgroundVisibility(
             photoModeActive: _photoModeActive,
             boardActive: IsBoardActive(),
             hasBackgroundSource: PhotoBackground.Source != null);
@@ -188,7 +188,7 @@ public partial class PaintOverlayWindow
         {
             var usePhotoTransform = ReferenceEquals(RasterImage.RenderTransform, _photoContentTransform);
             _ = TryBuildImageScreenRect(bitmap, _photoContentTransform, out var currentPageScreenRect);
-            rasterClipBounds = PhotoInkCurrentPageClipPolicy.ResolveBounds(
+            rasterClipBounds = PhotoInkInteropPolicies.ResolveBoundsPhotoInkCurrentPageClip(
                 photoInkModeActive: IsPhotoInkModeActive(),
                 crossPageDisplayActive: IsCrossPageDisplayActive(),
                 photoFullscreenActive: IsPhotoFullscreenActive,
@@ -196,7 +196,7 @@ public partial class PaintOverlayWindow
                 currentPageScreenRect: currentPageScreenRect,
                 pageWidthDip: GetBitmapDisplayWidthInDip(bitmap),
                 pageHeightDip: GetBitmapDisplayHeightInDip(bitmap));
-            previewClipBounds = PhotoInkPreviewClipPolicy.ResolveBounds(
+            previewClipBounds = PhotoInkInteropPolicies.ResolveBoundsPhotoInkPreviewClip(
                 photoInkModeActive: IsPhotoInkModeActive(),
                 crossPageDisplayActive: IsCrossPageDisplayActive(),
                 photoFullscreenActive: IsPhotoFullscreenActive,

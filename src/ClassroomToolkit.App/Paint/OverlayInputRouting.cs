@@ -6,107 +6,9 @@ using System.Windows;
 
 namespace ClassroomToolkit.App.Paint;
 
-internal static class DispatcherInvokeAvailabilityPolicy
-{
-    internal static bool CanBeginInvoke(bool hasShutdownStarted, bool hasShutdownFinished)
-    {
-        return !hasShutdownStarted && !hasShutdownFinished;
-    }
-}
-
-internal static class OverlayFocusAcceptancePolicy
-{
-    internal static bool ShouldBlockFocus(
-        UiNavigationMode navigationMode,
-        bool inputPassthroughEnabled,
-        PaintToolMode mode,
-        bool photoModeActive,
-        bool boardActive,
-        bool presentationAllowed,
-        bool presentationTargetValid,
-        bool wpsRawTargetValid)
-    {
-        if (mode != PaintToolMode.Cursor)
-        {
-            return false;
-        }
-
-        if (photoModeActive || boardActive)
-        {
-            return false;
-        }
-
-        if (inputPassthroughEnabled)
-        {
-            return true;
-        }
-
-        if (!presentationAllowed)
-        {
-            return false;
-        }
-
-        if (!UiSessionPresentationInputPolicy.AllowsPresentationInput(navigationMode))
-        {
-            return false;
-        }
-
-        return presentationTargetValid || wpsRawTargetValid;
-    }
-}
-
-internal static class OverlayFocusResolverGatePolicy
-{
-    internal static bool ShouldResolvePresentationTarget(
-        bool presentationAllowed,
-        bool navigationAllowsPresentationInput)
-    {
-        return presentationAllowed && navigationAllowsPresentationInput;
-    }
-}
-
-internal static class OverlayHitTestPolicy
-{
-    internal static bool ShouldEnableOverlayHitTest(
-        PaintToolMode mode,
-        bool photoModeActive,
-        bool photoLoading)
-    {
-        if (photoLoading)
-        {
-            return false;
-        }
-
-        return mode != PaintToolMode.Cursor || photoModeActive;
-    }
-}
-
 internal static class OverlayInputPassthroughDefaults
 {
     internal const double OpacityEpsilon = 0.001;
-}
-
-internal static class OverlayInputPassthroughPolicy
-{
-    private const double OpacityEpsilon = OverlayInputPassthroughDefaults.OpacityEpsilon;
-
-    internal static bool ShouldEnable(
-        PaintToolMode mode,
-        double boardOpacity,
-        bool photoModeActive)
-    {
-        if (photoModeActive)
-        {
-            return false;
-        }
-
-        if (mode != PaintToolMode.Cursor)
-        {
-            return false;
-        }
-
-        return boardOpacity <= OpacityEpsilon;
-    }
 }
 
 internal enum OverlayWheelInputRoute
@@ -124,57 +26,6 @@ internal enum OverlayKeyInputRoute
     RoutePresentation = 2
 }
 
-internal static class OverlayInputRoutingPolicy
-{
-    internal static OverlayWheelInputRoute ResolveWheelRoute(
-        bool boardActive,
-        bool photoModeActive,
-        bool canRoutePresentationInput,
-        bool presentationChannelEnabled)
-    {
-        if (boardActive)
-        {
-            return OverlayWheelInputRoute.ConsumeForBoard;
-        }
-
-        if (photoModeActive)
-        {
-            return OverlayWheelInputRoute.HandlePhoto;
-        }
-
-        if (!canRoutePresentationInput || !presentationChannelEnabled)
-        {
-            return OverlayWheelInputRoute.Ignore;
-        }
-
-        return OverlayWheelInputRoute.RoutePresentation;
-    }
-
-    internal static OverlayKeyInputRoute ResolveKeyRoute(
-        bool photoLoading,
-        bool photoKeyHandled,
-        bool photoOrBoardActive,
-        bool canRoutePresentationInput)
-    {
-        if (photoLoading)
-        {
-            return OverlayKeyInputRoute.Consume;
-        }
-
-        if (photoKeyHandled)
-        {
-            return OverlayKeyInputRoute.Consume;
-        }
-
-        if (photoOrBoardActive || !canRoutePresentationInput)
-        {
-            return OverlayKeyInputRoute.Ignore;
-        }
-
-        return OverlayKeyInputRoute.RoutePresentation;
-    }
-}
-
 internal enum OverlayPointerSourceGateDecision
 {
     Continue = 0,
@@ -182,56 +33,10 @@ internal enum OverlayPointerSourceGateDecision
     Consume = 2
 }
 
-internal static class OverlayPointerSourceGatePolicy
-{
-    internal static OverlayPointerSourceGateDecision Resolve(
-        bool photoLoading,
-        bool ignoreFromPhotoControls)
-    {
-        if (photoLoading)
-        {
-            return OverlayPointerSourceGateDecision.Consume;
-        }
-
-        if (ignoreFromPhotoControls)
-        {
-            return OverlayPointerSourceGateDecision.Ignore;
-        }
-
-        return OverlayPointerSourceGateDecision.Continue;
-    }
-}
-
 internal readonly record struct OverlayPointerSourceHandlingPlan(
     bool ShouldContinue,
     bool ShouldMarkHandled,
     bool ShouldHideEraserPreview);
-
-internal static class OverlayPointerSourceHandlingPolicy
-{
-    internal static OverlayPointerSourceHandlingPlan Resolve(
-        OverlayPointerSourceGateDecision gateDecision,
-        bool hideEraserPreviewWhenBlocked)
-    {
-        bool shouldHide = hideEraserPreviewWhenBlocked &&
-                          gateDecision != OverlayPointerSourceGateDecision.Continue;
-        return gateDecision switch
-        {
-            OverlayPointerSourceGateDecision.Continue => new OverlayPointerSourceHandlingPlan(
-                ShouldContinue: true,
-                ShouldMarkHandled: false,
-                ShouldHideEraserPreview: false),
-            OverlayPointerSourceGateDecision.Consume => new OverlayPointerSourceHandlingPlan(
-                ShouldContinue: false,
-                ShouldMarkHandled: true,
-                ShouldHideEraserPreview: shouldHide),
-            _ => new OverlayPointerSourceHandlingPlan(
-                ShouldContinue: false,
-                ShouldMarkHandled: false,
-                ShouldHideEraserPreview: shouldHide)
-        };
-    }
-}
 
 internal enum OverlayPresentationRouteType
 {
@@ -376,7 +181,7 @@ internal sealed class OverlayPresentationDispatchCoordinator
         Func<PresentationTarget, bool, bool> trySendWps,
         Func<PresentationTarget, bool, bool> trySendOffice)
     {
-        if (!PresentationChannelAvailabilityPolicy.IsAnyChannelEnabled(allowOffice, allowWps))
+        if (!OverlayInputRoutingPolicies.IsAnyChannelEnabled(allowOffice, allowWps))
         {
             return false;
         }
@@ -443,47 +248,6 @@ internal static class OverlayPresentationRouteContextBuilder
             PresentationType.Office => OverlayPresentationRouteType.Office,
             _ => OverlayPresentationRouteType.None
         };
-    }
-}
-
-internal static class OverlayPresentationRoutingPolicy
-{
-    internal static bool CanRouteFromAuxWindow(
-        UiNavigationMode navigationMode,
-        bool photoModeActive,
-        bool boardActive)
-    {
-        if (photoModeActive || boardActive)
-        {
-            return false;
-        }
-
-        return UiSessionPresentationInputPolicy.AllowsPresentationInput(navigationMode);
-    }
-
-    internal static bool CanRouteFromOverlay(
-        UiNavigationMode navigationMode,
-        bool photoModeActive,
-        bool boardActive,
-        PaintToolMode mode,
-        bool inputPassthroughEnabled)
-    {
-        if (photoModeActive || boardActive)
-        {
-            return false;
-        }
-
-        if (!UiSessionPresentationInputPolicy.AllowsPresentationInput(navigationMode))
-        {
-            return false;
-        }
-
-        if (mode == PaintToolMode.Cursor && inputPassthroughEnabled)
-        {
-            return false;
-        }
-
-        return true;
     }
 }
 
@@ -646,7 +410,7 @@ internal sealed class OverlayPresentationTargetSnapshotProvider : IOverlayPresen
                 : PresentationTarget.Empty;
         }
 
-        return PresentationSlideshowDetectionPolicy.IsSlideshow(
+        return PresentationPipelinePolicies.IsSlideshow(
             foreground,
             classifier,
             isFullscreenWindow,
@@ -678,7 +442,7 @@ internal sealed class OverlayPresentationTargetSnapshotProvider : IOverlayPresen
             return false;
         }
 
-        return PresentationSlideshowDetectionPolicy.IsSlideshow(
+        return PresentationPipelinePolicies.IsSlideshow(
             target,
             classifier,
             isFullscreenWindow,
@@ -697,7 +461,7 @@ internal sealed class OverlayPresentationTargetSnapshotProvider : IOverlayPresen
         }
 
         var isFullscreen = isFullscreenWindow(target.Handle);
-        var isSlideshow = PresentationSlideshowDetectionPolicy.IsSlideshow(
+        var isSlideshow = PresentationPipelinePolicies.IsSlideshow(
             target,
             classifier,
             _ => isFullscreen,
@@ -731,21 +495,13 @@ internal sealed class OverlayPresentationTargetSnapshotProvider : IOverlayPresen
             return PresentationType.None;
         }
 
-        return PresentationSlideshowDetectionPolicy.IsSlideshow(
+        return PresentationPipelinePolicies.IsSlideshow(
                 target,
                 classifier,
                 isFullscreenWindow,
                 type)
             ? type
             : PresentationType.None;
-    }
-}
-
-internal static class OverlayTopmostApplyGatePolicy
-{
-    internal static bool ShouldApply(bool overlayVisible, WindowState windowState)
-    {
-        return overlayVisible && windowState != WindowState.Minimized;
     }
 }
 
@@ -756,9 +512,223 @@ internal enum OverlayWheelPresentationExecutionAction
     SendPrevious = 2
 }
 
-internal static class OverlayWheelPresentationExecutionPolicy
+internal static class OverlayInputRoutingPolicies
 {
-    internal static OverlayWheelPresentationExecutionAction Resolve(
+    internal static bool CanBeginInvoke(bool hasShutdownStarted, bool hasShutdownFinished)
+    {
+        return !hasShutdownStarted && !hasShutdownFinished;
+    }
+
+    internal static bool ShouldBlockFocus(
+        UiNavigationMode navigationMode,
+        bool inputPassthroughEnabled,
+        PaintToolMode mode,
+        bool photoModeActive,
+        bool boardActive,
+        bool presentationAllowed,
+        bool presentationTargetValid,
+        bool wpsRawTargetValid)
+    {
+        if (mode != PaintToolMode.Cursor)
+        {
+            return false;
+        }
+
+        if (photoModeActive || boardActive)
+        {
+            return false;
+        }
+
+        if (inputPassthroughEnabled)
+        {
+            return true;
+        }
+
+        if (!presentationAllowed)
+        {
+            return false;
+        }
+
+        if (!UiSessionPolicies.AllowsPresentationInput(navigationMode))
+        {
+            return false;
+        }
+
+        return presentationTargetValid || wpsRawTargetValid;
+    }
+
+    internal static bool ShouldResolvePresentationTarget(
+        bool presentationAllowed,
+        bool navigationAllowsPresentationInput)
+    {
+        return presentationAllowed && navigationAllowsPresentationInput;
+    }
+
+    internal static bool ShouldEnableOverlayHitTest(
+        PaintToolMode mode,
+        bool photoModeActive,
+        bool photoLoading)
+    {
+        if (photoLoading)
+        {
+            return false;
+        }
+
+        return mode != PaintToolMode.Cursor || photoModeActive;
+    }
+
+    private const double OpacityEpsilon = OverlayInputPassthroughDefaults.OpacityEpsilon;
+
+    internal static bool ShouldEnable(
+        PaintToolMode mode,
+        double boardOpacity,
+        bool photoModeActive)
+    {
+        if (photoModeActive)
+        {
+            return false;
+        }
+
+        if (mode != PaintToolMode.Cursor)
+        {
+            return false;
+        }
+
+        return boardOpacity <= OpacityEpsilon;
+    }
+
+    internal static OverlayWheelInputRoute ResolveWheelRoute(
+        bool boardActive,
+        bool photoModeActive,
+        bool canRoutePresentationInput,
+        bool presentationChannelEnabled)
+    {
+        if (boardActive)
+        {
+            return OverlayWheelInputRoute.ConsumeForBoard;
+        }
+
+        if (photoModeActive)
+        {
+            return OverlayWheelInputRoute.HandlePhoto;
+        }
+
+        if (!canRoutePresentationInput || !presentationChannelEnabled)
+        {
+            return OverlayWheelInputRoute.Ignore;
+        }
+
+        return OverlayWheelInputRoute.RoutePresentation;
+    }
+
+    internal static OverlayKeyInputRoute ResolveKeyRoute(
+        bool photoLoading,
+        bool photoKeyHandled,
+        bool photoOrBoardActive,
+        bool canRoutePresentationInput)
+    {
+        if (photoLoading)
+        {
+            return OverlayKeyInputRoute.Consume;
+        }
+
+        if (photoKeyHandled)
+        {
+            return OverlayKeyInputRoute.Consume;
+        }
+
+        if (photoOrBoardActive || !canRoutePresentationInput)
+        {
+            return OverlayKeyInputRoute.Ignore;
+        }
+
+        return OverlayKeyInputRoute.RoutePresentation;
+    }
+
+    internal static OverlayPointerSourceGateDecision ResolveOverlayPointerSourceGate(
+        bool photoLoading,
+        bool ignoreFromPhotoControls)
+    {
+        if (photoLoading)
+        {
+            return OverlayPointerSourceGateDecision.Consume;
+        }
+
+        if (ignoreFromPhotoControls)
+        {
+            return OverlayPointerSourceGateDecision.Ignore;
+        }
+
+        return OverlayPointerSourceGateDecision.Continue;
+    }
+
+    internal static OverlayPointerSourceHandlingPlan ResolveOverlayPointerSourceHandling(
+        OverlayPointerSourceGateDecision gateDecision,
+        bool hideEraserPreviewWhenBlocked)
+    {
+        bool shouldHide = hideEraserPreviewWhenBlocked &&
+                          gateDecision != OverlayPointerSourceGateDecision.Continue;
+        return gateDecision switch
+        {
+            OverlayPointerSourceGateDecision.Continue => new OverlayPointerSourceHandlingPlan(
+                ShouldContinue: true,
+                ShouldMarkHandled: false,
+                ShouldHideEraserPreview: false),
+            OverlayPointerSourceGateDecision.Consume => new OverlayPointerSourceHandlingPlan(
+                ShouldContinue: false,
+                ShouldMarkHandled: true,
+                ShouldHideEraserPreview: shouldHide),
+            _ => new OverlayPointerSourceHandlingPlan(
+                ShouldContinue: false,
+                ShouldMarkHandled: false,
+                ShouldHideEraserPreview: shouldHide)
+        };
+    }
+
+    internal static bool CanRouteFromAuxWindow(
+        UiNavigationMode navigationMode,
+        bool photoModeActive,
+        bool boardActive)
+    {
+        if (photoModeActive || boardActive)
+        {
+            return false;
+        }
+
+        return UiSessionPolicies.AllowsPresentationInput(navigationMode);
+    }
+
+    internal static bool CanRouteFromOverlay(
+        UiNavigationMode navigationMode,
+        bool photoModeActive,
+        bool boardActive,
+        PaintToolMode mode,
+        bool inputPassthroughEnabled)
+    {
+        if (photoModeActive || boardActive)
+        {
+            return false;
+        }
+
+        if (!UiSessionPolicies.AllowsPresentationInput(navigationMode))
+        {
+            return false;
+        }
+
+        if (mode == PaintToolMode.Cursor && inputPassthroughEnabled)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    internal static bool ShouldApplyOverlayTopmostApplyGate(bool overlayVisible, WindowState windowState)
+    {
+        return overlayVisible && windowState != WindowState.Minimized;
+    }
+
+    internal static OverlayWheelPresentationExecutionAction ResolveOverlayWheelPresentationExecution(
         bool hookActive,
         bool hookInterceptWheel,
         bool hookBlockOnly,
@@ -766,7 +736,7 @@ internal static class OverlayWheelPresentationExecutionPolicy
         bool hookRecentlyFired,
         int wheelDelta)
     {
-        if (WpsWheelRoutingPolicy.ShouldBypassDirectSend(
+        if (WpsHookPolicies.ShouldBypassDirectSend(
                 hookActive,
                 hookInterceptWheel,
                 hookBlockOnly,
@@ -784,11 +754,8 @@ internal static class OverlayWheelPresentationExecutionPolicy
             ? OverlayWheelPresentationExecutionAction.SendNext
             : OverlayWheelPresentationExecutionAction.SendPrevious;
     }
-}
 
-internal static class OverlayWindowStyleApplyPolicy
-{
-    internal static bool ShouldApply(
+    internal static bool ShouldApplyOverlayWindowStyleApply(
         bool inputPassthroughEnabled,
         bool focusBlocked,
         bool? lastInputPassthroughEnabled,
@@ -797,13 +764,10 @@ internal static class OverlayWindowStyleApplyPolicy
         return lastInputPassthroughEnabled != inputPassthroughEnabled
             || lastFocusBlocked != focusBlocked;
     }
-}
 
-internal static class OverlayWindowStyleBitsPolicy
-{
     internal readonly record struct StyleMask(int SetMask, int ClearMask);
 
-    internal static StyleMask Resolve(bool inputPassthroughEnabled, bool focusBlocked)
+    internal static StyleMask ResolveOverlayWindowStyleBits(bool inputPassthroughEnabled, bool focusBlocked)
     {
         var setMask = 0;
         var clearMask = 0;
@@ -828,10 +792,7 @@ internal static class OverlayWindowStyleBitsPolicy
 
         return new StyleMask(setMask, clearMask);
     }
-}
 
-internal static class PresentationChannelAvailabilityPolicy
-{
     internal static bool IsAnyChannelEnabled(bool allowOffice, bool allowWps)
     {
         return allowOffice || allowWps;

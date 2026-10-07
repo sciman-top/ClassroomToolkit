@@ -3,40 +3,9 @@ System;
 
 namespace ClassroomToolkit.App.Windowing;
 
-internal static class LauncherBubbleDiagnosticsPolicy
-{
-    internal static string FormatVisibleChangedGateSkipMessage(
-        LauncherBubbleZOrderApplyGateReason reason,
-        LauncherBubbleVisibleChangedApplyReason sourceReason = LauncherBubbleVisibleChangedApplyReason.None)
-    {
-        var message = $"[LauncherBubble][VisibleChangedGate] skip reason={reason}";
-        if (sourceReason != LauncherBubbleVisibleChangedApplyReason.None)
-        {
-            message += $" source={sourceReason}";
-        }
-
-        return message;
-    }
-
-    internal static string FormatVisibleChangedDedupSkipMessage(LauncherBubbleVisibleChangedDedupReason reason)
-    {
-        return $"[LauncherBubble][VisibleChangedDedup] skip reason={reason}";
-    }
-}
-
 internal readonly record struct LauncherBubbleVisibilityDecision(
     bool RequestZOrderApply,
     bool ForceEnforceZOrder);
-
-internal static class LauncherBubbleVisibilityPolicy
-{
-    internal static LauncherBubbleVisibilityDecision Resolve(bool bubbleVisible)
-    {
-        return new LauncherBubbleVisibilityDecision(
-            RequestZOrderApply: bubbleVisible,
-            ForceEnforceZOrder: bubbleVisible);
-    }
-}
 
 internal readonly record struct LauncherBubbleVisibilityRuntimeState(
     bool SuppressVisibleChangedApply,
@@ -94,9 +63,80 @@ internal readonly record struct LauncherBubbleVisibleChangedApplyDecision(
     bool ShouldApply,
     LauncherBubbleVisibleChangedApplyReason Reason);
 
-internal static class LauncherBubbleVisibleChangedApplyPolicy
+internal enum LauncherBubbleVisibleChangedDedupReason
 {
-    internal static LauncherBubbleVisibleChangedApplyDecision Resolve(
+    None = 0,
+    DuplicateWithinWindow = 1,
+    NoHistory = 2,
+    DedupDisabledByInterval = 3,
+    UnsetTimestamp = 4,
+    Applied = 5
+}
+
+internal readonly record struct LauncherBubbleVisibleChangedDedupDecision(
+    bool ShouldApply,
+    LauncherBubbleVisibleChangedDedupReason Reason,
+    bool? LastVisibleState,
+    DateTime LastEventUtc);
+
+internal readonly record struct LauncherBubbleVisibleChangedRuntimeState(
+    bool? LastVisibleState,
+    DateTime LastEventUtc)
+{
+    internal static LauncherBubbleVisibleChangedRuntimeState Default => new(
+        LastVisibleState: null,
+        LastEventUtc: WindowDedupDefaults.UnsetTimestampUtc);
+}
+
+internal static class LauncherBubbleVisibleChangedSuppressionDefaults
+{
+    internal const int TransitionCooldownMs = 180;
+    internal const int InteractiveTransitionCooldownMs = 260;
+}
+
+internal enum LauncherBubbleZOrderApplyGateReason
+{
+    None = 0,
+    AppClosing = 1,
+    BubbleWindowMissing = 2,
+    BubbleHidden = 3,
+    VisibleChangedSuppressed = 4,
+    CooldownActive = 5
+}
+
+internal readonly record struct LauncherBubbleZOrderApplyGateDecision(
+    bool ShouldApply,
+    LauncherBubbleZOrderApplyGateReason Reason,
+    LauncherBubbleVisibleChangedApplyReason VisibleChangedReason);
+
+internal static class LauncherBubblePolicies
+{
+    internal static string FormatVisibleChangedGateSkipMessage(
+        LauncherBubbleZOrderApplyGateReason reason,
+        LauncherBubbleVisibleChangedApplyReason sourceReason = LauncherBubbleVisibleChangedApplyReason.None)
+    {
+        var message = $"[LauncherBubble][VisibleChangedGate] skip reason={reason}";
+        if (sourceReason != LauncherBubbleVisibleChangedApplyReason.None)
+        {
+            message += $" source={sourceReason}";
+        }
+
+        return message;
+    }
+
+    internal static string FormatVisibleChangedDedupSkipMessage(LauncherBubbleVisibleChangedDedupReason reason)
+    {
+        return $"[LauncherBubble][VisibleChangedDedup] skip reason={reason}";
+    }
+
+    internal static LauncherBubbleVisibilityDecision ResolveVisibility(bool bubbleVisible)
+    {
+        return new LauncherBubbleVisibilityDecision(
+            RequestZOrderApply: bubbleVisible,
+            ForceEnforceZOrder: bubbleVisible);
+    }
+
+    internal static LauncherBubbleVisibleChangedApplyDecision ResolveVisibleChangedApply(
         bool bubbleVisible,
         bool suppressVisibleChangedApply,
         DateTime suppressVisibleChangedUntilUtc,
@@ -135,39 +175,20 @@ internal static class LauncherBubbleVisibleChangedApplyPolicy
         DateTime suppressVisibleChangedUntilUtc,
         DateTime nowUtc)
     {
-        return Resolve(
+        return ResolveVisibleChangedApply(
             bubbleVisible,
             suppressVisibleChangedApply,
             suppressVisibleChangedUntilUtc,
             nowUtc).ShouldApply;
     }
-}
 
-internal enum LauncherBubbleVisibleChangedDedupReason
-{
-    None = 0,
-    DuplicateWithinWindow = 1,
-    NoHistory = 2,
-    DedupDisabledByInterval = 3,
-    UnsetTimestamp = 4,
-    Applied = 5
-}
-
-internal readonly record struct LauncherBubbleVisibleChangedDedupDecision(
-    bool ShouldApply,
-    LauncherBubbleVisibleChangedDedupReason Reason,
-    bool? LastVisibleState,
-    DateTime LastEventUtc);
-
-internal static class LauncherBubbleVisibleChangedDedupPolicy
-{
-    internal static LauncherBubbleVisibleChangedDedupDecision Resolve(
+    internal static LauncherBubbleVisibleChangedDedupDecision ResolveVisibleChangedDedup(
         bool currentVisibleState,
         LauncherBubbleVisibleChangedRuntimeState state,
         DateTime nowUtc,
         int minIntervalMs = FloatingInteractiveDedupIntervalDefaults.DefaultMs)
     {
-        return Resolve(
+        return ResolveVisibleChangedDedup(
             currentVisibleState,
             state.LastVisibleState,
             state.LastEventUtc,
@@ -175,7 +196,7 @@ internal static class LauncherBubbleVisibleChangedDedupPolicy
             minIntervalMs);
     }
 
-    internal static LauncherBubbleVisibleChangedDedupDecision Resolve(
+    internal static LauncherBubbleVisibleChangedDedupDecision ResolveVisibleChangedDedup(
         bool currentVisibleState,
         bool? lastVisibleState,
         DateTime lastEventUtc,
@@ -218,10 +239,7 @@ internal static class LauncherBubbleVisibleChangedDedupPolicy
                 LastEventUtc: nowUtc)
         };
     }
-}
 
-internal static class LauncherBubbleVisibleChangedDedupIntervalPolicy
-{
     internal static int ResolveMs(
         bool overlayVisible,
         bool photoModeActive,
@@ -236,19 +254,7 @@ internal static class LauncherBubbleVisibleChangedDedupIntervalPolicy
             defaultMs,
             interactiveMs);
     }
-}
 
-internal readonly record struct LauncherBubbleVisibleChangedRuntimeState(
-    bool? LastVisibleState,
-    DateTime LastEventUtc)
-{
-    internal static LauncherBubbleVisibleChangedRuntimeState Default => new(
-        LastVisibleState: null,
-        LastEventUtc: WindowDedupDefaults.UnsetTimestampUtc);
-}
-
-internal static class LauncherBubbleVisibleChangedSuppressionPolicy
-{
     internal static int ResolveCooldownMs(
         bool overlayVisible,
         bool photoModeActive,
@@ -263,32 +269,8 @@ internal static class LauncherBubbleVisibleChangedSuppressionPolicy
             defaultMs,
             interactiveMs);
     }
-}
 
-internal static class LauncherBubbleVisibleChangedSuppressionDefaults
-{
-    internal const int TransitionCooldownMs = 180;
-    internal const int InteractiveTransitionCooldownMs = 260;
-}
-
-internal enum LauncherBubbleZOrderApplyGateReason
-{
-    None = 0,
-    AppClosing = 1,
-    BubbleWindowMissing = 2,
-    BubbleHidden = 3,
-    VisibleChangedSuppressed = 4,
-    CooldownActive = 5
-}
-
-internal readonly record struct LauncherBubbleZOrderApplyGateDecision(
-    bool ShouldApply,
-    LauncherBubbleZOrderApplyGateReason Reason,
-    LauncherBubbleVisibleChangedApplyReason VisibleChangedReason);
-
-internal static class LauncherBubbleZOrderApplyGatePolicy
-{
-    internal static LauncherBubbleZOrderApplyGateDecision Resolve(
+    internal static LauncherBubbleZOrderApplyGateDecision ResolveZOrderApplyGate(
         bool bubbleVisible,
         bool suppressVisibleChangedApply,
         DateTime suppressVisibleChangedUntilUtc,
@@ -312,7 +294,7 @@ internal static class LauncherBubbleZOrderApplyGatePolicy
                 VisibleChangedReason: LauncherBubbleVisibleChangedApplyReason.None);
         }
 
-        var visibleChangedDecision = LauncherBubbleVisibleChangedApplyPolicy.Resolve(
+        var visibleChangedDecision = LauncherBubblePolicies.ResolveVisibleChangedApply(
             bubbleVisible,
             suppressVisibleChangedApply,
             suppressVisibleChangedUntilUtc,
@@ -342,7 +324,7 @@ internal static class LauncherBubbleZOrderApplyGatePolicy
         bool appClosing,
         bool bubbleWindowExists)
     {
-        return Resolve(
+        return ResolveZOrderApplyGate(
             bubbleVisible,
             suppressVisibleChangedApply,
             suppressVisibleChangedUntilUtc,

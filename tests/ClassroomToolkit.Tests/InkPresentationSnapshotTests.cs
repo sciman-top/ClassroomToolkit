@@ -60,7 +60,7 @@ public sealed class PresentationInkExitSnapshotPolicyTests
     [Fact]
     public void ShouldCapture_ShouldReturnTrue_WhenDrawingExists()
     {
-        PresentationInkExitSnapshotPolicy.ShouldCapture(hasDrawing: true).Should().BeTrue();
+        PresentationPipelinePolicies.ShouldCapture(hasDrawing: true).Should().BeTrue();
     }
 
     [Fact]
@@ -68,14 +68,14 @@ public sealed class PresentationInkExitSnapshotPolicyTests
     {
         // 出厂默认 ink_record_enabled=false：笔画只渲染不进向量表，
         // 快照判据必须只依赖位图表面，否则放映批注退出即静默丢失。
-        PresentationInkExitSnapshotPolicy.ShouldCapture(hasDrawing: true).Should().BeTrue();
+        PresentationPipelinePolicies.ShouldCapture(hasDrawing: true).Should().BeTrue();
     }
 
     [Theory]
     [InlineData(false)]
     public void ShouldCapture_ShouldReturnFalse_WhenNothingToCapture(bool hasDrawing)
     {
-        PresentationInkExitSnapshotPolicy.ShouldCapture(hasDrawing).Should().BeFalse();
+        PresentationPipelinePolicies.ShouldCapture(hasDrawing).Should().BeFalse();
     }
 }
 

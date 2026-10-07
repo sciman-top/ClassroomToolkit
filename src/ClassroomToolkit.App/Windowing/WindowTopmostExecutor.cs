@@ -129,7 +129,7 @@ internal static class WindowTopmostExecutor
                 var success = _interopAdapter.TrySetTopmostNoActivate(hwnd, enabled, out var errorCode);
                 return (success, errorCode);
             },
-            (attempt, errorCode) => WindowTopmostInteropRetryPolicy.Resolve(attempt, errorCode).ShouldRetry);
+            (attempt, errorCode) => WindowInteropRetryPolicies.ResolveWindowTopmostInteropRetry(attempt, errorCode).ShouldRetry);
     }
 
     internal static bool TryApplyHandleBehindNoActivate(IntPtr hwnd, IntPtr insertAfterHwnd)
@@ -150,7 +150,7 @@ internal static class WindowTopmostExecutor
                 var success = _interopAdapter.TrySetWindowBehindNoActivate(hwnd, insertAfterHwnd, out var errorCode);
                 return (success, errorCode);
             },
-            (attempt, errorCode) => WindowTopmostInteropRetryPolicy.Resolve(attempt, errorCode).ShouldRetry);
+            (attempt, errorCode) => WindowInteropRetryPolicies.ResolveWindowTopmostInteropRetry(attempt, errorCode).ShouldRetry);
     }
 
     private static IntPtr ResolveInsertAfterHandle(Window? insertAfterWindow)

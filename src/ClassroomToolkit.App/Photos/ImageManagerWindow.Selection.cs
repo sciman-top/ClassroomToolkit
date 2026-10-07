@@ -130,7 +130,7 @@ public partial class ImageManagerWindow
             return;
         }
 
-        if (!ImageManagerActivationPolicy.ShouldOpenOnSingleClick(item.IsFolder, item.IsPdf, item.IsImage))
+        if (!ImageManagerPolicies.ShouldOpenOnSingleClick(item.IsFolder, item.IsPdf, item.IsImage))
         {
             StopLongPressTracking(resetTriggered: true);
             return;
@@ -161,7 +161,7 @@ public partial class ImageManagerWindow
             return;
         }
 
-        if (!ImageManagerActivationPolicy.ShouldOpenOnDoubleClick(item.IsFolder, item.IsPdf, item.IsImage))
+        if (!ImageManagerPolicies.ShouldOpenOnDoubleClick(item.IsFolder, item.IsPdf, item.IsImage))
         {
             return;
         }

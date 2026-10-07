@@ -116,7 +116,7 @@ public partial class PaintSettingsDialog
         }
 
         var recommendedScheme = _presetRecommendation.Scheme;
-        var isRecommendedValid = PresetSchemePolicy.TryResolveManagedParameters(recommendedScheme, out _);
+        var isRecommendedValid = PresetSchemePolicies.TryResolveManagedParameters(recommendedScheme, out _);
         if (!isRecommendedValid)
         {
             PresetSchemeRecommendationText.Text = string.Empty;

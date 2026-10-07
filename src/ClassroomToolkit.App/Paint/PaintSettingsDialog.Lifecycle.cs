@@ -13,7 +13,7 @@ public partial class PaintSettingsDialog
         {
             return;
         }
-        if (!DispatcherInvokeAvailabilityPolicy.CanBeginInvoke(
+        if (!OverlayInputRoutingPolicies.CanBeginInvoke(
                 Dispatcher.HasShutdownStarted,
                 Dispatcher.HasShutdownFinished))
         {

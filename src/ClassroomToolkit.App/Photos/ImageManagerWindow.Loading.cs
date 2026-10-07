@@ -201,7 +201,7 @@ public partial class ImageManagerWindow
             },
             token,
             ex => Debug.WriteLine(
-                ImageManagerDiagnosticsPolicy.FormatThumbnailDispatchFailureMessage(
+                ImageManagerPolicies.FormatThumbnailDispatchFailureMessage(
                     item.Path,
                     ex.Message)));
     }
@@ -263,7 +263,7 @@ public partial class ImageManagerWindow
                 return;
             }
             Debug.WriteLine(
-                ImageManagerDiagnosticsPolicy.FormatThumbnailDispatchFailureMessage(
+                ImageManagerPolicies.FormatThumbnailDispatchFailureMessage(
                     item.Path,
                     ex.Message));
         }

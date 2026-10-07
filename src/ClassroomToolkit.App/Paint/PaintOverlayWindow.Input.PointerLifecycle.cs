@@ -30,7 +30,7 @@ public partial class PaintOverlayWindow
     private void HandlePointerDownByTool(BrushInputSample input)
     {
         var position = input.Position;
-        var executionPlan = PointerDownToolExecutionPolicy.Resolve(_mode);
+        var executionPlan = PointerToolExecutionPolicies.ResolvePointerDownToolExecution(_mode);
         var handled = true;
         switch (executionPlan.Action)
         {
@@ -113,7 +113,7 @@ public partial class PaintOverlayWindow
             recentSwitchGraceActive = elapsedMs >= 0
                 && elapsedMs <= CrossPageInputSwitchThresholds.OutOfPageMoveSuppressPostSwitchGraceMs;
         }
-        return CrossPageOutOfPageMoveSuppressionPolicy.ShouldSuppress(
+        return CrossPageInteractiveMiscPolicies.ShouldSuppress(
             crossPageDisplayActive: IsCrossPageDisplayActive(),
             photoFullscreenActive: IsPhotoFullscreenActive,
             mode: _mode,
@@ -127,7 +127,7 @@ public partial class PaintOverlayWindow
     private void HandlePointerMoveByTool(BrushInputSample input)
     {
         var position = input.Position;
-        var action = PointerMoveToolExecutionPolicy.Resolve(_mode);
+        var action = PointerToolExecutionPolicies.ResolvePointerMoveToolExecution(_mode);
         switch (action)
         {
             case PointerMoveToolAction.UpdateBrushStroke:
@@ -164,12 +164,12 @@ public partial class PaintOverlayWindow
         }
         HandlePointerUpByTool(input);
         ReleasePointerInput();
-        var pointerUpState = CrossPagePointerUpStatePolicy.Resolve(
+        var pointerUpState = CrossPagePointerUpPolicies.ResolveState(
             photoModeActive: _photoModeActive,
             boardActive: IsBoardActive(),
             crossPageDisplayEnabled: IsCrossPageDisplaySettingEnabled());
         var crossPageDisplayActive = pointerUpState.CrossPageDisplayActive;
-        var deferredState = CrossPagePointerUpDeferredStatePolicy.Resolve(
+        var deferredState = CrossPagePointerUpPolicies.ResolveDeferredState(
             deferredByInkInput: _crossPageUpdateDeferredByInkInput,
             crossPageDisplayActive: pointerUpState.CrossPageDisplayActive);
         _crossPageUpdateDeferredByInkInput = deferredState.NextDeferredByInkInput;
@@ -180,16 +180,16 @@ public partial class PaintOverlayWindow
             // A short delayed refresh after pointer-up restores neighbor page/ink visibility.
             _inkDiagnostics?.OnCrossPageUpdateEvent("defer", "pointer-up", "stable-recover-v3");
         }
-        var pointerUpDecision = CrossPagePointerUpDecisionPolicy.Resolve(
+        var pointerUpDecision = CrossPagePointerUpPolicies.ResolveDecision(
             crossPageDisplayActive: crossPageDisplayActive,
             hadInkOperation: hadInkOperation,
             deferredRefreshRequested: deferredRefreshRequested,
             updatePending: _crossPageDisplayUpdateState.Pending);
-        var pointerUpPlan = CrossPagePointerUpExecutionPlanPolicy.Resolve(
+        var pointerUpPlan = CrossPagePointerUpPolicies.ResolveExecutionPlan(
             pointerUpDecision,
             hadInkOperation,
             _pendingInkContextCheck);
-        var postExecutionPlan = CrossPagePointerUpPostExecutionPolicy.Resolve(
+        var postExecutionPlan = CrossPagePointerUpPolicies.ResolvePostExecution(
             pointerUpPlan,
             IsCrossPageFirstInputTraceActive());
         if (postExecutionPlan.ShouldTrackPointerUp)
@@ -228,7 +228,7 @@ public partial class PaintOverlayWindow
     private void HandlePointerUpByTool(BrushInputSample input)
     {
         var position = input.Position;
-        var executionPlan = PointerUpToolExecutionPolicy.Resolve(
+        var executionPlan = PointerToolExecutionPolicies.ResolvePointerUpToolExecution(
             _mode,
             _pendingAdaptiveRendererRefresh);
         switch (executionPlan.Action)
@@ -264,7 +264,7 @@ public partial class PaintOverlayWindow
 
         StopActivePhotoManipulation(reason);
 
-        if (PointerCaptureCleanupPolicy.ShouldDeferCleanup(
+        if (PointerToolExecutionPolicies.ShouldDeferCleanup(
                 reason,
                 OverlayRoot.IsMouseCaptured,
                 OverlayRoot.IsStylusCaptured))

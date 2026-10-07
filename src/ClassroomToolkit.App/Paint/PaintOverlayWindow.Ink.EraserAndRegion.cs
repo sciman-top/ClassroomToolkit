@@ -65,7 +65,7 @@ public partial class PaintOverlayWindow
         _activeInkOperationHistory = null;
         NotifyInkStateChanged(updateActiveSnapshot: true);
         var photoInkModeActive = IsPhotoInkModeActive();
-        if (PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
+        if (PhotoInkInteropPolicies.ShouldRequestImmediateRedraw(
                 photoInkModeActive,
                 RasterImage.RenderTransform,
                 _photoContentTransform))
@@ -134,7 +134,7 @@ public partial class PaintOverlayWindow
 
     private bool EraseRectAcrossVisibleCrossPages(Rect region)
     {
-        if (!CrossPageRegionErasePolicy.ShouldUseCrossPageErase(
+        if (!CrossPageInteractiveMiscPolicies.ShouldUseCrossPageErase(
                 IsPhotoInkModeActive(),
                 IsCrossPageDisplayActive()))
         {
@@ -149,7 +149,7 @@ public partial class PaintOverlayWindow
         }
 
         var anyChanged = false;
-        var batchOrder = CrossPageRegionEraseOrderPolicy.ResolveBatchOrder(
+        var batchOrder = CrossPageInteractiveMiscPolicies.ResolveBatchOrder(
             pages,
             currentPage);
         foreach (var targetPage in batchOrder)
@@ -206,7 +206,7 @@ public partial class PaintOverlayWindow
 
     private bool TryNavigateCrossPageForRegionErase(int targetPage)
     {
-        if (!CrossPageRegionErasePolicy.CanNavigateForRegionErase(
+        if (!CrossPageInteractiveMiscPolicies.CanNavigateForRegionErase(
                 IsPhotoInkModeActive(),
                 IsCrossPageDisplayActive(),
                 targetPage))
@@ -236,7 +236,7 @@ public partial class PaintOverlayWindow
             persistToSidecar: false,
             finalizeActiveOperation: false);
 
-        var navigationPlan = CrossPageRegionEraseNavigationPolicy.Resolve();
+        var navigationPlan = CrossPageInteractiveMiscPolicies.ResolveCrossPageRegionEraseNavigation();
 
         NavigateToPage(
             targetPage,

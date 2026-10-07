@@ -195,12 +195,12 @@ public partial class RollCallWindow
                 FallbackToken: "tab",
                 Handler: handler,
                 ShouldKeepActive: () => isCurrent() && ShouldEnableRemotePresenterHook(),
-                AlreadyUnavailableNotified: RemoteHookUnavailableNotificationPolicy.IsNotified(ref _remoteHookUnavailableNotifiedState),
+                AlreadyUnavailableNotified: NotificationAndExitPolicies.IsNotified(ref _remoteHookUnavailableNotifiedState),
                 NotifyUnavailableOnFailure: true);
             var result = await _remoteHookCoordinator.TryStartAsync(request);
             if (result.Started)
             {
-                RemoteHookUnavailableNotificationPolicy.Reset(ref _remoteHookUnavailableNotifiedState);
+                NotificationAndExitPolicies.Reset(ref _remoteHookUnavailableNotifiedState);
             }
             if (result.ShouldNotifyUnavailable)
             {
@@ -260,7 +260,7 @@ public partial class RollCallWindow
                 Dispatcher.HasShutdownFinished))
         {
             System.Diagnostics.Debug.WriteLine(
-                RollCallWindowDiagnosticsPolicy.FormatRemoteHookDispatchSkippedMessage(
+                RollCallWindowingPolicies.FormatRemoteHookDispatchSkippedMessage(
                     operation,
                     _closingCleanupStarted ? "window-closed" : "dispatcher-unavailable"));
             return;
@@ -277,7 +277,7 @@ public partial class RollCallWindow
             SafeActionExecutionExecutor.TryExecute(
                 action,
                 ex => System.Diagnostics.Debug.WriteLine(
-                    RollCallWindowDiagnosticsPolicy.FormatRemoteHookDispatchFailureMessage(
+                    RollCallWindowingPolicies.FormatRemoteHookDispatchFailureMessage(
                         operation,
                         ex.GetType().Name,
                         ex.Message)));
@@ -293,7 +293,7 @@ public partial class RollCallWindow
                 scheduled = true;
             },
             ex => System.Diagnostics.Debug.WriteLine(
-                RollCallWindowDiagnosticsPolicy.FormatRemoteHookDispatchFailureMessage(
+                RollCallWindowingPolicies.FormatRemoteHookDispatchFailureMessage(
                     operation,
                     ex.GetType().Name,
                     ex.Message)));
@@ -305,7 +305,7 @@ public partial class RollCallWindow
 
     private void NotifyRemoteHookError()
     {
-        if (!RemoteHookUnavailableNotificationPolicy.ShouldNotify(ref _remoteHookUnavailableNotifiedState))
+        if (!NotificationAndExitPolicies.ShouldNotifyRemoteHookUnavailableNotification(ref _remoteHookUnavailableNotifiedState))
         {
             return;
         }
@@ -314,7 +314,7 @@ public partial class RollCallWindow
                 Dispatcher.HasShutdownFinished))
         {
             System.Diagnostics.Debug.WriteLine(
-                RollCallWindowDiagnosticsPolicy.FormatRemoteHookDispatchSkippedMessage(
+                RollCallWindowingPolicies.FormatRemoteHookDispatchSkippedMessage(
                     "remote-hook-unavailable",
                     "dispatcher-unavailable"));
             return;

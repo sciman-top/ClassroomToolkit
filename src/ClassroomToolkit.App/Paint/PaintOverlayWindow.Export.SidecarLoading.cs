@@ -42,7 +42,7 @@ public partial class PaintOverlayWindow
                     out _,
                     out var runtimeHash,
                     out var runtimeDirty);
-                if (!InkSidecarLoadAdmissionPolicy.ShouldApplyLoadedSnapshot(
+                if (!InkPersistencePolicies.ShouldApplyLoadedSnapshot(
                         runtimeStateKnown,
                         runtimeHash,
                         runtimeDirty,

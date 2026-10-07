@@ -28,7 +28,7 @@ public partial class MainWindow
             return;
         }
 
-        var transitionPlan = PaintVisibilityTransitionPolicy.ResolvePaintToggle(overlay.IsVisible);
+        var transitionPlan = PaintWindowVisibilityPolicies.ResolvePaintToggle(overlay.IsVisible);
         ApplyPaintToggleTransition(transitionPlan);
         UpdateToggleButtons();
     }
@@ -59,10 +59,10 @@ public partial class MainWindow
     {
         var overlayWindow = _paintWindowOrchestrator.OverlayWindow;
         var toolbarWindow = _paintWindowOrchestrator.ToolbarWindow;
-        var shouldWireOverlayLifecycle = WindowLifecycleSubscriptionPolicy.ShouldWire(_lifecycleWiredOverlayWindow, overlayWindow);
-        var shouldWireToolbarLifecycle = WindowLifecycleSubscriptionPolicy.ShouldWire(_lifecycleWiredToolbarWindow, toolbarWindow);
+        var shouldWireOverlayLifecycle = WindowExecutionPolicies.ShouldWire(_lifecycleWiredOverlayWindow, overlayWindow);
+        var shouldWireToolbarLifecycle = WindowExecutionPolicies.ShouldWire(_lifecycleWiredToolbarWindow, toolbarWindow);
 
-        if (PaintWindowEnsureSkipPolicy.ShouldSkip(
+        if (PaintWindowVisibilityPolicies.ShouldSkip(
                 hasOverlayWindow: overlayWindow != null,
                 hasToolbarWindow: toolbarWindow != null,
                 eventsWired: _paintOrchestratorEventsWired,
@@ -72,7 +72,7 @@ public partial class MainWindow
             return;
         }
 
-        if (PaintWindowCreationPolicy.ShouldEnsureWindows(
+        if (PaintWindowVisibilityPolicies.ShouldEnsureWindows(
                 hasOverlayWindow: overlayWindow != null,
                 hasToolbarWindow: toolbarWindow != null))
         {
@@ -109,7 +109,7 @@ public partial class MainWindow
     private void WirePaintWindowLifecycle()
     {
         var overlayWindow = _paintWindowOrchestrator.OverlayWindow;
-        var overlayRewired = WindowLifecycleSubscriptionPolicy.ShouldWire(_lifecycleWiredOverlayWindow, overlayWindow);
+        var overlayRewired = WindowExecutionPolicies.ShouldWire(_lifecycleWiredOverlayWindow, overlayWindow);
         if (overlayRewired)
         {
             if (_lifecycleWiredOverlayWindow != null)
@@ -118,7 +118,7 @@ public partial class MainWindow
             }
             overlayWindow!.Closed += OnPaintOverlayWindowClosed;
             _lifecycleWiredOverlayWindow = overlayWindow;
-            var resetDecision = SessionTransitionDuplicateResetPolicy.Resolve(
+            var resetDecision = SessionTransitionPolicies.ResolveDuplicateReset(
                 overlayWindowRewired: true,
                 lastAppliedTransitionId: _lastAppliedSessionTransitionId);
             if (resetDecision.ShouldReset)
@@ -128,12 +128,12 @@ public partial class MainWindow
             else
             {
                 System.Diagnostics.Debug.WriteLine(
-                    SessionTransitionDiagnosticsPolicy.FormatDuplicateResetMessage(resetDecision.Reason));
+                    SessionTransitionPolicies.FormatDuplicateResetMessage(resetDecision.Reason));
             }
         }
 
         var toolbarWindow = _paintWindowOrchestrator.ToolbarWindow;
-        if (WindowLifecycleSubscriptionPolicy.ShouldWire(_lifecycleWiredToolbarWindow, toolbarWindow))
+        if (WindowExecutionPolicies.ShouldWire(_lifecycleWiredToolbarWindow, toolbarWindow))
         {
             if (_lifecycleWiredToolbarWindow != null)
             {
@@ -195,7 +195,7 @@ public partial class MainWindow
         }
 
         var snapshot = CaptureToolbarInteractionRetouchSnapshot(out var launcherWindow);
-        var suppressionDecision = ToolbarInteractionActivationSuppressionPolicy.Resolve(
+        var suppressionDecision = ToolbarInteractionRetouchPolicies.ResolveToolbarInteractionActivationSuppression(
             trigger,
             snapshot,
             _toolbarInteractionRetouchState.LastPreviewMouseDownUtc,
@@ -206,49 +206,49 @@ public partial class MainWindow
                 : ToolbarInteractionActivationSuppressionDefaults.LauncherOnlyAfterPreviewSuppressionMs);
         if (suppressionDecision.ShouldSuppress)
         {
-            System.Diagnostics.Debug.WriteLine(ToolbarInteractionRetouchDiagnosticsPolicy.FormatActivationSuppressionSkipMessage(
+            System.Diagnostics.Debug.WriteLine(ToolbarInteractionRetouchPolicies.FormatActivationSuppressionSkipMessage(
                 trigger,
                 suppressionDecision.Reason));
             return;
         }
 
-        var decision = ToolbarInteractionRetouchDecisionPolicy.Resolve(snapshot, trigger);
+        var decision = ToolbarInteractionRetouchPolicies.ResolveDecision(snapshot, trigger);
         if (!decision.ShouldRetouch)
         {
-            System.Diagnostics.Debug.WriteLine(ToolbarInteractionRetouchDiagnosticsPolicy.FormatDecisionSkipMessage(
+            System.Diagnostics.Debug.WriteLine(ToolbarInteractionRetouchPolicies.FormatDecisionSkipMessage(
                 trigger,
                 decision.Reason));
             return;
         }
 
-        var admission = ZOrderApplyReentryPolicy.Resolve(
+        var admission = ZOrderRequestPolicies.ResolveZOrderApplyReentry(
             _zOrderPolicyApplying,
             _floatingDispatchQueueState.ApplyQueued,
             decision.ForceEnforceZOrder);
         if (!admission.ShouldAcceptRequest)
         {
-            System.Diagnostics.Debug.WriteLine(ToolbarInteractionRetouchDiagnosticsPolicy.FormatAdmissionSkipMessage(
+            System.Diagnostics.Debug.WriteLine(ToolbarInteractionRetouchPolicies.FormatAdmissionSkipMessage(
                 trigger,
                 admission.Reason,
                 decision.ForceEnforceZOrder));
             return;
         }
 
-        var intervalMs = ToolbarInteractionRetouchIntervalPolicy.ResolveMs(snapshot, trigger);
+        var intervalMs = ToolbarInteractionRetouchPolicies.ResolveMs(snapshot, trigger);
         var throttleDecision = WindowingDedupPolicies.ResolveRetouchThrottle(
             _toolbarInteractionRetouchState.LastRetouchUtc,
             nowUtc,
             minimumIntervalMs: intervalMs);
         if (!throttleDecision.ShouldAllow)
         {
-            System.Diagnostics.Debug.WriteLine(ToolbarInteractionRetouchDiagnosticsPolicy.FormatThrottleSkipMessage(
+            System.Diagnostics.Debug.WriteLine(ToolbarInteractionRetouchPolicies.FormatThrottleSkipMessage(
                 trigger,
                 throttleDecision.Reason,
                 intervalMs));
             return;
         }
 
-        var executionPlan = ToolbarInteractionRetouchExecutionPlanPolicy.Resolve(decision);
+        var executionPlan = ToolbarInteractionRetouchPolicies.ResolveExecutionPlan(decision);
         var shouldMarkRetouched =
             (executionPlan.ApplyDirectDriftRepair || executionPlan.RequestZOrderApply)
             && !(trigger == ToolbarInteractionRetouchTrigger.PreviewMouseDown
@@ -261,29 +261,29 @@ public partial class MainWindow
                 nowUtc);
         }
         System.Diagnostics.Debug.WriteLine(
-            ToolbarInteractionRetouchDiagnosticsPolicy.FormatExecutionPlanMessage(
+            ToolbarInteractionRetouchPolicies.FormatExecutionPlanMessage(
                 trigger,
                 executionPlan));
         if (executionPlan.ApplyDirectDriftRepair)
         {
-            var directRepairAdmission = ToolbarInteractionDirectRepairAdmissionPolicy.Resolve(
+            var directRepairAdmission = ToolbarInteractionRetouchPolicies.ResolveToolbarInteractionDirectRepairAdmission(
                 _zOrderPolicyApplying,
                 _floatingDispatchQueueState.ApplyQueued);
             if (!directRepairAdmission.ShouldApply)
             {
                 System.Diagnostics.Debug.WriteLine(
-                    ToolbarInteractionRetouchDiagnosticsPolicy.FormatDirectRepairAdmissionSkipMessage(
+                    ToolbarInteractionRetouchPolicies.FormatDirectRepairAdmissionSkipMessage(
                         trigger,
                         directRepairAdmission.Reason));
                 return;
             }
 
-            var dispatchMode = ToolbarInteractionRetouchDispatchPolicy.Resolve(
+            var dispatchMode = ToolbarInteractionRetouchPolicies.ResolveDispatch(
                 trigger,
                 snapshot,
                 executionPlan);
             System.Diagnostics.Debug.WriteLine(
-                ToolbarInteractionRetouchDiagnosticsPolicy.FormatDirectRepairDispatchMessage(
+                ToolbarInteractionRetouchPolicies.FormatDirectRepairDispatchMessage(
                     trigger,
                     dispatchMode));
 
@@ -323,7 +323,7 @@ public partial class MainWindow
                 || executionOutcome == ToolbarInteractionDirectRepairExecutionOutcome.BackgroundMarkQueuedFailed)
             {
                 System.Diagnostics.Debug.WriteLine(
-                    ToolbarInteractionRetouchDiagnosticsPolicy.FormatDirectRepairDispatchAdmissionSkipMessage(
+                    ToolbarInteractionRetouchPolicies.FormatDirectRepairDispatchAdmissionSkipMessage(
                         trigger));
                 return;
             }
@@ -331,7 +331,7 @@ public partial class MainWindow
             if (executionOutcome == ToolbarInteractionDirectRepairExecutionOutcome.BackgroundScheduleFailed)
             {
                 System.Diagnostics.Debug.WriteLine(
-                    ToolbarInteractionRetouchDiagnosticsPolicy.FormatDirectRepairDispatchFailureMessage(
+                    ToolbarInteractionRetouchPolicies.FormatDirectRepairDispatchFailureMessage(
                         trigger,
                         nameof(InvalidOperationException),
                         "dispatcher-begininvoke-failed"));
@@ -353,8 +353,8 @@ public partial class MainWindow
     {
         var currentSnapshot = CaptureToolbarInteractionRetouchSnapshot(out var currentLauncherWindow);
         currentLauncherWindow ??= fallbackLauncherWindow;
-        var repairPlan = FloatingTopmostDriftRepairPolicy.Resolve(currentSnapshot);
-        var enforceRepairZOrder = FloatingTopmostDriftRepairEnforcePolicy.Resolve(currentSnapshot, trigger);
+        var repairPlan = FloatingTopmostPolicies.ResolveDriftRepair(currentSnapshot);
+        var enforceRepairZOrder = FloatingTopmostPolicies.ResolveDriftRepairEnforce(currentSnapshot, trigger);
         FloatingTopmostDriftRepairExecutor.Apply(
             repairPlan,
             _toolbarWindow,
@@ -362,7 +362,7 @@ public partial class MainWindow
             currentLauncherWindow,
             enforceRepairZOrder,
             ex => System.Diagnostics.Debug.WriteLine(
-                ToolbarInteractionRetouchDiagnosticsPolicy.FormatDirectRepairDispatchFailureMessage(
+                ToolbarInteractionRetouchPolicies.FormatDirectRepairDispatchFailureMessage(
                     trigger,
                     ex.GetType().Name,
                     ex.Message)));
@@ -373,7 +373,7 @@ public partial class MainWindow
         var nowUtc = GetCurrentUtcTimestamp();
         var launcherSnapshot = CaptureLauncherWindowRuntimeSnapshot();
         launcherWindow = ResolveLauncherWindow(launcherSnapshot);
-        var launcherVisibleForRepair = LauncherTopmostVisibilityHoldPolicy.ResolveVisibleForRepair(
+        var launcherVisibleForRepair = LauncherWindowPolicies.ResolveVisibleForRepair(
             launcherSnapshot.VisibleForTopmost,
             _lastLauncherVisibleForTopmostUtc,
             nowUtc);
@@ -397,7 +397,7 @@ public partial class MainWindow
         if (reason != ToolbarInteractionRetouchRuntimeResetReason.None)
         {
             System.Diagnostics.Debug.WriteLine(
-                ToolbarInteractionRetouchDiagnosticsPolicy.FormatRuntimeResetMessage(reason));
+                ToolbarInteractionRetouchPolicies.FormatRuntimeResetMessage(reason));
         }
     }
 
@@ -416,7 +416,7 @@ public partial class MainWindow
             return;
         }
 
-        var transitionPlan = PaintVisibilityTransitionPolicy.ResolveEnsureOverlayVisible(
+        var transitionPlan = PaintWindowVisibilityPolicies.ResolveEnsureOverlayVisible(
             overlayVisible: overlay.IsVisible);
         ApplyEnsurePaintOverlayVisibleTransition(transitionPlan);
     }
@@ -529,13 +529,13 @@ public partial class MainWindow
     {
         var context = new PhotoCloseTransitionContext(
             OverlayVisible: _overlayWindow?.IsVisible == true);
-        var transitionPlan = PhotoCloseTransitionPolicy.Resolve(context);
+        var transitionPlan = PhotoOverlayTransitionsPolicies.ResolvePhotoCloseTransition(context);
         ApplyPhotoCloseTransition(transitionPlan);
     }
 
     private void ApplyPhotoCloseTransition(PhotoCloseTransitionPlan transitionPlan)
     {
-        if (PhotoCloseOwnerDetachmentPolicy.ShouldDetachOwners(transitionPlan.SyncFloatingOwnersVisible))
+        if (PhotoOverlayTransitionsPolicies.ShouldDetachOwners(transitionPlan.SyncFloatingOwnersVisible))
         {
             // 断开 owner 链，避免关闭图片模式时浮层关系滞留。
             SyncFloatingWindowOwners(overlayVisible: false);
@@ -548,13 +548,13 @@ public partial class MainWindow
 
     private void OnOverlaySessionTransitionOccurred(UiSessionTransition transition)
     {
-        var admissionDecision = SessionTransitionEventAdmissionPolicy.Resolve(
+        var admissionDecision = SessionTransitionPolicies.ResolveEventAdmission(
             transition.HasStateChange,
             _lastAppliedSessionTransitionId,
             transition.Id);
         if (!admissionDecision.ShouldProcess)
         {
-            System.Diagnostics.Debug.WriteLine(SessionTransitionDiagnosticsPolicy.FormatAdmissionSkipMessage(
+            System.Diagnostics.Debug.WriteLine(SessionTransitionPolicies.FormatAdmissionSkipMessage(
                 transition.Id,
                 admissionDecision.Reason));
             return;
@@ -570,33 +570,33 @@ public partial class MainWindow
                 $"[UiSession][Violation] #{transition.Id} {string.Join(" | ", violations)}");
         }
 
-        var windowingDecision = SessionTransitionWindowingPolicy.ResolveDecision(transition);
+        var windowingDecision = SessionTransitionPolicies.ResolveDecision(transition);
         var decision = windowingDecision.ZOrderDecision;
         if (windowingDecision.SurfaceReason == SessionTransitionSurfaceReason.SurfaceRetouchRequested)
         {
-            System.Diagnostics.Debug.WriteLine(SessionTransitionDiagnosticsPolicy.FormatSurfaceReasonMessage(
+            System.Diagnostics.Debug.WriteLine(SessionTransitionPolicies.FormatSurfaceReasonMessage(
                 transition.Id,
                 windowingDecision.SurfaceReason));
         }
         if (windowingDecision.ApplyReason != SessionTransitionApplyReason.None)
         {
-            System.Diagnostics.Debug.WriteLine(SessionTransitionDiagnosticsPolicy.FormatApplyReasonMessage(
+            System.Diagnostics.Debug.WriteLine(SessionTransitionPolicies.FormatApplyReasonMessage(
                 transition.Id,
                 windowingDecision.ApplyReason));
         }
         if (windowingDecision.WidgetVisibilityReason != SessionFloatingWidgetVisibilityReason.None)
         {
-            System.Diagnostics.Debug.WriteLine(SessionTransitionDiagnosticsPolicy.FormatWidgetVisibilityReasonMessage(
+            System.Diagnostics.Debug.WriteLine(SessionTransitionPolicies.FormatWidgetVisibilityReasonMessage(
                 transition.Id,
                 windowingDecision.WidgetVisibilityReason));
         }
-        var applyGateDecision = SessionTransitionApplyGatePolicy.Resolve(decision);
+        var applyGateDecision = SessionTransitionPolicies.ResolveApplyGate(decision);
         if (!applyGateDecision.ShouldApply)
         {
-            System.Diagnostics.Debug.WriteLine(SessionTransitionDiagnosticsPolicy.FormatWindowingReasonMessage(
+            System.Diagnostics.Debug.WriteLine(SessionTransitionPolicies.FormatWindowingReasonMessage(
                 transition.Id,
                 windowingDecision.Reason));
-            System.Diagnostics.Debug.WriteLine(SessionTransitionDiagnosticsPolicy.FormatApplyGateSkipMessage(
+            System.Diagnostics.Debug.WriteLine(SessionTransitionPolicies.FormatApplyGateSkipMessage(
                 transition.Id,
                 applyGateDecision.Reason));
             return;
@@ -636,7 +636,7 @@ public partial class MainWindow
 
         if (!captureResult.Succeeded || string.IsNullOrWhiteSpace(captureResult.FilePath))
         {
-            var shouldReplayToolbarClick = ToolbarPassthroughActivationPolicy.ShouldReplayToolbarClick(
+            var shouldReplayToolbarClick = ToolbarPolicies.ShouldReplayToolbarClick(
                 captureResult.CancelReason,
                 captureResult.PassthroughInputKind,
                 _toolbarWindow?.IsVisible == true);
@@ -652,7 +652,7 @@ public partial class MainWindow
                 }
             }
 
-            if (ToolbarPassthroughActivationPolicy.ShouldArmDirectWhiteboardEntry(
+            if (ToolbarPolicies.ShouldArmDirectWhiteboardEntry(
                     captureResult.CancelReason,
                     captureResult.PassthroughInputKind,
                     toolbarClickReplayed))

@@ -123,7 +123,7 @@ public partial class MainWindow : Window
         _presentationForegroundSuppressionTimer.Tick += OnPresentationForegroundSuppressionTimerTick;
         _floatingTopmostWatchdogTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(FloatingTopmostWatchdogPolicy.ResolveIntervalMs())
+            Interval = TimeSpan.FromMilliseconds(FloatingTopmostPolicies.ResolveIntervalMs())
         };
         _floatingTopmostWatchdogTimer.Tick += OnFloatingTopmostWatchdogTick;
         _mainViewModel.OpenRollCallSettingsCommand = new RelayCommand(OnOpenRollCallSettings);

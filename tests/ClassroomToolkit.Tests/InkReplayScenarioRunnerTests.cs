@@ -27,7 +27,7 @@ public sealed class InkReplayScenarioRunnerTests
 
         result.Actions.Should().Contain(action =>
             action.Type == InkReplayActionType.DeferredRefreshScheduled
-            && action.Source == CrossPagePointerUpRefreshSourcePolicy.PointerUpInk);
+            && action.Source == CrossPagePointerUpPolicies.PointerUpInk);
 
         result.Actions.Should().Contain(action => action.Type == InkReplayActionType.ReplayFlushed);
         result.Actions.Should().Contain(action => action.Type == InkReplayActionType.PointerUpTracked);
@@ -52,7 +52,7 @@ public sealed class InkReplayScenarioRunnerTests
 
         result.Actions.Should().Contain(action =>
             action.Type == InkReplayActionType.DeferredRefreshScheduled
-            && action.Source == CrossPagePointerUpRefreshSourcePolicy.PointerUpInk);
+            && action.Source == CrossPagePointerUpPolicies.PointerUpInk);
     }
 
     [Fact]
@@ -100,7 +100,7 @@ public sealed class InkReplayScenarioRunnerTests
                 CrossPageUpdateSources.WithImmediate(CrossPageUpdateSources.PointerUpFast)),
             new InkReplayAction(
                 InkReplayActionType.DeferredRefreshScheduled,
-                CrossPagePointerUpRefreshSourcePolicy.PointerUpInk));
+                CrossPagePointerUpPolicies.PointerUpInk));
     }
 
     [Fact]
@@ -123,6 +123,6 @@ public sealed class InkReplayScenarioRunnerTests
                 CrossPageUpdateSources.WithImmediate(CrossPageUpdateSources.PointerUpFast)),
             new InkReplayAction(
                 InkReplayActionType.DeferredRefreshScheduled,
-                CrossPagePointerUpRefreshSourcePolicy.PointerUpInk));
+                CrossPagePointerUpPolicies.PointerUpInk));
     }
 }

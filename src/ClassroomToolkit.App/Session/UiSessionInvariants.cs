@@ -12,11 +12,11 @@ internal static class UiSessionInvariants
 
         if (state.Scene != UiSceneKind.Idle)
         {
-            if (state.OverlayTopmostRequired != UiSessionOverlayVisibilityPolicy.IsOverlayTopmostRequired(state.Scene))
+            if (state.OverlayTopmostRequired != UiSessionPolicies.IsOverlayTopmostRequired(state.Scene))
             {
                 violations.Add("INV-001: 非 Idle 场景必须要求 OverlayTopmostRequired=true。");
             }
-            var widgetsVisible = UiSessionOverlayVisibilityPolicy.AreFloatingWidgetsVisible(state.Scene);
+            var widgetsVisible = UiSessionPolicies.AreFloatingWidgetsVisible(state.Scene);
             if (state.RollCallVisible != widgetsVisible
                 || state.LauncherVisible != widgetsVisible
                 || state.ToolbarVisible != widgetsVisible)
@@ -27,12 +27,12 @@ internal static class UiSessionInvariants
 
         if (state.ToolMode == UiToolMode.Draw)
         {
-            var expectedNavigation = UiSessionNavigationPolicy.Resolve(state.Scene, state.ToolMode);
+            var expectedNavigation = UiSessionPolicies.ResolveNavigation(state.Scene, state.ToolMode);
             if (state.NavigationMode != expectedNavigation)
             {
                 violations.Add("INV-002: Draw 模式下导航必须满足：放映场景=HookOnly，其它场景=Disabled。");
             }
-            var expectedInkVisibility = UiSessionInkVisibilityPolicy.Resolve(state.Scene, state.ToolMode);
+            var expectedInkVisibility = UiSessionPolicies.ResolveInkVisibility(state.Scene, state.ToolMode);
             if (state.InkVisibility != expectedInkVisibility)
             {
                 violations.Add("INV-003: Draw 模式下墨迹必须可编辑。");
@@ -40,7 +40,7 @@ internal static class UiSessionInvariants
         }
         else
         {
-            var expectedInkVisibility = UiSessionInkVisibilityPolicy.Resolve(state.Scene, state.ToolMode);
+            var expectedInkVisibility = UiSessionPolicies.ResolveInkVisibility(state.Scene, state.ToolMode);
             if (state.InkVisibility != expectedInkVisibility && state.Scene == UiSceneKind.Idle)
             {
                 violations.Add("INV-004: Cursor + Idle 时墨迹必须隐藏。");
@@ -56,7 +56,7 @@ internal static class UiSessionInvariants
             violations.Add("INV-006: Whiteboard 场景下导航必须禁用。");
         }
 
-        var expectedFocusOwner = UiSessionFocusOwnerPolicy.Resolve(state.Scene);
+        var expectedFocusOwner = UiSessionPolicies.ResolveFocusOwner(state.Scene);
         if (state.FocusOwner != expectedFocusOwner)
         {
             violations.Add($"INV-007: {state.Scene} 场景焦点所有者应为 {expectedFocusOwner}。");

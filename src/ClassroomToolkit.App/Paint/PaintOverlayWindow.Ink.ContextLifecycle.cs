@@ -145,7 +145,7 @@ public partial class PaintOverlayWindow
             ? CrossPageUpdateSources.InkRedrawCompleted
             : CrossPageUpdateSources.InkStateChanged;
         if (_crossPageDisplayUpdateState.Pending
-            && CrossPageUpdateReplayPolicy.ShouldQueueReplay(CrossPageUpdateSourceKind.VisualSync))
+            && CrossPageDisplayUpdatePolicies.ShouldQueueReplay(CrossPageUpdateSourceKind.VisualSync))
         {
             CrossPageReplayPendingStateUpdater.ApplyQueueDecision(
                 ref _crossPageReplayState,

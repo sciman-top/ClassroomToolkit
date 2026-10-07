@@ -75,8 +75,8 @@ internal static class CrossPageDuplicateWindowPolicy
         }
 
         if (currentRequest.Kind == CrossPageUpdateSourceKind.VisualSync
-            && CrossPageUpdateReplayPolicy.IsReplayBaseSource(currentRequest.BaseSource)
-            && CrossPageUpdateReplayPolicy.IsReplayBaseSource(previousRequest.BaseSource))
+            && CrossPageDisplayUpdatePolicies.IsReplayBaseSource(currentRequest.BaseSource)
+            && CrossPageDisplayUpdatePolicies.IsReplayBaseSource(previousRequest.BaseSource))
         {
             // Replay is the recovery path for skipped updates; do not deduplicate it.
             return None();

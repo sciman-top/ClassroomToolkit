@@ -59,37 +59,6 @@ internal readonly record struct UserInitiatedWindowActivationDecision(
     bool ShouldActivateAfterShow,
     UserInitiatedWindowActivationReason Reason);
 
-internal static class UserInitiatedWindowActivationPolicy
-{
-    internal static UserInitiatedWindowActivationDecision Resolve(
-        bool windowVisible,
-        bool windowActive)
-    {
-        if (!windowVisible)
-        {
-            return new UserInitiatedWindowActivationDecision(
-                ShouldActivateAfterShow: false,
-                Reason: UserInitiatedWindowActivationReason.WindowNotVisible);
-        }
-
-        if (windowActive)
-        {
-            return new UserInitiatedWindowActivationDecision(
-                ShouldActivateAfterShow: false,
-                Reason: UserInitiatedWindowActivationReason.WindowAlreadyActive);
-        }
-
-        return new UserInitiatedWindowActivationDecision(
-            ShouldActivateAfterShow: true,
-            Reason: UserInitiatedWindowActivationReason.ActivationRequired);
-    }
-
-    internal static bool ShouldActivateAfterShow(bool windowVisible, bool windowActive)
-    {
-        return Resolve(windowVisible, windowActive).ShouldActivateAfterShow;
-    }
-}
-
 internal static class WindowStateTransitionExecutor
 {
     internal static bool Apply(Window? target, WindowState targetState)
@@ -192,7 +161,7 @@ internal static class SafeActionExecutionExecutor
             action();
             return true;
         }
-        catch (Exception ex) when (WindowingExceptionFilterPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (WindowingDiagnosticsPolicies.IsNonFatal(ex))
         {
             if (onFailure != null)
             {
@@ -200,7 +169,7 @@ internal static class SafeActionExecutionExecutor
                 {
                     onFailure(ex);
                 }
-                catch (Exception callbackEx) when (WindowingExceptionFilterPolicy.IsNonFatal(callbackEx))
+                catch (Exception callbackEx) when (WindowingDiagnosticsPolicies.IsNonFatal(callbackEx))
                 {
                 }
             }
@@ -219,7 +188,7 @@ internal static class SafeActionExecutionExecutor
         {
             return action();
         }
-        catch (Exception ex) when (WindowingExceptionFilterPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (WindowingDiagnosticsPolicies.IsNonFatal(ex))
         {
             if (onFailure != null)
             {
@@ -227,7 +196,7 @@ internal static class SafeActionExecutionExecutor
                 {
                     onFailure(ex);
                 }
-                catch (Exception callbackEx) when (WindowingExceptionFilterPolicy.IsNonFatal(callbackEx))
+                catch (Exception callbackEx) when (WindowingDiagnosticsPolicies.IsNonFatal(callbackEx))
                 {
                 }
             }
@@ -249,32 +218,6 @@ internal readonly record struct WindowLifecycleSubscriptionDecision(
     bool ShouldWire,
     WindowLifecycleSubscriptionReason Reason);
 
-internal static class WindowLifecycleSubscriptionPolicy
-{
-    internal static WindowLifecycleSubscriptionDecision Resolve(object? previousWindow, object? currentWindow)
-    {
-        if (currentWindow == null)
-        {
-            return new WindowLifecycleSubscriptionDecision(
-                ShouldWire: false,
-                Reason: WindowLifecycleSubscriptionReason.CurrentWindowMissing);
-        }
-
-        return ReferenceEquals(previousWindow, currentWindow)
-            ? new WindowLifecycleSubscriptionDecision(
-                ShouldWire: false,
-                Reason: WindowLifecycleSubscriptionReason.SameWindowInstance)
-            : new WindowLifecycleSubscriptionDecision(
-                ShouldWire: true,
-                Reason: WindowLifecycleSubscriptionReason.WindowInstanceChanged);
-    }
-
-    internal static bool ShouldWire(object? previousWindow, object? currentWindow)
-    {
-        return Resolve(previousWindow, currentWindow).ShouldWire;
-    }
-}
-
 internal enum WindowCursorHitTestReason
 {
     None = 0,
@@ -285,41 +228,6 @@ internal enum WindowCursorHitTestReason
 internal readonly record struct WindowCursorHitTestDecision(
     bool IsInside,
     WindowCursorHitTestReason Reason);
-
-internal static class WindowCursorHitTestPolicy
-{
-    internal static WindowCursorHitTestDecision Resolve(
-        int cursorX,
-        int cursorY,
-        int left,
-        int top,
-        int right,
-        int bottom)
-    {
-        var inside = cursorX >= left
-            && cursorX <= right
-            && cursorY >= top
-            && cursorY <= bottom;
-        return inside
-            ? new WindowCursorHitTestDecision(
-                IsInside: true,
-                Reason: WindowCursorHitTestReason.InsideBounds)
-            : new WindowCursorHitTestDecision(
-                IsInside: false,
-                Reason: WindowCursorHitTestReason.OutsideBounds);
-    }
-
-    internal static bool IsInside(
-        int cursorX,
-        int cursorY,
-        int left,
-        int top,
-        int right,
-        int bottom)
-    {
-        return Resolve(cursorX, cursorY, left, top, right, bottom).IsInside;
-    }
-}
 
 internal enum WindowCursorHitTestExecutionReason
 {
@@ -379,7 +287,7 @@ internal static class WindowCursorHitTestExecutor
                 Reason: WindowCursorHitTestExecutionReason.WindowRectUnavailable);
         }
 
-        var hitTestDecision = WindowCursorHitTestPolicy.Resolve(x, y, left, top, right, bottom);
+        var hitTestDecision = WindowExecutionPolicies.ResolveWindowCursorHitTest(x, y, left, top, right, bottom);
         return new WindowCursorHitTestExecutionDecision(
             Succeeded: true,
             IsInside: hitTestDecision.IsInside,
@@ -534,5 +442,91 @@ internal static class WindowDragOperationState
         {
             Interlocked.Exchange(ref _activeDragCount, 0);
         }
+    }
+}
+
+internal static class WindowExecutionPolicies
+{
+    internal static UserInitiatedWindowActivationDecision ResolveUserInitiatedWindowActivation(
+        bool windowVisible,
+        bool windowActive)
+    {
+        if (!windowVisible)
+        {
+            return new UserInitiatedWindowActivationDecision(
+                ShouldActivateAfterShow: false,
+                Reason: UserInitiatedWindowActivationReason.WindowNotVisible);
+        }
+
+        if (windowActive)
+        {
+            return new UserInitiatedWindowActivationDecision(
+                ShouldActivateAfterShow: false,
+                Reason: UserInitiatedWindowActivationReason.WindowAlreadyActive);
+        }
+
+        return new UserInitiatedWindowActivationDecision(
+            ShouldActivateAfterShow: true,
+            Reason: UserInitiatedWindowActivationReason.ActivationRequired);
+    }
+
+    internal static bool ShouldActivateAfterShow(bool windowVisible, bool windowActive)
+    {
+        return ResolveUserInitiatedWindowActivation(windowVisible, windowActive).ShouldActivateAfterShow;
+    }
+
+    internal static WindowLifecycleSubscriptionDecision ResolveWindowLifecycleSubscription(object? previousWindow, object? currentWindow)
+    {
+        if (currentWindow == null)
+        {
+            return new WindowLifecycleSubscriptionDecision(
+                ShouldWire: false,
+                Reason: WindowLifecycleSubscriptionReason.CurrentWindowMissing);
+        }
+
+        return ReferenceEquals(previousWindow, currentWindow)
+            ? new WindowLifecycleSubscriptionDecision(
+                ShouldWire: false,
+                Reason: WindowLifecycleSubscriptionReason.SameWindowInstance)
+            : new WindowLifecycleSubscriptionDecision(
+                ShouldWire: true,
+                Reason: WindowLifecycleSubscriptionReason.WindowInstanceChanged);
+    }
+
+    internal static bool ShouldWire(object? previousWindow, object? currentWindow)
+    {
+        return ResolveWindowLifecycleSubscription(previousWindow, currentWindow).ShouldWire;
+    }
+
+    internal static WindowCursorHitTestDecision ResolveWindowCursorHitTest(
+        int cursorX,
+        int cursorY,
+        int left,
+        int top,
+        int right,
+        int bottom)
+    {
+        var inside = cursorX >= left
+            && cursorX <= right
+            && cursorY >= top
+            && cursorY <= bottom;
+        return inside
+            ? new WindowCursorHitTestDecision(
+                IsInside: true,
+                Reason: WindowCursorHitTestReason.InsideBounds)
+            : new WindowCursorHitTestDecision(
+                IsInside: false,
+                Reason: WindowCursorHitTestReason.OutsideBounds);
+    }
+
+    internal static bool IsInside(
+        int cursorX,
+        int cursorY,
+        int left,
+        int top,
+        int right,
+        int bottom)
+    {
+        return ResolveWindowCursorHitTest(cursorX, cursorY, left, top, right, bottom).IsInside;
     }
 }

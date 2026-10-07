@@ -72,7 +72,7 @@ public partial class PaintOverlayWindow
             return null;
         }
 
-        var trackVectorSnapshot = InkUndoHistoryPolicy.ShouldTrackVectorSnapshot(_inkRecordEnabled, IsPhotoInkModeActive());
+        var trackVectorSnapshot = InkPersistencePolicies.ShouldTrackVectorSnapshot(_inkRecordEnabled, IsPhotoInkModeActive());
         if (trackVectorSnapshot && HasDuplicateVectorSnapshot())
         {
             // 状态与上一条向量快照一致：原先会推入整页位图快照后再弹出，

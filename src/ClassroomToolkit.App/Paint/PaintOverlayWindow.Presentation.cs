@@ -68,7 +68,7 @@ public partial class PaintOverlayWindow
             : PresentationType.None;
         var foregroundIsFullscreen = foregroundHasInfo
                                      && IsFullscreenPresentationWindow(foreground);
-        selectedType = PresentationTargetChannelSelectionPolicy.ResolveForFocus(
+        selectedType = PresentationPipelinePolicies.ResolveForFocus(
             foregroundType,
             foregroundIsFullscreen,
             _currentPresentationType,
@@ -80,7 +80,7 @@ public partial class PaintOverlayWindow
     public bool RestorePresentationFocusIfNeeded(bool requireFullscreen = false)
     {
         var sessionState = _sessionCoordinator.CurrentState;
-        var presentationAllowed = PresentationChannelAvailabilityPolicy.IsAnyChannelEnabled(
+        var presentationAllowed = OverlayInputRoutingPolicies.IsAnyChannelEnabled(
             _presentationOptions.AllowOffice,
             _presentationOptions.AllowWps);
         var target = ResolvePresentationFocusTarget(out var targetType);
@@ -89,7 +89,7 @@ public partial class PaintOverlayWindow
         var targetIsFullscreen = targetIsValid && IsFullscreenPresentationWindow(target, targetType);
         var force = ShouldForcePresentationForeground(target);
         var foregroundOwned = IsForegroundOwnedByCurrentProcess();
-        if (!PresentationFocusRestorePolicy.CanRestore(
+        if (!PresentationPipelinePolicies.CanRestore(
                 sessionState,
                 _photoModeActive,
                 IsBoardActive(),
@@ -113,13 +113,13 @@ public partial class PaintOverlayWindow
 
     public bool ForwardKeyboardToPresentation(Key key)
     {
-        if (!PresentationChannelAvailabilityPolicy.IsAnyChannelEnabled(
+        if (!OverlayInputRoutingPolicies.IsAnyChannelEnabled(
                 _presentationOptions.AllowOffice,
                 _presentationOptions.AllowWps))
         {
             return false;
         }
-        if (!PresentationKeyCommandPolicy.TryMap(key, out var command))
+        if (!PresentationPipelinePolicies.TryMap(key, out var command))
         {
             return false;
         }
@@ -128,7 +128,7 @@ public partial class PaintOverlayWindow
 
     public bool ForwardWheelToPresentation(int delta)
     {
-        if (!PresentationChannelAvailabilityPolicy.IsAnyChannelEnabled(
+        if (!OverlayInputRoutingPolicies.IsAnyChannelEnabled(
                 _presentationOptions.AllowOffice,
                 _presentationOptions.AllowWps))
         {
@@ -140,7 +140,7 @@ public partial class PaintOverlayWindow
         }
 
         var foregroundType = ResolveForegroundPresentationType();
-        var executionAction = OverlayWheelPresentationExecutionPolicy.Resolve(
+        var executionAction = OverlayInputRoutingPolicies.ResolveOverlayWheelPresentationExecution(
             _wpsNavHookActive,
             _wpsHookInterceptWheel,
             _wpsHookBlockOnly,
@@ -163,7 +163,7 @@ public partial class PaintOverlayWindow
 
     private void UpdatePresentationFocusMonitor()
     {
-        var shouldMonitor = PresentationFocusMonitorActivationPolicy.ShouldMonitor(
+        var shouldMonitor = PresentationPipelinePolicies.ShouldMonitor(
             overlayVisible: IsVisible,
             allowOffice: _presentationOptions.AllowOffice,
             allowWps: _presentationOptions.AllowWps,
@@ -184,7 +184,7 @@ public partial class PaintOverlayWindow
 
     private void DetectForegroundPresentation()
     {
-        if (!PresentationChannelAvailabilityPolicy.IsAnyChannelEnabled(
+        if (!OverlayInputRoutingPolicies.IsAnyChannelEnabled(
                 _presentationOptions.AllowOffice,
                 _presentationOptions.AllowWps))
         {
@@ -255,7 +255,7 @@ public partial class PaintOverlayWindow
         DetectForegroundPresentation();
         DetectForegroundPhoto();
         var nowUtc = GetCurrentUtcTimestamp();
-        if (!PresentationFocusMonitorPolicy.ShouldAttemptRestore(
+        if (!PresentationPipelinePolicies.ShouldAttemptRestore(
                 restoreEnabled: _presentationFocusRestoreEnabled,
                 photoModeActive: _photoModeActive,
                 boardActive: IsBoardActive(),
@@ -268,7 +268,7 @@ public partial class PaintOverlayWindow
         var restored = RestorePresentationFocusIfNeeded(requireFullscreen: true);
         if (restored)
         {
-            _nextPresentationFocusAttempt = PresentationFocusMonitorPolicy.ComputeNextAttemptUtc(
+            _nextPresentationFocusAttempt = PresentationPipelinePolicies.ComputeNextAttemptUtc(
                 nowUtc,
                 PresentationFocusCooldownMs);
             LogPresentationState("focus-restored");
@@ -282,7 +282,7 @@ public partial class PaintOverlayWindow
         _pendingInkContextCheck = false;
 
         var allowPresentation = _presentationOptions.AllowOffice || _presentationOptions.AllowWps;
-        var photoOrBoardActive = PhotoInteractionModePolicy.IsPhotoOrBoardActive(
+        var photoOrBoardActive = PhotoWindowPolicies.IsPhotoOrBoardActive(
             photoModeActive: _photoModeActive,
             boardActive: IsBoardActive());
         if (!allowPresentation)
@@ -385,14 +385,14 @@ public partial class PaintOverlayWindow
         }
 
         var currentCheck = check!;
-        var isPresentationFullscreen = PresentationFullscreenWindowAdmissionPolicy.ShouldTreatAsPresentationFullscreen(
+        var isPresentationFullscreen = PresentationPipelinePolicies.ShouldTreatAsPresentationFullscreen(
             targetIsValid: target.IsValid,
             targetHasInfo: target.Info != null,
             isFullscreen: currentCheck.IsFullscreen,
             classifiesAsSlideshow: false,
             classifiesAsOffice: currentCheck.Type == PresentationType.Office,
             classifiesAsDedicatedWpsRuntime: currentCheck.Type == PresentationType.Wps
-                && WpsPresentationRuntimePolicy.IsDedicatedSlideshowRuntime(currentCheck.ProcessName));
+                && WpsHookPolicies.IsDedicatedSlideshowRuntime(currentCheck.ProcessName));
         return currentCheck.ClassMatch || isPresentationFullscreen
             ? currentCheck.Type
             : PresentationType.None;
@@ -400,7 +400,7 @@ public partial class PaintOverlayWindow
 
     private void TryFollowPresentationMonitor()
     {
-        if (!PresentationFollowMonitorPolicy.ShouldFollow(
+        if (!PresentationPipelinePolicies.ShouldFollow(
                 photoModeActive: _photoModeActive,
                 boardActive: IsBoardActive(),
                 overlayVisible: IsVisible,
@@ -414,7 +414,7 @@ public partial class PaintOverlayWindow
             return;
         }
         var targetMonitorRect = GetMonitorRectOfWindow(target.Handle);
-        if (!PresentationFollowMonitorPolicy.ShouldMove(
+        if (!PresentationPipelinePolicies.ShouldMove(
                 GetCurrentMonitorRect(useWorkArea: false),
                 targetMonitorRect))
         {
@@ -445,7 +445,7 @@ public partial class PaintOverlayWindow
     {
         _presentationInputPipeline.UpdateWpsMode(mode);
         _presentationOptions.Strategy = _presentationInputPipeline.WpsStrategy;
-        WpsHookUnavailableNotificationPolicy.Reset(ref _wpsHookUnavailableNotifiedState);
+        WpsHookPolicies.Reset(ref _wpsHookUnavailableNotifiedState);
         UpdateWpsNavHookState();
         UpdateFocusAcceptance();
     }
@@ -517,7 +517,7 @@ public partial class PaintOverlayWindow
         _presentationInputPipeline.ResetAutoFallbacks();
         if (hasParseError)
         {
-            WpsHookUnavailableNotificationPolicy.Reset(ref _wpsHookUnavailableNotifiedState);
+            WpsHookPolicies.Reset(ref _wpsHookUnavailableNotifiedState);
         }
         UpdateWpsNavHookState();
         UpdateFocusAcceptance();
@@ -591,7 +591,7 @@ public partial class PaintOverlayWindow
         {
             _presentationTargetSessionBinding.Invalidate(PresentationType.Wps);
             _presentationInputPipeline.ResetWpsHookFallback();
-            WpsHookUnavailableNotificationPolicy.Reset(ref _wpsHookUnavailableNotifiedState);
+            WpsHookPolicies.Reset(ref _wpsHookUnavailableNotifiedState);
         }
         _presentationInputPipeline.ResetOfficeAutoFallback();
         UpdateWpsNavHookState();
@@ -607,7 +607,7 @@ public partial class PaintOverlayWindow
     private bool TryHandlePresentationKey(Key key)
     {
         var presentationAllowed = _presentationOptions.AllowOffice || _presentationOptions.AllowWps;
-        var keyMapped = PresentationKeyCommandPolicy.TryMap(key, out var command);
+        var keyMapped = PresentationPipelinePolicies.TryMap(key, out var command);
         if (!presentationAllowed || !keyMapped)
         {
             return false;
@@ -672,7 +672,7 @@ public partial class PaintOverlayWindow
         var targetHasInfo = target.Info != null;
         var targetIsSlideshow = targetHasInfo && IsPresentationSlideshow(target, expectedType);
         var targetForeground = target.IsValid && IsTargetForeground(target);
-        return PresentationNavigationAdmissionPolicy.ShouldAttempt(
+        return PresentationPipelinePolicies.ShouldAttempt(
             allowChannel: allowChannel,
             boardActive: IsBoardActive(),
             targetIsValid: target.IsValid,
@@ -698,14 +698,14 @@ public partial class PaintOverlayWindow
             return true;
         }
 
-        return PresentationFullscreenWindowAdmissionPolicy.ShouldTreatAsPresentationFullscreen(
+        return PresentationPipelinePolicies.ShouldTreatAsPresentationFullscreen(
             targetIsValid: target.IsValid,
             targetHasInfo: target.Info != null,
             isFullscreen: check.IsFullscreen,
             classifiesAsSlideshow: false,
             classifiesAsOffice: check.Type == PresentationType.Office,
             classifiesAsDedicatedWpsRuntime: check.Type == PresentationType.Wps
-                && WpsPresentationRuntimePolicy.IsDedicatedSlideshowRuntime(check.ProcessName));
+                && WpsHookPolicies.IsDedicatedSlideshowRuntime(check.ProcessName));
     }
 
     private PresentationType ResolveFullscreenPresentationType()
@@ -732,7 +732,7 @@ public partial class PaintOverlayWindow
         {
             var wpsTarget = ResolveWpsTarget();
             var hasFullscreenCandidate = IsFullscreenPresentationWindow(wpsTarget, PresentationType.Wps);
-            wpsFullscreen = WpsFullscreenExitPolicy.ShouldTreatAsActiveFullscreen(
+            wpsFullscreen = WpsHookPolicies.ShouldTreatAsActiveFullscreen(
                 hasFullscreenCandidate,
                 foregroundType,
                 foregroundIsFullscreen,
@@ -743,7 +743,7 @@ public partial class PaintOverlayWindow
             var officeTarget = ResolveOfficeTarget();
             officeFullscreen = IsFullscreenPresentationWindow(officeTarget, PresentationType.Office);
         }
-        return PresentationFullscreenTypeResolutionPolicy.Resolve(
+        return PresentationPipelinePolicies.Resolve(
             wpsFullscreen,
             officeFullscreen,
             _currentPresentationType,
@@ -753,7 +753,7 @@ public partial class PaintOverlayWindow
 
     private bool ShouldSuppressPresentationWheelFromRecentInkInput()
     {
-        return PresentationWheelInkConflictPolicy.ShouldSuppress(
+        return PresentationPipelinePolicies.ShouldSuppress(
             _mode,
             _lastInkInputUtc,
             GetCurrentUtcTimestamp(),
@@ -791,9 +791,9 @@ public partial class PaintOverlayWindow
 
         var classifiedType = check!.Type;
         var dedicatedWpsRuntime = classifiedType == PresentationType.Wps
-                                  && WpsPresentationRuntimePolicy.IsDedicatedSlideshowRuntime(
+                                  && WpsHookPolicies.IsDedicatedSlideshowRuntime(
                                       check.ProcessName);
-        return PresentationFullscreenWindowAdmissionPolicy.ShouldTreatAsPresentationFullscreen(
+        return PresentationPipelinePolicies.ShouldTreatAsPresentationFullscreen(
             target.IsValid,
             targetHasInfo: target.Info != null,
             check.IsFullscreen,
@@ -844,7 +844,7 @@ public partial class PaintOverlayWindow
 
     private void RequestPresentationOverlayRetouchIfNeeded(bool actionApplied, string reason)
     {
-        if (!PresentationOverlayRetouchPolicy.ShouldRequest(
+        if (!PresentationPipelinePolicies.ShouldRequest(
                 actionApplied,
                 IsVisible,
                 _presentationFullscreenActive))
@@ -861,7 +861,7 @@ public partial class PaintOverlayWindow
         bool rollCallGroupSwitchEnabled,
         string? rollCallGroupSwitchKey)
     {
-        var reservedKeys = PresentationReservedNavigationKeyPolicy.ResolveRollCallGroupSwitchKeys(
+        var reservedKeys = PresentationPipelinePolicies.ResolveRollCallGroupSwitchKeys(
             rollCallGroupSwitchEnabled,
             rollCallGroupSwitchKey);
         // orchestrator 缓存保留键，供禁用→重启用循环后回填；这里同时立即写入钩子侧，

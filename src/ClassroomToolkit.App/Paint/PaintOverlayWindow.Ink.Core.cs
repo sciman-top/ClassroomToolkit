@@ -161,7 +161,7 @@ public partial class PaintOverlayWindow
     private const int InkRedrawTelemetryWindowSize = 120;
     private const int InkRedrawTelemetrySampleStride = 40;
     private const double InkRedrawTelemetryLogMinIntervalSeconds = 30;
-    private static readonly bool InkRedrawTelemetryEnabled = InkRedrawTelemetryPolicy.ResolveEnabledFromEnvironment();
+    private static readonly bool InkRedrawTelemetryEnabled = InkPersistencePolicies.ResolveEnabledFromEnvironment();
     private const int InkSidecarAutoSaveDelayMs = InkRuntimeTimingDefaults.SidecarAutoSaveDelayMs;
     private const int InkSidecarAutoSaveRetryMax = InkRuntimeTimingDefaults.SidecarAutoSaveRetryMax;
     private const int InkSidecarAutoSaveRetryDelayMs = InkRuntimeTimingDefaults.SidecarAutoSaveRetryDelayMs;

@@ -91,7 +91,7 @@ public sealed class CrossPageDisplayUpdateDispatchFailureFallbackPolicyTests
     [Fact]
     public void Resolve_ShouldReturnNone_WhenDispatchScheduled()
     {
-        var decision = CrossPageDisplayUpdateDispatchFailureFallbackPolicy.Resolve(
+        var decision = CrossPageDisplayUpdatePolicies.ResolveDispatchFailureFallback(
             dispatchScheduled: true,
             dispatcherCheckAccess: true,
             dispatcherShutdownStarted: false,
@@ -105,7 +105,7 @@ public sealed class CrossPageDisplayUpdateDispatchFailureFallbackPolicyTests
     [Fact]
     public void Resolve_ShouldRunInline_WhenDispatchFailedOnUiThread()
     {
-        var decision = CrossPageDisplayUpdateDispatchFailureFallbackPolicy.Resolve(
+        var decision = CrossPageDisplayUpdatePolicies.ResolveDispatchFailureFallback(
             dispatchScheduled: false,
             dispatcherCheckAccess: true,
             dispatcherShutdownStarted: false,
@@ -119,7 +119,7 @@ public sealed class CrossPageDisplayUpdateDispatchFailureFallbackPolicyTests
     [Fact]
     public void Resolve_ShouldQueueReplay_WhenDispatchFailedOffUiThread()
     {
-        var decision = CrossPageDisplayUpdateDispatchFailureFallbackPolicy.Resolve(
+        var decision = CrossPageDisplayUpdatePolicies.ResolveDispatchFailureFallback(
             dispatchScheduled: false,
             dispatcherCheckAccess: false,
             dispatcherShutdownStarted: false,

@@ -9,7 +9,7 @@ public sealed class PhotoCrossPageNeighborInkPolicyTests
     [Fact]
     public void ShouldKeepExistingInkFrame_ShouldBeFalse_WhenSlotPageChangedDuringDrag()
     {
-        var keep = CrossPageNeighborInkPolicy.ShouldKeepExistingInkFrame(
+        var keep = CrossPageNeighborInkPolicies.ShouldKeepExistingInkFrame(
             slotPageChanged: true,
             hasExistingInkFrame: true);
 
@@ -19,7 +19,7 @@ public sealed class PhotoCrossPageNeighborInkPolicyTests
     [Fact]
     public void ShouldKeepExistingInkFrame_ShouldBeTrue_WhenSlotUnchangedAndDragging()
     {
-        var keep = CrossPageNeighborInkPolicy.ShouldKeepExistingInkFrame(
+        var keep = CrossPageNeighborInkPolicies.ShouldKeepExistingInkFrame(
             slotPageChanged: false,
             hasExistingInkFrame: true);
 
@@ -29,7 +29,7 @@ public sealed class PhotoCrossPageNeighborInkPolicyTests
     [Fact]
     public void ShouldKeepExistingInkFrame_ShouldBeTrue_WhenSlotUnchangedAndIdle()
     {
-        var keep = CrossPageNeighborInkPolicy.ShouldKeepExistingInkFrame(
+        var keep = CrossPageNeighborInkPolicies.ShouldKeepExistingInkFrame(
             slotPageChanged: false,
             hasExistingInkFrame: true);
 
@@ -39,7 +39,7 @@ public sealed class PhotoCrossPageNeighborInkPolicyTests
     [Fact]
     public void ShouldKeepExistingInkFrame_ShouldBeFalse_WhenNoExistingFrame()
     {
-        var keep = CrossPageNeighborInkPolicy.ShouldKeepExistingInkFrame(
+        var keep = CrossPageNeighborInkPolicies.ShouldKeepExistingInkFrame(
             slotPageChanged: false,
             hasExistingInkFrame: false);
 

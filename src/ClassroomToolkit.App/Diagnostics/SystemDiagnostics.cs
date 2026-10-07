@@ -36,8 +36,8 @@ internal static class SystemDiagnostics
         var startupCompatibility = StartupCompatibilityProbe.Collect(
             settingsPath,
             settings.PresentationClassifierOverridesJson);
-        var startupStatus = StartupCompatibilityStatusPolicy.Resolve(startupCompatibility);
-        var startupBadge = StartupCompatibilityStatusPolicy.ToBadgeText(startupStatus);
+        var startupStatus = StartupDiagnosticsPolicies.Resolve(startupCompatibility);
+        var startupBadge = StartupDiagnosticsPolicies.ToBadgeText(startupStatus);
         lines.Add(startupBadge);
         if (startupCompatibility.Issues.Count > 0)
         {
@@ -91,7 +91,7 @@ internal static class SystemDiagnostics
         lines.Add($"跨页抬笔刷新延迟：{settings.PhotoPostInputRefreshDelayMs}ms");
         lines.Add($"图片输入遥测日志：{(settings.PhotoInputTelemetryEnabled ? "启用" : "禁用")}");
         lines.Add($"全屏演示前台保障：{(settings.ForcePresentationForegroundOnFullscreen ? "启用" : "禁用")}");
-        var presetRecommendation = PresetSchemePolicy.ResolveRecommendation(settings);
+        var presetRecommendation = PresetSchemePolicies.ResolveRecommendation(settings);
         lines.Add($"当前预设方案：{settings.PresetScheme}");
         lines.Add($"推荐预设方案：{presetRecommendation.Scheme}（{(presetRecommendation.HasAdaptiveSignal ? "基于设备画像" : "默认推荐")}）");
         lines.Add($"推荐依据：{presetRecommendation.Reason}");
@@ -135,8 +135,8 @@ internal static class SystemDiagnostics
         lines.Add($".NET：{RuntimeInformation.FrameworkDescription}");
         lines.Add($"程序目录：{AppDomain.CurrentDomain.BaseDirectory}");
         var startupCompatibility = StartupCompatibilityProbe.Collect(settingsPath);
-        var startupStatus = StartupCompatibilityStatusPolicy.Resolve(startupCompatibility);
-        var startupBadge = StartupCompatibilityStatusPolicy.ToBadgeText(startupStatus);
+        var startupStatus = StartupDiagnosticsPolicies.Resolve(startupCompatibility);
+        var startupBadge = StartupDiagnosticsPolicies.ToBadgeText(startupStatus);
         lines.Add(startupBadge);
         if (startupCompatibility.Issues.Count > 0)
         {

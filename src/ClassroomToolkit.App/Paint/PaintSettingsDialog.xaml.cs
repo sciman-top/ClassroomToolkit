@@ -22,7 +22,7 @@ public partial class PaintSettingsDialog : Window
             },
             ex => System.Diagnostics.Debug.WriteLine($"PaintSettingsDialog 构造函数修复失败: {ex.Message}"));
 
-        _presetRecommendation = PresetSchemePolicy.ResolveRecommendation(settings);
+        _presetRecommendation = PresetSchemePolicies.ResolveRecommendation(settings);
         InitializeFromSettings(settings);
     }
 

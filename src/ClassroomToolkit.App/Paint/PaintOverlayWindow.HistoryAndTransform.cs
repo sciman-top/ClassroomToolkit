@@ -7,14 +7,14 @@ public partial class PaintOverlayWindow
 {
     public void Undo()
     {
-        if (InkUndoHistoryPolicy.ShouldPreferGlobalPhotoUndo(_photoModeActive, _globalInkHistory.Count))
+        if (InkPersistencePolicies.ShouldPreferGlobalPhotoUndo(_photoModeActive, _globalInkHistory.Count))
         {
             if (TryUndoAcrossPages())
             {
                 return;
             }
         }
-        if (InkUndoHistoryPolicy.ShouldPreferLocalVectorUndo(_inkRecordEnabled, IsPhotoInkModeActive(), _inkHistory.Count))
+        if (InkPersistencePolicies.ShouldPreferLocalVectorUndo(_inkRecordEnabled, IsPhotoInkModeActive(), _inkHistory.Count))
         {
             var snapshot = _inkHistory[^1];
             _inkHistory.RemoveAt(_inkHistory.Count - 1);
@@ -188,7 +188,7 @@ public partial class PaintOverlayWindow
         _lastPhotoTranslateX = PhotoUnifiedTransformDefaults.NormalizeTranslation(translateX);
         _lastPhotoTranslateY = PhotoUnifiedTransformDefaults.NormalizeTranslation(translateY);
         _photoUserTransformDirty = true;
-        if (PhotoUnifiedTransformApplyPolicy.ShouldApplyRuntimeTransform(
+        if (PhotoWindowTransformPolicies.ShouldApplyRuntimeTransform(
                 _rememberPhotoTransform,
                 IsPhotoInkModeActive(),
                 IsCrossPageDisplayActive()))

@@ -11,7 +11,7 @@ public partial class PaintOverlayWindow
         var pendingSeed = _pendingCrossPageBrushContinuationSample;
         var replayCurrentInput = _pendingCrossPageBrushReplayCurrentInput;
         var seed = pendingSeed ?? input;
-        var executionPlan = CrossPageInputResumePolicy.Resolve(
+        var executionPlan = CrossPageInputSwitchPolicies.ResolveCrossPageInputResume(
             switchedPage,
             _mode,
             _strokeInProgress,

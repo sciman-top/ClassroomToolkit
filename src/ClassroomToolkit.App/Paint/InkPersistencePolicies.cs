@@ -7,23 +7,6 @@ using System;
 
 namespace ClassroomToolkit.App.Paint;
 
-internal static class InkAutoSaveSnapshotAdmissionPolicy
-{
-    internal static bool ShouldPersistSnapshot(
-        bool runtimeStateKnown,
-        string runtimeHash,
-        string snapshotHash)
-    {
-        if (!runtimeStateKnown)
-        {
-            return true;
-        }
-
-        return string.IsNullOrWhiteSpace(runtimeHash)
-            || string.Equals(runtimeHash, snapshotHash, StringComparison.Ordinal);
-    }
-}
-
 internal static class InkCacheRuntimeDefaults
 {
     internal const int HistoryLimit = 20;
@@ -37,30 +20,6 @@ internal readonly record struct InkCacheUpdateTransitionPlan(
     bool ShouldStartMonitor,
     bool ShouldClearCache,
     bool ShouldRequestRefresh);
-
-internal static class InkCacheUpdateTransitionPolicy
-{
-    internal static InkCacheUpdateTransitionPlan Resolve(bool enabled, bool monitorEnabled)
-    {
-        return new InkCacheUpdateTransitionPlan(
-            ShouldStartMonitor: !monitorEnabled,
-            ShouldClearCache: !enabled,
-            ShouldRequestRefresh: true);
-    }
-}
-
-internal static class InkEraseStrokeChangePolicy
-{
-    internal static bool ShouldMarkStrokeChanged(
-        bool geometryPathChanged,
-        bool bloomGeometryChanged,
-        bool ribbonGeometryChanged)
-    {
-        return geometryPathChanged
-            || bloomGeometryChanged
-            || ribbonGeometryChanged;
-    }
-}
 
 internal static class InkExportSnapshotBuilder
 {
@@ -264,29 +223,6 @@ internal static class InkGeometryDefaults
     internal const double EraserTapDistanceThresholdDip = 0.5;
 }
 
-internal static class InkPersistenceTogglePolicy
-{
-    internal static bool ShouldLoadPersistedInk(bool allowDiskFallback)
-    {
-        return allowDiskFallback;
-    }
-
-    internal static bool ShouldTrackWal(bool inkSaveEnabled)
-    {
-        return inkSaveEnabled;
-    }
-
-    internal static bool ShouldRecoverWal(bool inkSaveEnabled)
-    {
-        return inkSaveEnabled;
-    }
-
-    internal static bool ShouldRetainRuntimeCacheOnPhotoExit(bool inkSaveEnabled)
-    {
-        return inkSaveEnabled;
-    }
-}
-
 internal static class InkPredictionDefaults
 {
     internal const int HorizonMinMs = 4;
@@ -298,135 +234,6 @@ internal static class InkPredictionDefaults
     internal const int SecondaryAlphaMax = 110;
     internal const int TipAlphaMin = 14;
     internal const int TipAlphaMax = 92;
-}
-
-internal static class InkRedrawClipPolicy
-{
-    internal static bool ShouldUsePartialClear(
-        bool clipAvailable,
-        Int32Rect clipPixelRect,
-        Int32Rect? lastClipPixelRect)
-    {
-        return clipAvailable
-            && lastClipPixelRect.HasValue
-            && lastClipPixelRect.Value.Equals(clipPixelRect);
-    }
-
-    internal static bool TryResolvePixelClip(
-        Rect clipBoundsDip,
-        int surfacePixelWidth,
-        int surfacePixelHeight,
-        double surfaceDpiX,
-        double surfaceDpiY,
-        out Int32Rect clipPixelRect)
-    {
-        clipPixelRect = default;
-        if (clipBoundsDip.IsEmpty || clipBoundsDip.Width <= 0 || clipBoundsDip.Height <= 0)
-        {
-            return false;
-        }
-
-        var dpiScaleX = surfaceDpiX > 0 ? surfaceDpiX / 96.0 : 1.0;
-        var dpiScaleY = surfaceDpiY > 0 ? surfaceDpiY / 96.0 : 1.0;
-        var left = (int)Math.Floor(clipBoundsDip.Left * dpiScaleX);
-        var top = (int)Math.Floor(clipBoundsDip.Top * dpiScaleY);
-        var right = (int)Math.Ceiling(clipBoundsDip.Right * dpiScaleX);
-        var bottom = (int)Math.Ceiling(clipBoundsDip.Bottom * dpiScaleY);
-
-        left = Math.Clamp(left, 0, surfacePixelWidth);
-        top = Math.Clamp(top, 0, surfacePixelHeight);
-        right = Math.Clamp(right, 0, surfacePixelWidth);
-        bottom = Math.Clamp(bottom, 0, surfacePixelHeight);
-        var width = right - left;
-        var height = bottom - top;
-        if (width <= 0 || height <= 0)
-        {
-            return false;
-        }
-
-        clipPixelRect = new Int32Rect(left, top, width, height);
-        return true;
-    }
-}
-
-internal static class InkRedrawTelemetryPolicy
-{
-    internal const string EnvironmentFlagName = "CTK_INK_REDRAW_TELEMETRY";
-
-    internal static bool ResolveEnabledFromEnvironment()
-    {
-        return IsEnabledValue(Environment.GetEnvironmentVariable(EnvironmentFlagName));
-    }
-
-    internal static bool IsEnabledValue(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        return value.Trim().ToUpperInvariant() switch
-        {
-            "1" => true,
-            "TRUE" => true,
-            "ON" => true,
-            "YES" => true,
-            "ENABLED" => true,
-            _ => false
-        };
-    }
-
-    internal static void AppendSample(Queue<double> samples, double value, int windowSize)
-    {
-        if (samples == null || windowSize <= 0 || !double.IsFinite(value))
-        {
-            return;
-        }
-
-        samples.Enqueue(value);
-        while (samples.Count > windowSize)
-        {
-            samples.Dequeue();
-        }
-    }
-
-    internal static double Percentile(IReadOnlyCollection<double> samples, double percentile)
-    {
-        if (samples == null || samples.Count == 0)
-        {
-            return 0;
-        }
-
-        var p = Math.Clamp(percentile, 0.0, 1.0);
-        var sorted = samples.OrderBy(x => x).ToArray();
-        var index = (int)Math.Floor((sorted.Length - 1) * p);
-        return sorted[index];
-    }
-
-    internal static bool ShouldEmitLog(
-        int sampleCount,
-        DateTime nowUtc,
-        DateTime lastLogUtc,
-        int minSampleStride,
-        double minIntervalSeconds)
-    {
-        if (sampleCount <= 0)
-        {
-            return false;
-        }
-
-        if (sampleCount < minSampleStride && (nowUtc - lastLogUtc).TotalSeconds < minIntervalSeconds)
-        {
-            return false;
-        }
-
-        if (sampleCount % minSampleStride != 0 && (nowUtc - lastLogUtc).TotalSeconds < minIntervalSeconds)
-        {
-            return false;
-        }
-
-        return true;
-    }
 }
 
 internal static class InkRenderBatchingDefaults
@@ -454,7 +261,7 @@ internal sealed class InkRuntimeDiagnostics
 
     internal static InkRuntimeDiagnostics? CreateFromEnvironment()
     {
-        var inkRedrawTelemetryEnabled = InkRedrawTelemetryPolicy.ResolveEnabledFromEnvironment();
+        var inkRedrawTelemetryEnabled = InkPersistencePolicies.ResolveEnabledFromEnvironment();
         if (!inkRedrawTelemetryEnabled)
         {
             return null;
@@ -579,9 +386,221 @@ internal readonly record struct InkSaveUpdateTransitionPlan(
     bool ShouldCancelPendingAutoSave,
     bool ShouldScheduleAutoSave);
 
-internal static class InkSaveUpdateTransitionPolicy
+internal readonly record struct InkShowUpdateTransitionPlan(
+    bool ShouldApplySetting,
+    bool ShouldReturnAfterSetting,
+    bool ShouldClearInkState,
+    bool ShouldLoadCurrentPage,
+    bool RequestCrossPageUpdateForEnabled,
+    bool RequestCrossPageUpdateForDisabled);
+
+internal static class InkStrokeEraseUpdater
 {
-    internal static InkSaveUpdateTransitionPlan Resolve(bool enabled)
+    internal static bool TryApplyUpdatedGeometryPath(InkStrokeData stroke, string? updatedPath, out bool removed)
+    {
+        removed = false;
+        if (updatedPath == null)
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(updatedPath))
+        {
+            removed = true;
+            return true;
+        }
+
+        if (string.Equals(updatedPath, stroke.GeometryPath, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        stroke.GeometryPath = updatedPath;
+        stroke.CachedGeometry = null;
+        stroke.CachedBounds = null;
+        stroke.CachedRibbonGeometries = null;
+        return true;
+    }
+}
+
+internal static class InkPersistencePolicies
+{
+    internal static bool ShouldPersistSnapshot(
+        bool runtimeStateKnown,
+        string runtimeHash,
+        string snapshotHash)
+    {
+        if (!runtimeStateKnown)
+        {
+            return true;
+        }
+
+        return string.IsNullOrWhiteSpace(runtimeHash)
+            || string.Equals(runtimeHash, snapshotHash, StringComparison.Ordinal);
+    }
+
+    internal static InkCacheUpdateTransitionPlan ResolveInkCacheUpdateTransition(bool enabled, bool monitorEnabled)
+    {
+        return new InkCacheUpdateTransitionPlan(
+            ShouldStartMonitor: !monitorEnabled,
+            ShouldClearCache: !enabled,
+            ShouldRequestRefresh: true);
+    }
+
+    internal static bool ShouldMarkStrokeChanged(
+        bool geometryPathChanged,
+        bool bloomGeometryChanged,
+        bool ribbonGeometryChanged)
+    {
+        return geometryPathChanged
+            || bloomGeometryChanged
+            || ribbonGeometryChanged;
+    }
+
+    internal static bool ShouldLoadPersistedInk(bool allowDiskFallback)
+    {
+        return allowDiskFallback;
+    }
+
+    internal static bool ShouldTrackWal(bool inkSaveEnabled)
+    {
+        return inkSaveEnabled;
+    }
+
+    internal static bool ShouldRecoverWal(bool inkSaveEnabled)
+    {
+        return inkSaveEnabled;
+    }
+
+    internal static bool ShouldRetainRuntimeCacheOnPhotoExit(bool inkSaveEnabled)
+    {
+        return inkSaveEnabled;
+    }
+
+    internal static bool ShouldUsePartialClear(
+        bool clipAvailable,
+        Int32Rect clipPixelRect,
+        Int32Rect? lastClipPixelRect)
+    {
+        return clipAvailable
+            && lastClipPixelRect.HasValue
+            && lastClipPixelRect.Value.Equals(clipPixelRect);
+    }
+
+    internal static bool TryResolvePixelClip(
+        Rect clipBoundsDip,
+        int surfacePixelWidth,
+        int surfacePixelHeight,
+        double surfaceDpiX,
+        double surfaceDpiY,
+        out Int32Rect clipPixelRect)
+    {
+        clipPixelRect = default;
+        if (clipBoundsDip.IsEmpty || clipBoundsDip.Width <= 0 || clipBoundsDip.Height <= 0)
+        {
+            return false;
+        }
+
+        var dpiScaleX = surfaceDpiX > 0 ? surfaceDpiX / 96.0 : 1.0;
+        var dpiScaleY = surfaceDpiY > 0 ? surfaceDpiY / 96.0 : 1.0;
+        var left = (int)Math.Floor(clipBoundsDip.Left * dpiScaleX);
+        var top = (int)Math.Floor(clipBoundsDip.Top * dpiScaleY);
+        var right = (int)Math.Ceiling(clipBoundsDip.Right * dpiScaleX);
+        var bottom = (int)Math.Ceiling(clipBoundsDip.Bottom * dpiScaleY);
+
+        left = Math.Clamp(left, 0, surfacePixelWidth);
+        top = Math.Clamp(top, 0, surfacePixelHeight);
+        right = Math.Clamp(right, 0, surfacePixelWidth);
+        bottom = Math.Clamp(bottom, 0, surfacePixelHeight);
+        var width = right - left;
+        var height = bottom - top;
+        if (width <= 0 || height <= 0)
+        {
+            return false;
+        }
+
+        clipPixelRect = new Int32Rect(left, top, width, height);
+        return true;
+    }
+
+    internal const string EnvironmentFlagName = "CTK_INK_REDRAW_TELEMETRY";
+
+    internal static bool ResolveEnabledFromEnvironment()
+    {
+        return IsEnabledValue(Environment.GetEnvironmentVariable(EnvironmentFlagName));
+    }
+
+    internal static bool IsEnabledValue(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return value.Trim().ToUpperInvariant() switch
+        {
+            "1" => true,
+            "TRUE" => true,
+            "ON" => true,
+            "YES" => true,
+            "ENABLED" => true,
+            _ => false
+        };
+    }
+
+    internal static void AppendSample(Queue<double> samples, double value, int windowSize)
+    {
+        if (samples == null || windowSize <= 0 || !double.IsFinite(value))
+        {
+            return;
+        }
+
+        samples.Enqueue(value);
+        while (samples.Count > windowSize)
+        {
+            samples.Dequeue();
+        }
+    }
+
+    internal static double Percentile(IReadOnlyCollection<double> samples, double percentile)
+    {
+        if (samples == null || samples.Count == 0)
+        {
+            return 0;
+        }
+
+        var p = Math.Clamp(percentile, 0.0, 1.0);
+        var sorted = samples.OrderBy(x => x).ToArray();
+        var index = (int)Math.Floor((sorted.Length - 1) * p);
+        return sorted[index];
+    }
+
+    internal static bool ShouldEmitLog(
+        int sampleCount,
+        DateTime nowUtc,
+        DateTime lastLogUtc,
+        int minSampleStride,
+        double minIntervalSeconds)
+    {
+        if (sampleCount <= 0)
+        {
+            return false;
+        }
+
+        if (sampleCount < minSampleStride && (nowUtc - lastLogUtc).TotalSeconds < minIntervalSeconds)
+        {
+            return false;
+        }
+
+        if (sampleCount % minSampleStride != 0 && (nowUtc - lastLogUtc).TotalSeconds < minIntervalSeconds)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    internal static InkSaveUpdateTransitionPlan ResolveInkSaveUpdateTransition(bool enabled)
     {
         return enabled
             ? new InkSaveUpdateTransitionPlan(
@@ -593,19 +612,8 @@ internal static class InkSaveUpdateTransitionPolicy
                 ShouldCancelPendingAutoSave: true,
                 ShouldScheduleAutoSave: false);
     }
-}
 
-internal readonly record struct InkShowUpdateTransitionPlan(
-    bool ShouldApplySetting,
-    bool ShouldReturnAfterSetting,
-    bool ShouldClearInkState,
-    bool ShouldLoadCurrentPage,
-    bool RequestCrossPageUpdateForEnabled,
-    bool RequestCrossPageUpdateForDisabled);
-
-internal static class InkShowUpdateTransitionPolicy
-{
-    internal static InkShowUpdateTransitionPlan Resolve(
+    internal static InkShowUpdateTransitionPlan ResolveInkShowUpdateTransition(
         bool currentInkShowEnabled,
         bool nextInkShowEnabled,
         bool photoModeActive)
@@ -651,10 +659,7 @@ internal static class InkShowUpdateTransitionPolicy
             RequestCrossPageUpdateForEnabled: true,
             RequestCrossPageUpdateForDisabled: false);
     }
-}
 
-internal static class InkSidecarLoadAdmissionPolicy
-{
     internal static bool ShouldApplyLoadedSnapshot(
         bool runtimeStateKnown,
         string runtimeHash,
@@ -679,39 +684,7 @@ internal static class InkSidecarLoadAdmissionPolicy
 
         return !string.Equals(runtimeHash, "empty", StringComparison.Ordinal);
     }
-}
 
-internal static class InkStrokeEraseUpdater
-{
-    internal static bool TryApplyUpdatedGeometryPath(InkStrokeData stroke, string? updatedPath, out bool removed)
-    {
-        removed = false;
-        if (updatedPath == null)
-        {
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(updatedPath))
-        {
-            removed = true;
-            return true;
-        }
-
-        if (string.Equals(updatedPath, stroke.GeometryPath, StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        stroke.GeometryPath = updatedPath;
-        stroke.CachedGeometry = null;
-        stroke.CachedBounds = null;
-        stroke.CachedRibbonGeometries = null;
-        return true;
-    }
-}
-
-internal static class InkUndoHistoryPolicy
-{
     internal static bool ShouldTrackVectorSnapshot(bool inkRecordEnabled, bool photoInkModeActive)
     {
         return inkRecordEnabled || photoInkModeActive;

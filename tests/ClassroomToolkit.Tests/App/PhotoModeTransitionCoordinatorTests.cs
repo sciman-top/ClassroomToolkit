@@ -14,7 +14,7 @@ public sealed class PhotoModeTransitionCoordinatorTests
         var showCount = 0;
         var syncCount = 0;
         var surfaceCount = 0;
-        var plan = PaintVisibilityTransitionPolicy.ResolvePhotoModeChange(
+        var plan = PaintWindowVisibilityPolicies.ResolvePhotoModeChange(
             photoModeActive: true,
             toolbarWindowState: System.Windows.WindowState.Minimized);
 
@@ -42,7 +42,7 @@ public sealed class PhotoModeTransitionCoordinatorTests
     public void Apply_ShouldSyncOwners_WhenPhotoModeBecomesInactive()
     {
         var syncCount = 0;
-        var plan = PaintVisibilityTransitionPolicy.ResolvePhotoModeChange(
+        var plan = PaintWindowVisibilityPolicies.ResolvePhotoModeChange(
             photoModeActive: false,
             toolbarWindowState: System.Windows.WindowState.Normal);
 

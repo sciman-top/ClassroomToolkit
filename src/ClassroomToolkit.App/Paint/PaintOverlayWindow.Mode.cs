@@ -47,7 +47,7 @@ public partial class PaintOverlayWindow
         _mode = mode;
         DispatchSessionEvent(new SwitchToolModeEvent(MapSessionToolMode(mode)));
         UpdateOverlayHitTestVisibility();
-        if (PhotoCursorModeFocusRequestPolicy.ShouldRequestFocus(_photoModeActive, mode))
+        if (PhotoOverlayTransitionsPolicies.ShouldRequestFocus(_photoModeActive, mode))
         {
             SafeActionExecutionExecutor.TryExecute(
                 () => PhotoCursorModeFocusRequested?.Invoke(),
@@ -84,7 +84,7 @@ public partial class PaintOverlayWindow
         HideEraserPreview();
 
         UpdateInputPassthrough();
-        if (PhotoPanModeSwitchPolicy.ShouldEndPan(
+        if (PhotoPanPolicies.ShouldEndPanModeSwitch(
                 _photoPanning,
                 _photoModeActive,
                 IsBoardActive(),

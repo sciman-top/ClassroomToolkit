@@ -37,7 +37,7 @@ public partial class PaintOverlayWindow
             _currentPageIndex = newPageIndex;
             _currentCacheKey = BuildPdfCacheKey(_currentDocumentPath, _currentPageIndex);
             ResetInkHistory();
-            _photoTranslate.Y = PhotoNavigationInkLoadTranslatePolicy.ResolveTranslateYBeforeLoad(
+            _photoTranslate.Y = PhotoInkInteropPolicies.ResolveTranslateYBeforeLoad(
                 _photoTranslate.Y,
                 newTranslateY,
                 pageChanged: beforeCurrentPage != newPageIndex,
@@ -99,7 +99,7 @@ public partial class PaintOverlayWindow
                 _currentDocumentPath = newPath;
                 _currentCacheKey = BuildPhotoCacheKey(newPath);
                 ResetInkHistory();
-                _photoTranslate.Y = PhotoNavigationInkLoadTranslatePolicy.ResolveTranslateYBeforeLoad(
+                _photoTranslate.Y = PhotoInkInteropPolicies.ResolveTranslateYBeforeLoad(
                     _photoTranslate.Y,
                     newTranslateY,
                     pageChanged: beforeCurrentPage != newPageIndex,
@@ -147,7 +147,7 @@ public partial class PaintOverlayWindow
         }
         // Apply new position
         _photoTranslate.Y = newTranslateY;
-        var viewportSyncAction = PhotoNavigationInkViewportSyncPolicy.ResolveAction(
+        var viewportSyncAction = PhotoInkInteropPolicies.ResolveAction(
             IsPhotoInkModeActive(),
             interactiveSwitch);
         if (viewportSyncAction == PhotoNavigationInkViewportSyncAction.UpdatePanCompensation)
@@ -168,12 +168,12 @@ public partial class PaintOverlayWindow
         var currentPageAfterNavigation = GetCurrentPageIndexForCrossPage();
         var pageChanged = beforeCurrentPage != currentPageAfterNavigation;
         var previousPageForNeighborSeed = previousPageIndexForInteractiveSwitch.GetValueOrDefault(beforeCurrentPage);
-        var preservedPageForMutationClear = CrossPageMutationNeighborRetentionPolicy.ResolvePreservedPage(
+        var preservedPageForMutationClear = CrossPageNeighborInkPolicies.ResolvePreservedPage(
             clearPreservedNeighborInkFrames,
             pageChanged,
             previousPageForNeighborSeed,
             currentPageAfterNavigation);
-        if (CrossPageNavigationCurrentInkRefreshPolicy.ShouldRequest(
+        if (CrossPageRefreshCoordinationPolicies.ShouldRequest(
                 pageChanged,
                 interactiveSwitch,
                 IsPhotoInkModeActive(),
@@ -192,7 +192,7 @@ public partial class PaintOverlayWindow
                 ClearNeighborInkVisuals(
                     clearSlotIdentity: true,
                     preservePageIndex: preservedPageForMutationClear);
-                if (CrossPageMutationNeighborSeedPolicy.ShouldSeedPreviousPageAfterClear(
+                if (CrossPageNeighborInkPolicies.ShouldSeedPreviousPageAfterClear(
                         clearPreservedNeighborInkFrames,
                         pageChanged,
                         previousPageForNeighborSeed,
@@ -250,8 +250,8 @@ public partial class PaintOverlayWindow
                 previousPageForNeighborSeed,
                 previousPageBitmapForInteractiveSwitch);
 
-            var refreshMode = CrossPageInteractiveSwitchRefreshPolicy.Resolve(_mode, deferCrossPageDisplayUpdate);
-            if (CrossPageDeferredRefreshPolicy.ShouldArmOnInteractiveSwitch(refreshMode))
+            var refreshMode = CrossPageInputSwitchPolicies.ResolveCrossPageInteractiveSwitchRefresh(_mode, deferCrossPageDisplayUpdate);
+            if (CrossPageRefreshCoordinationPolicies.ShouldArmOnInteractiveSwitch(refreshMode))
             {
                 _crossPageUpdateDeferredByInkInput = true;
             }

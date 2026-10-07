@@ -115,7 +115,7 @@ public partial class PaintOverlayWindow
         }
 
         var pageImg = _neighborPageImages[slotIndex];
-        if (CrossPageFrameSourceAssignmentPolicy.ShouldAssign(pageImg.Source, neighborBitmap))
+        if (CrossPageInteractiveMiscPolicies.ShouldAssign(pageImg.Source, neighborBitmap))
         {
             pageImg.Source = neighborBitmap;
         }
@@ -135,13 +135,13 @@ public partial class PaintOverlayWindow
         var targetInkBitmap = _inkShowEnabled ? inkBitmap : null;
         var currentInkOffsetDip = 0.0;
         var slotPageChanged = !string.Equals(inkImgFirst.Uid, pageUid, StringComparison.Ordinal);
-        var shouldReplaceSeedFrame = CrossPageInteractiveSeedInkFramePolicy.ShouldReplaceFrame(
+        var shouldReplaceSeedFrame = CrossPageNeighborInkPolicies.ShouldReplaceFrame(
             _inkShowEnabled,
             hasCurrentFrame: inkImgFirst.Source != null,
             hasResolvedTargetFrame: targetInkBitmap != null,
             slotPageChanged: slotPageChanged);
         if (shouldReplaceSeedFrame
-            && CrossPageFrameSourceAssignmentPolicy.ShouldAssign(
+            && CrossPageInteractiveMiscPolicies.ShouldAssign(
                 inkImgFirst.Source,
                 targetInkBitmap))
         {
@@ -162,7 +162,7 @@ public partial class PaintOverlayWindow
         _neighborPagesCanvas.Visibility = Visibility.Visible;
         _lastNeighborPagesNonEmptyUtc = GetCurrentUtcTimestamp();
         var visibleNeighborCount = _neighborPageImages.Count(img => img.Visibility == Visibility.Visible);
-        var holdMs = CrossPageInteractiveHoldDurationPolicy.ResolveMs(visibleNeighborCount, _mode);
+        var holdMs = CrossPageNeighborInkPolicies.ResolveMs(visibleNeighborCount, _mode);
         if (holdMs > 0)
         {
             _interactiveSwitchPinnedNeighborPage = previousPage;

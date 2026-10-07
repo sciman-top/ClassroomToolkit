@@ -4,36 +4,6 @@ using System;
 
 namespace ClassroomToolkit.App;
 
-internal static class LauncherWindowRuntimeSelectionLogPolicy
-{
-    internal static bool ShouldLog(LauncherWindowRuntimeSelectionReason reason)
-    {
-        return reason == LauncherWindowRuntimeSelectionReason.FallbackToMainBecauseBubbleNotVisible
-               || reason == LauncherWindowRuntimeSelectionReason.FallbackToBubbleBecauseMainNotVisible;
-    }
-}
-
-internal static class LauncherWindowResolutionPolicy
-{
-    internal static bool ShouldUseBubbleWindow(
-        LauncherWindowKind resolvedKind,
-        bool bubbleWindowExists)
-    {
-        return resolvedKind == LauncherWindowKind.Bubble && bubbleWindowExists;
-    }
-}
-
-internal static class LauncherTopmostVisibilityTimestampPolicy
-{
-    internal static DateTime ResolveLastVisibleUtc(
-        DateTime previousUtc,
-        DateTime nowUtc,
-        bool visibleForTopmost)
-    {
-        return visibleForTopmost ? nowUtc : previousUtc;
-    }
-}
-
 internal static class LauncherTopmostVisibilityStateUpdater
 {
     internal static void ApplyResolvedTimestamp(
@@ -41,7 +11,7 @@ internal static class LauncherTopmostVisibilityStateUpdater
         DateTime nowUtc,
         bool visibleForTopmost)
     {
-        lastVisibleUtc = LauncherTopmostVisibilityTimestampPolicy.ResolveLastVisibleUtc(
+        lastVisibleUtc = LauncherRuntimePolicies.ResolveLastVisibleUtc(
             lastVisibleUtc,
             nowUtc,
             visibleForTopmost);
@@ -52,9 +22,36 @@ internal readonly record struct LauncherAutoExitTimerPlan(
     bool ShouldStart,
     TimeSpan Interval);
 
-internal static class LauncherAutoExitTimerPlanPolicy
+internal static class RollCallRuntimeDefaults
 {
-    internal static LauncherAutoExitTimerPlan Resolve(int autoExitSeconds)
+    internal static readonly DateTime UnsetTimestampUtc = DateTime.MinValue;
+    internal const int ClassSwitchSuppressMs = 250;
+}
+
+internal static class LauncherRuntimePolicies
+{
+    internal static bool ShouldLog(LauncherWindowRuntimeSelectionReason reason)
+    {
+        return reason == LauncherWindowRuntimeSelectionReason.FallbackToMainBecauseBubbleNotVisible
+               || reason == LauncherWindowRuntimeSelectionReason.FallbackToBubbleBecauseMainNotVisible;
+    }
+
+    internal static bool ShouldUseBubbleWindow(
+        LauncherWindowKind resolvedKind,
+        bool bubbleWindowExists)
+    {
+        return resolvedKind == LauncherWindowKind.Bubble && bubbleWindowExists;
+    }
+
+    internal static DateTime ResolveLastVisibleUtc(
+        DateTime previousUtc,
+        DateTime nowUtc,
+        bool visibleForTopmost)
+    {
+        return visibleForTopmost ? nowUtc : previousUtc;
+    }
+
+    internal static LauncherAutoExitTimerPlan ResolveLauncherAutoExitTimerPlan(int autoExitSeconds)
     {
         if (autoExitSeconds <= 0)
         {
@@ -67,11 +64,8 @@ internal static class LauncherAutoExitTimerPlanPolicy
             ShouldStart: true,
             Interval: TimeSpan.FromSeconds(autoExitSeconds));
     }
-}
 
-internal static class LauncherWorkAreaClampPolicy
-{
-    internal static System.Windows.Point Resolve(
+    internal static System.Windows.Point ResolveLauncherWorkAreaClamp(
         double left,
         double top,
         double width,
@@ -103,10 +97,4 @@ internal static class LauncherWorkAreaClampPolicy
 
         return new System.Windows.Point(resolvedLeft, resolvedTop);
     }
-}
-
-internal static class RollCallRuntimeDefaults
-{
-    internal static readonly DateTime UnsetTimestampUtc = DateTime.MinValue;
-    internal const int ClassSwitchSuppressMs = 250;
 }

@@ -9,9 +9,24 @@ internal enum ToolbarBoardClickAction
     EnterWhiteboard = 3
 }
 
-internal static class ToolbarBoardClickActionPolicy
+internal static class ToolbarScaleDefaults
 {
-    internal static ToolbarBoardClickAction Resolve(
+    internal const double Min = 0.8;
+    internal const double Default = 1.0;
+    internal const double Max = 2.0;
+}
+
+internal enum ToolbarSecondTapTarget
+{
+    None,
+    QuickColor,
+    Shape,
+    Board
+}
+
+internal static class ToolbarPolicies
+{
+    internal static ToolbarBoardClickAction ResolveBoardClickAction(
         bool sessionCaptureWhiteboardActive,
         bool whiteboardActive,
         bool shouldEnterWhiteboardBySecondTap,
@@ -43,11 +58,8 @@ internal static class ToolbarBoardClickActionPolicy
 
         return ToolbarBoardClickAction.OpenActionsPopup;
     }
-}
 
-internal static class ToolbarBoardSelectionVisualPolicy
-{
-    internal static bool Resolve(
+    internal static bool ResolveBoardSelectionVisual(
         bool boardActive,
         bool overlayWhiteboardActive,
         bool sessionCaptureWhiteboardActive,
@@ -65,10 +77,7 @@ internal static class ToolbarBoardSelectionVisualPolicy
 
         return false;
     }
-}
 
-internal static class ToolbarPassthroughActivationPolicy
-{
     internal static bool ShouldReplayToolbarClick(
         RegionScreenCaptureCancelReason cancelReason,
         RegionScreenCapturePassthroughInputKind passthroughInputKind,
@@ -91,10 +100,7 @@ internal static class ToolbarPassthroughActivationPolicy
 
         return passthroughInputKind == RegionScreenCapturePassthroughInputKind.PointerMove;
     }
-}
 
-internal static class ToolbarResumeCancellationPolicy
-{
     internal static bool ShouldCancelPendingResumeOnToolbarPress(
         bool resumeArmed,
         bool pressedToolbarButton,
@@ -102,18 +108,8 @@ internal static class ToolbarResumeCancellationPolicy
     {
         return resumeArmed && pressedToolbarButton && !pressedBoardButton;
     }
-}
 
-internal static class ToolbarScaleDefaults
-{
-    internal const double Min = 0.8;
-    internal const double Default = 1.0;
-    internal const double Max = 2.0;
-}
-
-internal static class ToolbarSecondTapIntentPolicy
-{
-    internal static ToolbarSecondTapTarget Resolve(
+    internal static ToolbarSecondTapTarget ResolveSecondTapIntent(
         bool alreadySelected,
         bool supportsSecondaryAction,
         ToolbarSecondTapTarget requestedTarget)
@@ -122,12 +118,4 @@ internal static class ToolbarSecondTapIntentPolicy
             ? requestedTarget
             : ToolbarSecondTapTarget.None;
     }
-}
-
-internal enum ToolbarSecondTapTarget
-{
-    None,
-    QuickColor,
-    Shape,
-    Board
 }

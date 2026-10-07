@@ -9,11 +9,11 @@ public partial class PaintOverlayWindow
     private void OnMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
     {
         var interactionState = CaptureInputInteractionState();
-        var wheelRoute = OverlayInputRoutingPolicy.ResolveWheelRoute(
+        var wheelRoute = OverlayInputRoutingPolicies.ResolveWheelRoute(
             interactionState.BoardActive,
             interactionState.PhotoModeActive,
             CanRoutePresentationInputFromOverlay(interactionState),
-            PresentationChannelAvailabilityPolicy.IsAnyChannelEnabled(
+            OverlayInputRoutingPolicies.IsAnyChannelEnabled(
                 _presentationOptions.AllowOffice,
                 _presentationOptions.AllowWps));
         if (wheelRoute == OverlayWheelInputRoute.ConsumeForBoard)
@@ -44,7 +44,7 @@ public partial class PaintOverlayWindow
             return;
         }
         var foregroundType = ResolveForegroundPresentationType();
-        var presentationExecutionAction = OverlayWheelPresentationExecutionPolicy.Resolve(
+        var presentationExecutionAction = OverlayInputRoutingPolicies.ResolveOverlayWheelPresentationExecution(
             _wpsNavHookActive,
             _wpsHookInterceptWheel,
             _wpsHookBlockOnly,
@@ -72,7 +72,7 @@ public partial class PaintOverlayWindow
     {
         var interactionState = CaptureInputInteractionState();
         var photoKeyHandled = TryHandlePhotoKey(e.Key);
-        var keyRoute = OverlayInputRoutingPolicy.ResolveKeyRoute(
+        var keyRoute = OverlayInputRoutingPolicies.ResolveKeyRoute(
             _photoLoading,
             photoKeyHandled,
             interactionState.PhotoOrBoardActive,
@@ -99,7 +99,7 @@ public partial class PaintOverlayWindow
 
     private bool CanRoutePresentationInputFromOverlay(InputInteractionState interactionState)
     {
-        return OverlayPresentationRoutingPolicy.CanRouteFromOverlay(
+        return OverlayInputRoutingPolicies.CanRouteFromOverlay(
             _sessionCoordinator.CurrentState.NavigationMode,
             interactionState.PhotoModeActive,
             interactionState.BoardActive,

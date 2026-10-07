@@ -83,7 +83,7 @@ internal static class WindowPlacementExecutor
                     out var errorCode);
                 return (success, errorCode);
             },
-            (attempt, errorCode) => WindowPlacementInteropRetryPolicy.Resolve(attempt, errorCode).ShouldRetry);
+            (attempt, errorCode) => WindowInteropRetryPolicies.ResolveWindowPlacementInteropRetry(attempt, errorCode).ShouldRetry);
     }
 }
 
@@ -150,7 +150,7 @@ internal static class WindowStyleExecutor
                 var success = _interopAdapter.TryGetWindowLong(hwnd, index, out var currentStyle, out var errorCode);
                 return (success, currentStyle, errorCode);
             },
-            (attempt, errorCode) => WindowStyleInteropRetryPolicy.Resolve(attempt, errorCode).ShouldRetry,
+            (attempt, errorCode) => WindowInteropRetryPolicies.ResolveWindowStyleInteropRetry(attempt, errorCode).ShouldRetry,
             out style);
     }
 
@@ -162,6 +162,6 @@ internal static class WindowStyleExecutor
                 var success = _interopAdapter.TrySetWindowLong(hwnd, index, value, out var errorCode);
                 return (success, errorCode);
             },
-            (attempt, errorCode) => WindowStyleInteropRetryPolicy.Resolve(attempt, errorCode).ShouldRetry);
+            (attempt, errorCode) => WindowInteropRetryPolicies.ResolveWindowStyleInteropRetry(attempt, errorCode).ShouldRetry);
     }
 }

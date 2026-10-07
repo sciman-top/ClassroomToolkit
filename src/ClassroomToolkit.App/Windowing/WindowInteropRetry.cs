@@ -54,9 +54,33 @@ internal readonly record struct WindowPlacementInteropRetryDecision(
     bool ShouldRetry,
     WindowPlacementInteropRetryReason Reason);
 
-internal static class WindowPlacementInteropRetryPolicy
+internal enum WindowStyleInteropRetryReason
 {
-    internal static WindowPlacementInteropRetryDecision Resolve(int attempt, int errorCode)
+    None = 0,
+    MaxAttemptsReached = 1,
+    InvalidHandleError = 2,
+    RetryableError = 3
+}
+
+internal readonly record struct WindowStyleInteropRetryDecision(
+    bool ShouldRetry,
+    WindowStyleInteropRetryReason Reason);
+
+internal enum WindowTopmostInteropRetryReason
+{
+    None = 0,
+    MaxAttemptsReached = 1,
+    InvalidHandleError = 2,
+    RetryableError = 3
+}
+
+internal readonly record struct WindowTopmostInteropRetryDecision(
+    bool ShouldRetry,
+    WindowTopmostInteropRetryReason Reason);
+
+internal static class WindowInteropRetryPolicies
+{
+    internal static WindowPlacementInteropRetryDecision ResolveWindowPlacementInteropRetry(int attempt, int errorCode)
     {
         var coreDecision = WindowInteropRetryPolicyCore.Resolve(attempt, errorCode);
         return coreDecision switch
@@ -73,27 +97,12 @@ internal static class WindowPlacementInteropRetryPolicy
         };
     }
 
-    internal static bool ShouldRetry(int attempt, int errorCode)
+    internal static bool ShouldRetryWindowPlacementInteropRetry(int attempt, int errorCode)
     {
-        return Resolve(attempt, errorCode).ShouldRetry;
+        return ResolveWindowPlacementInteropRetry(attempt, errorCode).ShouldRetry;
     }
-}
 
-internal enum WindowStyleInteropRetryReason
-{
-    None = 0,
-    MaxAttemptsReached = 1,
-    InvalidHandleError = 2,
-    RetryableError = 3
-}
-
-internal readonly record struct WindowStyleInteropRetryDecision(
-    bool ShouldRetry,
-    WindowStyleInteropRetryReason Reason);
-
-internal static class WindowStyleInteropRetryPolicy
-{
-    internal static WindowStyleInteropRetryDecision Resolve(int attempt, int errorCode)
+    internal static WindowStyleInteropRetryDecision ResolveWindowStyleInteropRetry(int attempt, int errorCode)
     {
         var coreDecision = WindowInteropRetryPolicyCore.Resolve(attempt, errorCode);
         return coreDecision switch
@@ -110,27 +119,12 @@ internal static class WindowStyleInteropRetryPolicy
         };
     }
 
-    internal static bool ShouldRetry(int attempt, int errorCode)
+    internal static bool ShouldRetryWindowStyleInteropRetry(int attempt, int errorCode)
     {
-        return Resolve(attempt, errorCode).ShouldRetry;
+        return ResolveWindowStyleInteropRetry(attempt, errorCode).ShouldRetry;
     }
-}
 
-internal enum WindowTopmostInteropRetryReason
-{
-    None = 0,
-    MaxAttemptsReached = 1,
-    InvalidHandleError = 2,
-    RetryableError = 3
-}
-
-internal readonly record struct WindowTopmostInteropRetryDecision(
-    bool ShouldRetry,
-    WindowTopmostInteropRetryReason Reason);
-
-internal static class WindowTopmostInteropRetryPolicy
-{
-    internal static WindowTopmostInteropRetryDecision Resolve(int attempt, int errorCode)
+    internal static WindowTopmostInteropRetryDecision ResolveWindowTopmostInteropRetry(int attempt, int errorCode)
     {
         var coreDecision = WindowInteropRetryPolicyCore.Resolve(attempt, errorCode);
         return coreDecision switch
@@ -147,8 +141,8 @@ internal static class WindowTopmostInteropRetryPolicy
         };
     }
 
-    internal static bool ShouldRetry(int attempt, int errorCode)
+    internal static bool ShouldRetryWindowTopmostInteropRetry(int attempt, int errorCode)
     {
-        return Resolve(attempt, errorCode).ShouldRetry;
+        return ResolveWindowTopmostInteropRetry(attempt, errorCode).ShouldRetry;
     }
 }

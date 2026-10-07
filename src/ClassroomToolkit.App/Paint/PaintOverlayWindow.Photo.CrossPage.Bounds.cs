@@ -10,7 +10,7 @@ public partial class PaintOverlayWindow
     private void SyncNeighborLayoutForZoom(double scaleFactor)
     {
         if (!IsCrossPageDisplayActive()
-            || !CrossPageZoomLayoutScalePolicy.ShouldSynchronize(scaleFactor))
+            || !CrossPageInteractiveMiscPolicies.ShouldSynchronize(scaleFactor))
         {
             return;
         }
@@ -19,7 +19,7 @@ public partial class PaintOverlayWindow
         {
             if (_neighborPageImages[i].Tag is double baseTop)
             {
-                var scaledBaseTop = CrossPageZoomLayoutScalePolicy.Scale(baseTop, scaleFactor);
+                var scaledBaseTop = CrossPageInteractiveMiscPolicies.Scale(baseTop, scaleFactor);
                 _neighborPageImages[i].Tag = scaledBaseTop;
 
                 if (i < _neighborInkImages.Count)
@@ -31,7 +31,7 @@ public partial class PaintOverlayWindow
                     var inkTag = ResolveNeighborInkSlotTag(inkImg.Tag, baseTop);
                     SetNeighborInkSlotTag(
                         inkImg,
-                        CrossPageZoomLayoutScalePolicy.Scale(inkTag.BaseTop, scaleFactor),
+                        CrossPageInteractiveMiscPolicies.Scale(inkTag.BaseTop, scaleFactor),
                         inkTag.HorizontalOffsetDip);
                 }
             }
@@ -40,7 +40,7 @@ public partial class PaintOverlayWindow
             {
                 SetNeighborInkSlotTag(
                     _neighborInkImages[i],
-                    CrossPageZoomLayoutScalePolicy.Scale(inkTag.BaseTop, scaleFactor),
+                    CrossPageInteractiveMiscPolicies.Scale(inkTag.BaseTop, scaleFactor),
                     inkTag.HorizontalOffsetDip);
             }
         }
@@ -53,7 +53,7 @@ public partial class PaintOverlayWindow
                 var cachedHeight = _neighborPageHeightCache[pageIndex];
                 if (cachedHeight > 0)
                 {
-                    _neighborPageHeightCache[pageIndex] = CrossPageZoomLayoutScalePolicy.Scale(
+                    _neighborPageHeightCache[pageIndex] = CrossPageInteractiveMiscPolicies.Scale(
                         cachedHeight,
                         scaleFactor);
                 }
@@ -251,7 +251,7 @@ public partial class PaintOverlayWindow
 
         var originalY = _photoTranslate.Y;
         _photoTranslate.Y = Math.Clamp(_photoTranslate.Y, minY, maxY);
-        _crossPageTranslateClamped = CrossPageViewportBoundsPolicy.IsTranslateClamped(originalY, _photoTranslate.Y);
+        _crossPageTranslateClamped = CrossPageInteractiveMiscPolicies.IsTranslateClamped(originalY, _photoTranslate.Y);
         UpdatePhotoInkClip();
     }
 
@@ -295,7 +295,7 @@ public partial class PaintOverlayWindow
 
         var currentPage = GetCurrentPageIndexForCrossPage();
         normalizedWidthDip = GetCrossPageNormalizedWidthDip(currentBitmap);
-        var allowSynchronousHeightResolve = CrossPageNeighborHeightResolvePolicy.ShouldAllowSynchronousResolve(
+        var allowSynchronousHeightResolve = CrossPageNeighborInkPolicies.ShouldAllowSynchronousResolveCrossPageNeighborHeightResolve(
             interactionActive: preferCachedDuringInteraction,
             photoDocumentIsPdf: _photoDocumentIsPdf);
         if (TryResolveCachedCrossPageBounds(
@@ -353,7 +353,7 @@ public partial class PaintOverlayWindow
 
         if (includeSlack)
         {
-            var slack = CrossPageViewportBoundsPolicy.ResolveSlackDip(viewportHeight);
+            var slack = CrossPageInteractiveMiscPolicies.ResolveSlackDip(viewportHeight);
             if (currentPage > 1)
             {
                 maxY += slack;
@@ -373,7 +373,7 @@ public partial class PaintOverlayWindow
         if (normalizedWidthDip > 0)
         {
             var scaledWidth = normalizedWidthDip * _photoScale.ScaleX;
-            var xRange = PhotoHorizontalPanRangePolicy.Resolve(
+            var xRange = PhotoPanPolicies.ResolvePhotoHorizontalPanRange(
                 viewportWidth,
                 scaledWidth,
                 includeSlack);

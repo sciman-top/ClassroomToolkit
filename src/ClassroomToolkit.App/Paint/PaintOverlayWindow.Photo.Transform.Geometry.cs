@@ -18,7 +18,7 @@ public partial class PaintOverlayWindow
             if (monitor.Width > PhotoTransformViewportDefaults.MinUsableViewportDip
                 && monitor.Height > PhotoTransformViewportDefaults.MinUsableViewportDip)
             {
-                return PhotoZoomAnchorPolicy.ResolveViewportCenter(monitor.Width, monitor.Height);
+                return PhotoWindowTransformPolicies.ResolveViewportCenter(monitor.Width, monitor.Height);
             }
         }
 
@@ -46,12 +46,12 @@ public partial class PaintOverlayWindow
             viewportHeight = monitor.Height;
         }
 
-        return PhotoZoomAnchorPolicy.ResolveViewportCenter(viewportWidth, viewportHeight);
+        return PhotoWindowTransformPolicies.ResolveViewportCenter(viewportWidth, viewportHeight);
     }
 
     private WpfPoint ToPhotoSpace(WpfPoint point)
     {
-        if (!PhotoInteractionModePolicy.IsPhotoTransformEnabled(
+        if (!PhotoWindowPolicies.IsPhotoTransformEnabled(
                 photoModeActive: _photoModeActive,
                 boardActive: IsBoardActive()))
         {
@@ -64,7 +64,7 @@ public partial class PaintOverlayWindow
 
     private Geometry? ToPhotoGeometry(Geometry geometry)
     {
-        if (!PhotoInteractionModePolicy.IsPhotoTransformEnabled(
+        if (!PhotoWindowPolicies.IsPhotoTransformEnabled(
                 photoModeActive: _photoModeActive,
                 boardActive: IsBoardActive())
             || geometry == null)
@@ -86,7 +86,7 @@ public partial class PaintOverlayWindow
 
     private Geometry? ToScreenGeometry(Geometry geometry)
     {
-        if (!PhotoInteractionModePolicy.IsPhotoTransformEnabled(
+        if (!PhotoWindowPolicies.IsPhotoTransformEnabled(
                 photoModeActive: _photoModeActive,
                 boardActive: IsBoardActive())
             || geometry == null)

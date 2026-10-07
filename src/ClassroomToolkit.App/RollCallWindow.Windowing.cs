@@ -75,7 +75,7 @@ public partial class RollCallWindow
     private bool TryDragMoveSafe()
     {
         return this.SafeDragMove(ex => System.Diagnostics.Debug.WriteLine(
-            RollCallWindowDiagnosticsPolicy.FormatDragMoveFailureMessage(
+            RollCallWindowingPolicies.FormatDragMoveFailureMessage(
                 ex.GetType().Name,
                 ex.Message)));
     }
@@ -235,12 +235,12 @@ public partial class RollCallWindow
         {
             return;
         }
-        var transparencyDecision = RollCallTransparencyPolicy.ResolveTransparency(
+        var transparencyDecision = RollCallWindowingPolicies.ResolveTransparency(
             hovering: _hovering,
             paintAllowsTransparency: PaintModeManager.Instance.ShouldAllowTransparency(isToolbar: false));
         var allowTransparent = transparencyDecision.TransparentEnabled;
         UpdateHoverTimer(allowTransparent);
-        var styleApplyDecision = RollCallTransparencyPolicy.ResolveStyleApply(
+        var styleApplyDecision = RollCallWindowingPolicies.ResolveStyleApply(
             transparentEnabled: allowTransparent,
             lastTransparentEnabled: _lastTransparentStyleEnabled);
         if (!styleApplyDecision.ShouldApplyStyle)
@@ -248,7 +248,7 @@ public partial class RollCallWindow
             return;
         }
 
-        var (setMask, clearMask) = RollCallTransparencyPolicy.ResolveStyleMasks(allowTransparent);
+        var (setMask, clearMask) = RollCallWindowingPolicies.ResolveStyleMasks(allowTransparent);
         if (WindowStyleExecutor.TryUpdateExtendedStyleBits(
                 _hwnd,
                 setMask,
@@ -261,7 +261,7 @@ public partial class RollCallWindow
 
     private void UpdateHoverTimer(bool transparentEnabled)
     {
-        var hoverTimerDecision = RollCallTransparencyPolicy.ResolveHoverTimer(
+        var hoverTimerDecision = RollCallWindowingPolicies.ResolveHoverTimer(
             transparentEnabled: transparentEnabled,
             hoverTimerEnabled: _hoverCheckTimer.IsEnabled);
         if (hoverTimerDecision.ShouldStop)
@@ -319,7 +319,7 @@ public partial class RollCallWindow
     {
         var photoVisible = _photoOverlay?.IsDisplayActive == true;
         var groupVisible = _groupOverlay?.IsVisible == true;
-        var plan = RollCallAuxOverlayTopmostPolicy.Resolve(
+        var plan = RollCallWindowingPolicies.ResolveRollCallAuxOverlayTopmost(
             photoVisible,
             groupVisible,
             enforceZOrder);
@@ -402,7 +402,7 @@ public partial class RollCallWindow
         SafeActionExecutionExecutor.TryExecute(
             action,
             ex => System.Diagnostics.Debug.WriteLine(
-                RollCallWindowDiagnosticsPolicy.FormatGroupOverlayFailureMessage(
+                RollCallWindowingPolicies.FormatGroupOverlayFailureMessage(
                     operation,
                     ex.GetType().Name,
                     ex.Message)));

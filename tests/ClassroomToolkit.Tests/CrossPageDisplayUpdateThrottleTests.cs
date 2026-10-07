@@ -9,7 +9,7 @@ public sealed class CrossPageDisplayUpdateThrottlePolicyTests
     [Fact]
     public void Resolve_ShouldSkip_WhenPendingAlreadyTrue()
     {
-        var decision = CrossPageDisplayUpdateThrottlePolicy.Resolve(
+        var decision = CrossPageDisplayUpdatePolicies.ResolveThrottle(
             updatePending: true,
             photoPanning: true,
             crossPageDragging: true,
@@ -25,7 +25,7 @@ public sealed class CrossPageDisplayUpdateThrottlePolicyTests
     [Fact]
     public void Resolve_ShouldReturnDelayed_WhenPhotoPanThrottleActiveAndElapsedNotEnough()
     {
-        var decision = CrossPageDisplayUpdateThrottlePolicy.Resolve(
+        var decision = CrossPageDisplayUpdatePolicies.ResolveThrottle(
             updatePending: false,
             photoPanning: true,
             crossPageDragging: false,
@@ -41,7 +41,7 @@ public sealed class CrossPageDisplayUpdateThrottlePolicyTests
     [Fact]
     public void Resolve_ShouldReturnDelayed_WhenCrossPageDragThrottleActiveAndElapsedNotEnough()
     {
-        var decision = CrossPageDisplayUpdateThrottlePolicy.Resolve(
+        var decision = CrossPageDisplayUpdatePolicies.ResolveThrottle(
             updatePending: false,
             photoPanning: false,
             crossPageDragging: true,
@@ -57,7 +57,7 @@ public sealed class CrossPageDisplayUpdateThrottlePolicyTests
     [Fact]
     public void Resolve_ShouldReturnDirect_WhenThrottleInactive()
     {
-        var decision = CrossPageDisplayUpdateThrottlePolicy.Resolve(
+        var decision = CrossPageDisplayUpdatePolicies.ResolveThrottle(
             updatePending: false,
             photoPanning: false,
             crossPageDragging: false,
@@ -73,7 +73,7 @@ public sealed class CrossPageDisplayUpdateThrottlePolicyTests
     [Fact]
     public void Resolve_ShouldReturnDirect_WhenThrottleActiveButElapsedEnough()
     {
-        var decision = CrossPageDisplayUpdateThrottlePolicy.Resolve(
+        var decision = CrossPageDisplayUpdatePolicies.ResolveThrottle(
             updatePending: false,
             photoPanning: true,
             crossPageDragging: false,
@@ -89,7 +89,7 @@ public sealed class CrossPageDisplayUpdateThrottlePolicyTests
     [Fact]
     public void Resolve_ShouldReturnDelayed_WhenInkOperationActiveAndElapsedNotEnough()
     {
-        var decision = CrossPageDisplayUpdateThrottlePolicy.Resolve(
+        var decision = CrossPageDisplayUpdatePolicies.ResolveThrottle(
             updatePending: false,
             photoPanning: false,
             crossPageDragging: false,
@@ -105,7 +105,7 @@ public sealed class CrossPageDisplayUpdateThrottlePolicyTests
     [Fact]
     public void Resolve_ShouldUseWiderDelay_WhenPanAndInkActive()
     {
-        var decision = CrossPageDisplayUpdateThrottlePolicy.Resolve(
+        var decision = CrossPageDisplayUpdatePolicies.ResolveThrottle(
             updatePending: false,
             photoPanning: true,
             crossPageDragging: false,
@@ -125,7 +125,7 @@ public sealed class CrossPageDisplayUpdateMinIntervalPolicyTests
     [Fact]
     public void ResolveMs_ShouldUsePanInterval_WhenPanningActive()
     {
-        var value = CrossPageDisplayUpdateMinIntervalPolicy.ResolveMs(
+        var value = CrossPageDisplayUpdatePolicies.ResolveMs(
             photoPanning: true,
             crossPageDragging: false,
             inkOperationActive: false,
@@ -138,7 +138,7 @@ public sealed class CrossPageDisplayUpdateMinIntervalPolicyTests
     [Fact]
     public void ResolveMs_ShouldUseInkInterval_WhenOnlyInkActive()
     {
-        var value = CrossPageDisplayUpdateMinIntervalPolicy.ResolveMs(
+        var value = CrossPageDisplayUpdatePolicies.ResolveMs(
             photoPanning: false,
             crossPageDragging: false,
             inkOperationActive: true,
@@ -151,7 +151,7 @@ public sealed class CrossPageDisplayUpdateMinIntervalPolicyTests
     [Fact]
     public void ResolveMs_ShouldUseWiderInterval_WhenPanAndInkActive()
     {
-        var value = CrossPageDisplayUpdateMinIntervalPolicy.ResolveMs(
+        var value = CrossPageDisplayUpdatePolicies.ResolveMs(
             photoPanning: true,
             crossPageDragging: false,
             inkOperationActive: true,
@@ -164,7 +164,7 @@ public sealed class CrossPageDisplayUpdateMinIntervalPolicyTests
     [Fact]
     public void ResolveMs_ShouldUseNormalInterval_WhenNoInteraction()
     {
-        var value = CrossPageDisplayUpdateMinIntervalPolicy.ResolveMs(
+        var value = CrossPageDisplayUpdatePolicies.ResolveMs(
             photoPanning: false,
             crossPageDragging: false,
             inkOperationActive: false,
@@ -198,7 +198,7 @@ public sealed class CrossPageDisplayUpdateThrottleSnapshotOverloadTests
             Dragging: false,
             InkOperationActive: false);
 
-        var decision = CrossPageDisplayUpdateThrottlePolicy.Resolve(
+        var decision = CrossPageDisplayUpdatePolicies.ResolveThrottle(
             snapshot,
             elapsedMs: 0,
             draggingMinIntervalMs: 24,
@@ -216,7 +216,7 @@ public sealed class CrossPageDisplayUpdateThrottleSnapshotOverloadTests
             Dragging: false,
             InkOperationActive: false);
 
-        var decision = CrossPageDisplayUpdateThrottlePolicy.Resolve(
+        var decision = CrossPageDisplayUpdatePolicies.ResolveThrottle(
             snapshot,
             elapsedMs: 6,
             draggingMinIntervalMs: 24,

@@ -31,7 +31,7 @@ public partial class PaintToolbarWindow
             return;
         }
 
-        _pendingSecondTapTarget = ToolbarSecondTapIntentPolicy.Resolve(
+        _pendingSecondTapTarget = ToolbarPolicies.ResolveSecondTapIntent(
             alreadySelected: button.IsChecked == true,
             supportsSecondaryAction: true,
             requestedTarget: ToolbarSecondTapTarget.QuickColor);
@@ -109,7 +109,7 @@ public partial class PaintToolbarWindow
 
     private void PrepareShapeSecondTap()
     {
-        _pendingSecondTapTarget = ToolbarSecondTapIntentPolicy.Resolve(
+        _pendingSecondTapTarget = ToolbarPolicies.ResolveSecondTapIntent(
             alreadySelected: ShapeButton.IsChecked == true,
             supportsSecondaryAction: true,
             requestedTarget: ToolbarSecondTapTarget.Shape);
@@ -155,7 +155,7 @@ public partial class PaintToolbarWindow
 
     private void PrepareBoardSecondTap()
     {
-        _pendingSecondTapTarget = ToolbarSecondTapIntentPolicy.Resolve(
+        _pendingSecondTapTarget = ToolbarPolicies.ResolveSecondTapIntent(
             alreadySelected: BoardButton.IsChecked == true || _regionCapturePending,
             supportsSecondaryAction: true,
             requestedTarget: ToolbarSecondTapTarget.Board);
@@ -177,7 +177,7 @@ public partial class PaintToolbarWindow
 
         var whiteboardActive = _boardActive || IsOverlayWhiteboardSceneActive() || _overlay?.IsWhiteboardActive == true;
         var shouldEnterWhiteboardBySecondTap = _pendingSecondTapTarget == ToolbarSecondTapTarget.Board;
-        var action = ToolbarBoardClickActionPolicy.Resolve(
+        var action = ToolbarPolicies.ResolveBoardClickAction(
             sessionCaptureWhiteboardActive: IsSessionCaptureWhiteboardActive(),
             whiteboardActive: whiteboardActive,
             shouldEnterWhiteboardBySecondTap: shouldEnterWhiteboardBySecondTap,

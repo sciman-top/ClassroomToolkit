@@ -77,7 +77,7 @@ public partial class PaintOverlayWindow
         ClearShapePreview();
         _activeInkOperationHistory = null;
         var photoInkModeActive = IsPhotoInkModeActive();
-        if (PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
+        if (PhotoInkInteropPolicies.ShouldRequestImmediateRedraw(
                 photoInkModeActive,
                 RasterImage.RenderTransform,
                 _photoContentTransform))
@@ -201,7 +201,7 @@ public partial class PaintOverlayWindow
         ResetTriangleState();
         _activeInkOperationHistory = null;
         var photoInkModeActive = IsPhotoInkModeActive();
-        if (PhotoInkRenderPolicy.ShouldRequestImmediateRedraw(
+        if (PhotoInkInteropPolicies.ShouldRequestImmediateRedraw(
                 photoInkModeActive,
                 RasterImage.RenderTransform,
                 _photoContentTransform))

@@ -80,7 +80,7 @@ internal static class AppCompositionRoot
         {
             var settingsService = provider.GetRequiredService<AppSettingsService>();
             var settings = settingsService.Load();
-            var presetInitialization = PresetSchemeInitializationPolicy.Resolve(settings);
+            var presetInitialization = PresetSchemePolicies.ResolveInitialization(settings);
             var uiDefaultsInitialization = UiDefaultsBootstrapOptimizationPolicy.Resolve(settings);
             if (presetInitialization.ShouldPersist || uiDefaultsInitialization.ShouldPersist)
             {

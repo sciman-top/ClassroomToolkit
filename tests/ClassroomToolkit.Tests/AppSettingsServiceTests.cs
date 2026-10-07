@@ -682,7 +682,7 @@ public sealed class AppSettingsServiceTests
             var settings = service.Load();
 
             settings.UiDefaultsVersion.Should().Be(UiDefaultsBootstrapOptimizationPolicy.CurrentVersion);
-            settings.PresetRecommendationVersion.Should().Be(PresetSchemeInitializationPolicy.CurrentVersion);
+            settings.PresetRecommendationVersion.Should().Be(PresetSchemePolicies.CurrentVersion);
 
             service.Save(settings);
 
@@ -696,7 +696,7 @@ public sealed class AppSettingsServiceTests
                 launcher.GetProperty("ui_defaults_version").GetString()
                     .Should().Be(UiDefaultsBootstrapOptimizationPolicy.CurrentVersion.ToString());
                 paint.GetProperty("preset_recommendation_version").GetString()
-                    .Should().Be(PresetSchemeInitializationPolicy.CurrentVersion.ToString());
+                    .Should().Be(PresetSchemePolicies.CurrentVersion.ToString());
                 launcher.TryGetProperty("ui_defaults_optimized", out _).Should().BeFalse();
                 paint.TryGetProperty("preset_recommendation_initialized", out _).Should().BeFalse();
                 paint.TryGetProperty("board_opacity", out _).Should().BeFalse();
@@ -715,7 +715,7 @@ public sealed class AppSettingsServiceTests
                 saved.Should().Contain(
                     $"ui_defaults_version={UiDefaultsBootstrapOptimizationPolicy.CurrentVersion}");
                 saved.Should().Contain(
-                    $"preset_recommendation_version={PresetSchemeInitializationPolicy.CurrentVersion}");
+                    $"preset_recommendation_version={PresetSchemePolicies.CurrentVersion}");
                 saved.Should().NotContain("ui_defaults_optimized");
                 saved.Should().NotContain("preset_recommendation_initialized");
                 saved.Should().NotContain("board_opacity");
@@ -1011,7 +1011,7 @@ public sealed class AppSettingsServiceTests
             settings.InkRetentionDays.Should().Be(0);
             settings.InkPhotoRootPath.Should().Be(AppSettings.ResolveDefaultInkPhotoRootPath());
             settings.PhotoNeighborPrefetchRadiusMax.Should().Be(CrossPageNeighborPrefetchDefaults.RadiusMax);
-            settings.PhotoPostInputRefreshDelayMs.Should().Be(CrossPagePostInputRefreshDelayClampPolicy.MinDelayMs);
+            settings.PhotoPostInputRefreshDelayMs.Should().Be(CrossPageRefreshCoordinationPolicies.MinDelayMs);
             settings.PhotoWheelZoomBase.Should().Be(PhotoZoomInputDefaults.WheelZoomBaseMin);
             settings.PhotoGestureZoomSensitivity.Should().Be(PhotoZoomInputDefaults.GestureSensitivityMax);
             settings.PhotoInertiaProfile.Should().Be(PhotoInertiaProfileDefaults.Standard);
@@ -1138,7 +1138,7 @@ public sealed class AppSettingsServiceTests
             reloaded.InkRetentionDays.Should().Be(0);
             reloaded.InkPhotoRootPath.Should().Be(AppSettings.ResolveDefaultInkPhotoRootPath());
             reloaded.PhotoNeighborPrefetchRadiusMax.Should().Be(CrossPageNeighborPrefetchDefaults.RadiusMin);
-            reloaded.PhotoPostInputRefreshDelayMs.Should().Be(CrossPagePostInputRefreshDelayClampPolicy.MaxDelayMs);
+            reloaded.PhotoPostInputRefreshDelayMs.Should().Be(CrossPageRefreshCoordinationPolicies.MaxDelayMs);
             reloaded.PhotoWheelZoomBase.Should().Be(PhotoZoomInputDefaults.WheelZoomBaseMax);
             reloaded.PhotoGestureZoomSensitivity.Should().Be(PhotoZoomInputDefaults.GestureSensitivityMin);
             reloaded.LauncherAutoExitSeconds.Should().Be(0);

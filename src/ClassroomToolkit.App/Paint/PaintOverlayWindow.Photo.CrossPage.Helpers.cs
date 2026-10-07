@@ -47,7 +47,7 @@ public partial class PaintOverlayWindow
             return false;
         }
 
-        return PhotoInteractionModePolicy.IsCrossPageDisplayActive(
+        return PhotoWindowPolicies.IsCrossPageDisplayActive(
             photoModeActive: _photoModeActive,
             boardActive: IsBoardActive(),
             crossPageDisplayEnabled: IsCrossPageDisplaySettingEnabled());
@@ -249,7 +249,7 @@ public partial class PaintOverlayWindow
     private void ScheduleNeighborImagePrefetch(int pageIndex)
     {
         var interactionActiveForPrefetch = IsCrossPagePanOrDragActive();
-        if (!CrossPageNeighborPrefetchGatePolicy.ShouldSchedule(
+        if (!CrossPageNeighborInkPolicies.ShouldSchedule(
                 _photoModeActive,
                 _photoDocumentIsPdf,
                 IsCrossPageDisplaySettingEnabled(),
@@ -292,7 +292,7 @@ public partial class PaintOverlayWindow
             {
                 try
                 {
-                    if (!CrossPageNeighborPrefetchGatePolicy.ShouldRunPrefetch(
+                    if (!CrossPageNeighborInkPolicies.ShouldRunPrefetch(
                             _photoModeActive,
                             _photoDocumentIsPdf,
                             IsCrossPageDisplaySettingEnabled(),

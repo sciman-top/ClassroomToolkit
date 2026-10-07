@@ -3,50 +3,9 @@ using System;
 
 namespace ClassroomToolkit.App.Paint;
 
-internal static class CrossPageDisplayClearPolicy
-{
-    internal static bool ShouldClearNeighborPages(
-        int totalPages,
-        bool hasCurrentBitmap,
-        double currentPageHeight)
-    {
-        if (totalPages <= 1)
-        {
-            return true;
-        }
-
-        if (!hasCurrentBitmap)
-        {
-            return true;
-        }
-
-        return currentPageHeight <= 0;
-    }
-}
-
 internal readonly record struct CrossPageDisplayToggleFlagUpdateDecision(
     bool ShouldApply,
     bool NextCrossPageDisplayEnabled);
-
-internal static class CrossPageDisplayToggleFlagUpdatePolicy
-{
-    internal static CrossPageDisplayToggleFlagUpdateDecision Resolve(
-        bool currentCrossPageDisplayEnabled,
-        bool requestedEnabled)
-    {
-        var unchanged = currentCrossPageDisplayEnabled == requestedEnabled;
-        if (unchanged)
-        {
-            return new CrossPageDisplayToggleFlagUpdateDecision(
-                ShouldApply: false,
-                NextCrossPageDisplayEnabled: currentCrossPageDisplayEnabled);
-        }
-
-        return new CrossPageDisplayToggleFlagUpdateDecision(
-            ShouldApply: true,
-            NextCrossPageDisplayEnabled: requestedEnabled);
-    }
-}
 
 internal readonly record struct CrossPageDisplayToggleRuntimePlan(
     bool ShouldRestoreUnifiedTransformAndRedraw,
@@ -54,23 +13,6 @@ internal readonly record struct CrossPageDisplayToggleRuntimePlan(
     bool ShouldResetReplayAndClearNeighbors,
     bool ShouldRefreshImageSequenceSource,
     bool ShouldReloadPdfInkCache);
-
-internal static class CrossPageDisplayToggleRuntimePlanPolicy
-{
-    internal static CrossPageDisplayToggleRuntimePlan Resolve(
-        bool photoInkModeActive,
-        bool crossPageDisplayEnabled,
-        bool photoDocumentIsPdf,
-        bool photoUnifiedTransformReady)
-    {
-        return new CrossPageDisplayToggleRuntimePlan(
-            ShouldRestoreUnifiedTransformAndRedraw: photoInkModeActive && crossPageDisplayEnabled && photoUnifiedTransformReady,
-            ShouldSaveUnifiedTransformState: photoInkModeActive && crossPageDisplayEnabled && !photoUnifiedTransformReady,
-            ShouldResetReplayAndClearNeighbors: !crossPageDisplayEnabled,
-            ShouldRefreshImageSequenceSource: photoInkModeActive && !photoDocumentIsPdf,
-            ShouldReloadPdfInkCache: photoInkModeActive && photoDocumentIsPdf);
-    }
-}
 
 internal readonly record struct CrossPageDisplayToggleTransitionExecutionResult(
     bool AppliedFlagUpdate,
@@ -109,7 +51,7 @@ internal static class CrossPageDisplayToggleTransitionCoordinator
         ArgumentNullException.ThrowIfNull(refreshCurrentImageSequenceSourceAfterToggle);
         ArgumentNullException.ThrowIfNull(reloadPdfInkCacheAfterToggle);
 
-        var flagUpdate = CrossPageDisplayToggleFlagUpdatePolicy.Resolve(
+        var flagUpdate = CrossPageDisplayUpdatePolicies.ResolveCrossPageDisplayToggleFlagUpdate(
             currentCrossPageDisplayEnabled,
             requestedEnabled);
         if (!flagUpdate.ShouldApply)
@@ -119,7 +61,7 @@ internal static class CrossPageDisplayToggleTransitionCoordinator
 
         PaintActionInvoker.TryInvoke(() => setCrossPageDisplayEnabled(flagUpdate.NextCrossPageDisplayEnabled));
 
-        var togglePlan = CrossPageDisplayToggleRuntimePlanPolicy.Resolve(
+        var togglePlan = CrossPageDisplayUpdatePolicies.ResolveCrossPageDisplayToggleRuntimePlan(
             photoInkModeActive: photoInkModeActive,
             crossPageDisplayEnabled: flagUpdate.NextCrossPageDisplayEnabled,
             photoDocumentIsPdf: photoDocumentIsPdf,
@@ -199,37 +141,6 @@ internal readonly record struct CrossPageDisplayRunGateDecision(
     bool ShouldRun,
     string? AbortReason);
 
-internal static class CrossPageDisplayRunGatePolicy
-{
-    internal static CrossPageDisplayRunGateDecision Resolve(bool crossPageDisplayActive)
-    {
-        if (!crossPageDisplayActive)
-        {
-            return new CrossPageDisplayRunGateDecision(
-                ShouldRun: false,
-                AbortReason: CrossPageDeferredDiagnosticReason.Inactive);
-        }
-
-        return new CrossPageDisplayRunGateDecision(
-            ShouldRun: true,
-            AbortReason: null);
-    }
-}
-
-internal static class CrossPageDisplayUpdateRunFailureReplayPolicy
-{
-    internal static CrossPageReplayQueueDecision Resolve(string source)
-    {
-        var context = CrossPageUpdateRequestContextFactory.Create(source);
-        return context.Kind switch
-        {
-            CrossPageUpdateSourceKind.VisualSync => CrossPageReplayQueueDecisionFactory.VisualSync(),
-            CrossPageUpdateSourceKind.Interaction => CrossPageReplayQueueDecisionFactory.Interaction(),
-            _ => CrossPageReplayQueueDecisionFactory.None()
-        };
-    }
-}
-
 internal enum CrossPageDisplayUpdateDispatchFailureFallbackReason
 {
     None = 0,
@@ -241,37 +152,6 @@ internal readonly record struct CrossPageDisplayUpdateDispatchFailureFallbackDec
     bool ShouldRunInline,
     bool ShouldQueueReplay,
     CrossPageDisplayUpdateDispatchFailureFallbackReason Reason);
-
-internal static class CrossPageDisplayUpdateDispatchFailureFallbackPolicy
-{
-    internal static CrossPageDisplayUpdateDispatchFailureFallbackDecision Resolve(
-        bool dispatchScheduled,
-        bool dispatcherCheckAccess,
-        bool dispatcherShutdownStarted,
-        bool dispatcherShutdownFinished)
-    {
-        if (dispatchScheduled)
-        {
-            return new CrossPageDisplayUpdateDispatchFailureFallbackDecision(
-                ShouldRunInline: false,
-                ShouldQueueReplay: false,
-                Reason: CrossPageDisplayUpdateDispatchFailureFallbackReason.None);
-        }
-
-        if (dispatcherCheckAccess && !dispatcherShutdownStarted && !dispatcherShutdownFinished)
-        {
-            return new CrossPageDisplayUpdateDispatchFailureFallbackDecision(
-                ShouldRunInline: true,
-                ShouldQueueReplay: false,
-                Reason: CrossPageDisplayUpdateDispatchFailureFallbackReason.InlineCurrentThread);
-        }
-
-        return new CrossPageDisplayUpdateDispatchFailureFallbackDecision(
-            ShouldRunInline: false,
-            ShouldQueueReplay: true,
-            Reason: CrossPageDisplayUpdateDispatchFailureFallbackReason.QueueReplay);
-    }
-}
 
 internal readonly record struct CrossPageDisplayUpdateDispatchFailureExecutionResult(
     bool RanInline,
@@ -302,7 +182,7 @@ internal static class CrossPageDisplayUpdateDispatchFailureCoordinator
         ArgumentNullException.ThrowIfNull(dispatcherShutdownStarted);
         ArgumentNullException.ThrowIfNull(dispatcherShutdownFinished);
 
-        var fallbackDecision = CrossPageDisplayUpdateDispatchFailureFallbackPolicy.Resolve(
+        var fallbackDecision = CrossPageDisplayUpdatePolicies.ResolveDispatchFailureFallback(
             dispatchScheduled: false,
             dispatcherCheckAccess: dispatcherCheckAccess(),
             dispatcherShutdownStarted: dispatcherShutdownStarted(),
@@ -321,7 +201,7 @@ internal static class CrossPageDisplayUpdateDispatchFailureCoordinator
 
         if (fallbackDecision.ShouldQueueReplay)
         {
-            var replayQueueDecision = CrossPageReplayQueuePolicy.Resolve(kind, source);
+            var replayQueueDecision = CrossPageReplayPolicies.ResolveQueue(kind, source);
             CrossPageReplayPendingStateUpdater.ApplyQueueDecision(
                 ref replayState,
                 replayQueueDecision);
@@ -441,116 +321,6 @@ internal static class CrossPageDisplayUpdateMinIntervalThresholds
     internal const int InkOnlyMinMs = 16;
 }
 
-internal static class CrossPageDisplayUpdateMinIntervalPolicy
-{
-    internal static int ResolveMs(
-        bool photoPanning,
-        bool crossPageDragging,
-        bool inkOperationActive,
-        int draggingMinIntervalMs,
-        int normalMinIntervalMs)
-    {
-        if (photoPanning || crossPageDragging)
-        {
-            if (inkOperationActive)
-            {
-                return Math.Max(draggingMinIntervalMs, CrossPageDisplayUpdateMinIntervalThresholds.PanInkActiveMinMs);
-            }
-
-            return Math.Max(draggingMinIntervalMs, CrossPageDisplayUpdateMinIntervalThresholds.PanOnlyMinMs);
-        }
-
-        if (inkOperationActive)
-        {
-            return Math.Max(draggingMinIntervalMs, CrossPageDisplayUpdateMinIntervalThresholds.InkOnlyMinMs);
-        }
-
-        return Math.Max(1, normalMinIntervalMs);
-    }
-}
-
-internal static class CrossPageDisplayUpdateThrottlePolicy
-{
-    internal static CrossPageDisplayUpdateDispatchDecision Resolve(
-        CrossPageDisplayUpdateDispatchSnapshot snapshot,
-        double elapsedMs,
-        int draggingMinIntervalMs,
-        int normalMinIntervalMs)
-    {
-        return Resolve(
-            updatePending: snapshot.Pending,
-            photoPanning: snapshot.Panning,
-            crossPageDragging: snapshot.Dragging,
-            inkOperationActive: snapshot.InkOperationActive,
-            elapsedMs: elapsedMs,
-            draggingMinIntervalMs: draggingMinIntervalMs,
-            normalMinIntervalMs: normalMinIntervalMs);
-    }
-
-    internal static CrossPageDisplayUpdateDispatchDecision Resolve(
-        bool updatePending,
-        bool photoPanning,
-        bool crossPageDragging,
-        bool inkOperationActive,
-        double elapsedMs,
-        int draggingMinIntervalMs,
-        int normalMinIntervalMs)
-    {
-        if (updatePending)
-        {
-            return new CrossPageDisplayUpdateDispatchDecision(
-                CrossPageDisplayUpdateDispatchMode.SkipPending,
-                DelayMs: CrossPageDisplayUpdateThrottleDefaults.ImmediateDelayMs);
-        }
-
-        var throttleActive = CrossPageInteractionActivityPolicy.IsActive(
-            photoPanning,
-            crossPageDragging,
-            inkOperationActive);
-        var minIntervalMs = throttleActive
-            ? CrossPageDisplayUpdateMinIntervalPolicy.ResolveMs(
-                photoPanning,
-                crossPageDragging,
-                inkOperationActive,
-                draggingMinIntervalMs,
-                normalMinIntervalMs)
-            : normalMinIntervalMs;
-        if (throttleActive && elapsedMs < minIntervalMs)
-        {
-            var delay = Math.Max(
-                CrossPageDisplayUpdateThrottleDefaults.MinDelayedDispatchMs,
-                (int)Math.Ceiling(minIntervalMs - elapsedMs));
-            return new CrossPageDisplayUpdateDispatchDecision(
-                CrossPageDisplayUpdateDispatchMode.Delayed,
-                delay);
-        }
-
-        return new CrossPageDisplayUpdateDispatchDecision(
-            CrossPageDisplayUpdateDispatchMode.Direct,
-            DelayMs: CrossPageDisplayUpdateThrottleDefaults.ImmediateDelayMs);
-    }
-}
-
-internal static class CrossPagePdfVisiblePrefetchUpdatePolicy
-{
-    internal static bool ShouldRefreshCrossPageDisplay(
-        bool photoModeActive,
-        bool photoDocumentIsPdf,
-        bool boardActive,
-        bool crossPageDisplayEnabled)
-    {
-        if (!photoDocumentIsPdf)
-        {
-            return false;
-        }
-
-        return PhotoInteractionModePolicy.IsCrossPageDisplayActive(
-            photoModeActive,
-            boardActive,
-            crossPageDisplayEnabled);
-    }
-}
-
 internal enum CrossPageRequestAdmissionReason
 {
     None = 0,
@@ -566,81 +336,6 @@ internal readonly record struct CrossPageRequestAdmissionDecision(
     bool ShouldAdmit,
     CrossPageRequestAdmissionReason Reason);
 
-internal static class CrossPageRequestAdmissionPolicy
-{
-    internal static CrossPageRequestAdmissionDecision Resolve(
-        bool crossPageDisplayActive,
-        bool photoLoading,
-        bool hasPhotoBackgroundSource,
-        bool overlayVisible,
-        bool overlayMinimized,
-        bool hasUsableViewport)
-    {
-        if (!crossPageDisplayActive)
-        {
-            return new CrossPageRequestAdmissionDecision(
-                ShouldAdmit: false,
-                Reason: CrossPageRequestAdmissionReason.CrossPageInactive);
-        }
-
-        if (photoLoading)
-        {
-            return new CrossPageRequestAdmissionDecision(
-                ShouldAdmit: false,
-                Reason: CrossPageRequestAdmissionReason.PhotoLoading);
-        }
-
-        if (!hasPhotoBackgroundSource)
-        {
-            return new CrossPageRequestAdmissionDecision(
-                ShouldAdmit: false,
-                Reason: CrossPageRequestAdmissionReason.BackgroundNotReady);
-        }
-
-        if (!overlayVisible)
-        {
-            return new CrossPageRequestAdmissionDecision(
-                ShouldAdmit: false,
-                Reason: CrossPageRequestAdmissionReason.OverlayNotVisible);
-        }
-
-        if (overlayMinimized)
-        {
-            return new CrossPageRequestAdmissionDecision(
-                ShouldAdmit: false,
-                Reason: CrossPageRequestAdmissionReason.OverlayMinimized);
-        }
-
-        if (!hasUsableViewport)
-        {
-            return new CrossPageRequestAdmissionDecision(
-                ShouldAdmit: false,
-                Reason: CrossPageRequestAdmissionReason.ViewportUnavailable);
-        }
-
-        return new CrossPageRequestAdmissionDecision(
-            ShouldAdmit: true,
-            Reason: CrossPageRequestAdmissionReason.None);
-    }
-
-    internal static bool ShouldAdmit(
-        bool crossPageDisplayActive,
-        bool photoLoading,
-        bool hasPhotoBackgroundSource,
-        bool overlayVisible,
-        bool overlayMinimized,
-        bool hasUsableViewport)
-    {
-        return Resolve(
-            crossPageDisplayActive,
-            photoLoading,
-            hasPhotoBackgroundSource,
-            overlayVisible,
-            overlayMinimized,
-            hasUsableViewport).ShouldAdmit;
-    }
-}
-
 internal static class CrossPageRuntimeDefaults
 {
     internal const int PostInputRefreshDelayMs = 420;
@@ -648,34 +343,6 @@ internal static class CrossPageRuntimeDefaults
     internal const int DraggingUpdateMinIntervalMs = 24;
     internal const int UpdateMinIntervalMs = 24;
     internal static readonly DateTime UnsetTimestampUtc = DateTime.MinValue;
-}
-
-internal static class CrossPageUpdateReplayPolicy
-{
-    internal static bool IsReplayBaseSource(string source)
-    {
-        return string.Equals(source, CrossPageUpdateSources.InkVisualSyncReplay, StringComparison.Ordinal)
-            || string.Equals(source, CrossPageUpdateSources.InteractionReplay, StringComparison.Ordinal);
-    }
-
-    internal static bool ShouldQueueReplay(CrossPageUpdateSourceKind kind)
-    {
-        return kind is CrossPageUpdateSourceKind.VisualSync or CrossPageUpdateSourceKind.Interaction;
-    }
-
-    internal static bool ShouldFlushReplay(
-        bool replayPending,
-        bool crossPageUpdatePending,
-        bool photoModeActive,
-        bool crossPageDisplayEnabled,
-        bool interactionActive)
-    {
-        return replayPending
-            && !crossPageUpdatePending
-            && photoModeActive
-            && crossPageDisplayEnabled
-            && !interactionActive;
-    }
 }
 
 internal readonly record struct CrossPageUpdateRequestContext(
@@ -868,5 +535,308 @@ internal static class CrossPageUpdateSources
     {
         var normalized = CrossPageUpdateSourceParser.Parse(source).BaseSource;
         return $"{normalized}{DelayedSuffix}";
+    }
+}
+
+internal static class CrossPageDisplayUpdatePolicies
+{
+    internal static bool ShouldClearNeighborPages(
+        int totalPages,
+        bool hasCurrentBitmap,
+        double currentPageHeight)
+    {
+        if (totalPages <= 1)
+        {
+            return true;
+        }
+
+        if (!hasCurrentBitmap)
+        {
+            return true;
+        }
+
+        return currentPageHeight <= 0;
+    }
+
+    internal static CrossPageDisplayToggleFlagUpdateDecision ResolveCrossPageDisplayToggleFlagUpdate(
+        bool currentCrossPageDisplayEnabled,
+        bool requestedEnabled)
+    {
+        var unchanged = currentCrossPageDisplayEnabled == requestedEnabled;
+        if (unchanged)
+        {
+            return new CrossPageDisplayToggleFlagUpdateDecision(
+                ShouldApply: false,
+                NextCrossPageDisplayEnabled: currentCrossPageDisplayEnabled);
+        }
+
+        return new CrossPageDisplayToggleFlagUpdateDecision(
+            ShouldApply: true,
+            NextCrossPageDisplayEnabled: requestedEnabled);
+    }
+
+    internal static CrossPageDisplayToggleRuntimePlan ResolveCrossPageDisplayToggleRuntimePlan(
+        bool photoInkModeActive,
+        bool crossPageDisplayEnabled,
+        bool photoDocumentIsPdf,
+        bool photoUnifiedTransformReady)
+    {
+        return new CrossPageDisplayToggleRuntimePlan(
+            ShouldRestoreUnifiedTransformAndRedraw: photoInkModeActive && crossPageDisplayEnabled && photoUnifiedTransformReady,
+            ShouldSaveUnifiedTransformState: photoInkModeActive && crossPageDisplayEnabled && !photoUnifiedTransformReady,
+            ShouldResetReplayAndClearNeighbors: !crossPageDisplayEnabled,
+            ShouldRefreshImageSequenceSource: photoInkModeActive && !photoDocumentIsPdf,
+            ShouldReloadPdfInkCache: photoInkModeActive && photoDocumentIsPdf);
+    }
+
+    internal static CrossPageDisplayRunGateDecision ResolveCrossPageDisplayRunGate(bool crossPageDisplayActive)
+    {
+        if (!crossPageDisplayActive)
+        {
+            return new CrossPageDisplayRunGateDecision(
+                ShouldRun: false,
+                AbortReason: CrossPageDeferredDiagnosticReason.Inactive);
+        }
+
+        return new CrossPageDisplayRunGateDecision(
+            ShouldRun: true,
+            AbortReason: null);
+    }
+
+    internal static CrossPageReplayQueueDecision ResolveRunFailureReplay(string source)
+    {
+        var context = CrossPageUpdateRequestContextFactory.Create(source);
+        return context.Kind switch
+        {
+            CrossPageUpdateSourceKind.VisualSync => CrossPageReplayQueueDecisionFactory.VisualSync(),
+            CrossPageUpdateSourceKind.Interaction => CrossPageReplayQueueDecisionFactory.Interaction(),
+            _ => CrossPageReplayQueueDecisionFactory.None()
+        };
+    }
+
+    internal static CrossPageDisplayUpdateDispatchFailureFallbackDecision ResolveDispatchFailureFallback(
+        bool dispatchScheduled,
+        bool dispatcherCheckAccess,
+        bool dispatcherShutdownStarted,
+        bool dispatcherShutdownFinished)
+    {
+        if (dispatchScheduled)
+        {
+            return new CrossPageDisplayUpdateDispatchFailureFallbackDecision(
+                ShouldRunInline: false,
+                ShouldQueueReplay: false,
+                Reason: CrossPageDisplayUpdateDispatchFailureFallbackReason.None);
+        }
+
+        if (dispatcherCheckAccess && !dispatcherShutdownStarted && !dispatcherShutdownFinished)
+        {
+            return new CrossPageDisplayUpdateDispatchFailureFallbackDecision(
+                ShouldRunInline: true,
+                ShouldQueueReplay: false,
+                Reason: CrossPageDisplayUpdateDispatchFailureFallbackReason.InlineCurrentThread);
+        }
+
+        return new CrossPageDisplayUpdateDispatchFailureFallbackDecision(
+            ShouldRunInline: false,
+            ShouldQueueReplay: true,
+            Reason: CrossPageDisplayUpdateDispatchFailureFallbackReason.QueueReplay);
+    }
+
+    internal static int ResolveMs(
+        bool photoPanning,
+        bool crossPageDragging,
+        bool inkOperationActive,
+        int draggingMinIntervalMs,
+        int normalMinIntervalMs)
+    {
+        if (photoPanning || crossPageDragging)
+        {
+            if (inkOperationActive)
+            {
+                return Math.Max(draggingMinIntervalMs, CrossPageDisplayUpdateMinIntervalThresholds.PanInkActiveMinMs);
+            }
+
+            return Math.Max(draggingMinIntervalMs, CrossPageDisplayUpdateMinIntervalThresholds.PanOnlyMinMs);
+        }
+
+        if (inkOperationActive)
+        {
+            return Math.Max(draggingMinIntervalMs, CrossPageDisplayUpdateMinIntervalThresholds.InkOnlyMinMs);
+        }
+
+        return Math.Max(1, normalMinIntervalMs);
+    }
+
+    internal static CrossPageDisplayUpdateDispatchDecision ResolveThrottle(
+        CrossPageDisplayUpdateDispatchSnapshot snapshot,
+        double elapsedMs,
+        int draggingMinIntervalMs,
+        int normalMinIntervalMs)
+    {
+        return ResolveThrottle(
+            updatePending: snapshot.Pending,
+            photoPanning: snapshot.Panning,
+            crossPageDragging: snapshot.Dragging,
+            inkOperationActive: snapshot.InkOperationActive,
+            elapsedMs: elapsedMs,
+            draggingMinIntervalMs: draggingMinIntervalMs,
+            normalMinIntervalMs: normalMinIntervalMs);
+    }
+
+    internal static CrossPageDisplayUpdateDispatchDecision ResolveThrottle(
+        bool updatePending,
+        bool photoPanning,
+        bool crossPageDragging,
+        bool inkOperationActive,
+        double elapsedMs,
+        int draggingMinIntervalMs,
+        int normalMinIntervalMs)
+    {
+        if (updatePending)
+        {
+            return new CrossPageDisplayUpdateDispatchDecision(
+                CrossPageDisplayUpdateDispatchMode.SkipPending,
+                DelayMs: CrossPageDisplayUpdateThrottleDefaults.ImmediateDelayMs);
+        }
+
+        var throttleActive = CrossPageInteractionActivityPolicy.IsActive(
+            photoPanning,
+            crossPageDragging,
+            inkOperationActive);
+        var minIntervalMs = throttleActive
+            ? CrossPageDisplayUpdatePolicies.ResolveMs(
+                photoPanning,
+                crossPageDragging,
+                inkOperationActive,
+                draggingMinIntervalMs,
+                normalMinIntervalMs)
+            : normalMinIntervalMs;
+        if (throttleActive && elapsedMs < minIntervalMs)
+        {
+            var delay = Math.Max(
+                CrossPageDisplayUpdateThrottleDefaults.MinDelayedDispatchMs,
+                (int)Math.Ceiling(minIntervalMs - elapsedMs));
+            return new CrossPageDisplayUpdateDispatchDecision(
+                CrossPageDisplayUpdateDispatchMode.Delayed,
+                delay);
+        }
+
+        return new CrossPageDisplayUpdateDispatchDecision(
+            CrossPageDisplayUpdateDispatchMode.Direct,
+            DelayMs: CrossPageDisplayUpdateThrottleDefaults.ImmediateDelayMs);
+    }
+
+    internal static bool ShouldRefreshCrossPageDisplay(
+        bool photoModeActive,
+        bool photoDocumentIsPdf,
+        bool boardActive,
+        bool crossPageDisplayEnabled)
+    {
+        if (!photoDocumentIsPdf)
+        {
+            return false;
+        }
+
+        return PhotoWindowPolicies.IsCrossPageDisplayActive(
+            photoModeActive,
+            boardActive,
+            crossPageDisplayEnabled);
+    }
+
+    internal static CrossPageRequestAdmissionDecision ResolveCrossPageRequestAdmission(
+        bool crossPageDisplayActive,
+        bool photoLoading,
+        bool hasPhotoBackgroundSource,
+        bool overlayVisible,
+        bool overlayMinimized,
+        bool hasUsableViewport)
+    {
+        if (!crossPageDisplayActive)
+        {
+            return new CrossPageRequestAdmissionDecision(
+                ShouldAdmit: false,
+                Reason: CrossPageRequestAdmissionReason.CrossPageInactive);
+        }
+
+        if (photoLoading)
+        {
+            return new CrossPageRequestAdmissionDecision(
+                ShouldAdmit: false,
+                Reason: CrossPageRequestAdmissionReason.PhotoLoading);
+        }
+
+        if (!hasPhotoBackgroundSource)
+        {
+            return new CrossPageRequestAdmissionDecision(
+                ShouldAdmit: false,
+                Reason: CrossPageRequestAdmissionReason.BackgroundNotReady);
+        }
+
+        if (!overlayVisible)
+        {
+            return new CrossPageRequestAdmissionDecision(
+                ShouldAdmit: false,
+                Reason: CrossPageRequestAdmissionReason.OverlayNotVisible);
+        }
+
+        if (overlayMinimized)
+        {
+            return new CrossPageRequestAdmissionDecision(
+                ShouldAdmit: false,
+                Reason: CrossPageRequestAdmissionReason.OverlayMinimized);
+        }
+
+        if (!hasUsableViewport)
+        {
+            return new CrossPageRequestAdmissionDecision(
+                ShouldAdmit: false,
+                Reason: CrossPageRequestAdmissionReason.ViewportUnavailable);
+        }
+
+        return new CrossPageRequestAdmissionDecision(
+            ShouldAdmit: true,
+            Reason: CrossPageRequestAdmissionReason.None);
+    }
+
+    internal static bool ShouldAdmit(
+        bool crossPageDisplayActive,
+        bool photoLoading,
+        bool hasPhotoBackgroundSource,
+        bool overlayVisible,
+        bool overlayMinimized,
+        bool hasUsableViewport)
+    {
+        return ResolveCrossPageRequestAdmission(
+            crossPageDisplayActive,
+            photoLoading,
+            hasPhotoBackgroundSource,
+            overlayVisible,
+            overlayMinimized,
+            hasUsableViewport).ShouldAdmit;
+    }
+
+    internal static bool IsReplayBaseSource(string source)
+    {
+        return string.Equals(source, CrossPageUpdateSources.InkVisualSyncReplay, StringComparison.Ordinal)
+            || string.Equals(source, CrossPageUpdateSources.InteractionReplay, StringComparison.Ordinal);
+    }
+
+    internal static bool ShouldQueueReplay(CrossPageUpdateSourceKind kind)
+    {
+        return kind is CrossPageUpdateSourceKind.VisualSync or CrossPageUpdateSourceKind.Interaction;
+    }
+
+    internal static bool ShouldFlushReplay(
+        bool replayPending,
+        bool crossPageUpdatePending,
+        bool photoModeActive,
+        bool crossPageDisplayEnabled,
+        bool interactionActive)
+    {
+        return replayPending
+            && !crossPageUpdatePending
+            && photoModeActive
+            && crossPageDisplayEnabled
+            && !interactionActive;
     }
 }

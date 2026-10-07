@@ -51,13 +51,13 @@ public partial class MainWindow
             return;
         }
 
-        var launcherVisible = LauncherVisibilityPolicy.IsVisibleForTopmost(
+        var launcherVisible = LauncherWindowPolicies.IsVisibleForTopmost(
             launcherMinimized: _settings.LauncherMinimized,
             mainVisible: IsVisible,
             mainMinimized: WindowState == WindowState.Minimized,
             bubbleVisible: _bubbleWindow?.IsVisible == true,
             bubbleMinimized: _bubbleWindow?.WindowState == WindowState.Minimized);
-        var shouldRetouch = FloatingTopmostWatchdogPolicy.ShouldForceRetouch(
+        var shouldRetouch = FloatingTopmostPolicies.ShouldForceRetouch(
             toolbarVisible: _toolbarWindow?.IsVisible == true,
             rollCallVisible: _rollCallWindow?.IsVisible == true,
             launcherVisible: launcherVisible,
@@ -232,7 +232,7 @@ public partial class MainWindow
         SafeActionExecutionExecutor.TryExecute(
             action,
             ex => System.Diagnostics.Debug.WriteLine(
-                LifecycleSafeExecutionDiagnosticsPolicy.FormatFailureMessage(
+                WindowingDiagnosticsPolicies.FormatFailureMessageLifecycleSafeExecutionDiagnostics(
                     phase,
                     operation,
                     ex.GetType().Name,
@@ -265,7 +265,7 @@ public partial class MainWindow
         SafeActionExecutionExecutor.TryExecute(
             () => DialogShowResultStateUpdater.MarkFromDialogResult(ref result, dialog.SafeShowDialog()),
             ex => System.Diagnostics.Debug.WriteLine(
-                DialogShowDiagnosticsPolicy.FormatFailureMessage(
+                WindowingDiagnosticsPolicies.FormatFailureMessageDialogShowDiagnostics(
                     dialogName,
                     ex.Message)));
         return result;
@@ -309,7 +309,7 @@ public partial class MainWindow
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
-            var notificationPlan = SettingsSaveFailureNotificationPolicy.Resolve(_settingsSaveFailedNotified);
+            var notificationPlan = NotificationAndExitPolicies.Resolve(_settingsSaveFailedNotified);
             SettingsSaveFailureNotificationStateUpdater.ApplyNotificationPlan(
                 ref _settingsSaveFailedNotified,
                 notificationPlan);
@@ -331,7 +331,7 @@ public partial class MainWindow
             _ => TriggerInkCleanup(),
             _backgroundTasksCancellation.Token,
             ex => System.Diagnostics.Debug.WriteLine(
-                InkStartupCleanupLogPolicy.FormatFailureMessage(ex.Message)));
+                NotificationAndExitPolicies.FormatFailureMessage(ex.Message)));
     }
 
     private void TriggerInkCleanup()
@@ -356,14 +356,14 @@ public partial class MainWindow
             var summary = new InkStartupCleanupSummary(
                 TotalSidecars: totalSidecars,
                 TotalComposites: totalComposites);
-            if (InkStartupCleanupLogPolicy.ShouldLogDeletionSummary(summary))
+            if (NotificationAndExitPolicies.ShouldLogDeletionSummary(summary))
             {
-                System.Diagnostics.Debug.WriteLine(InkStartupCleanupLogPolicy.FormatDeletionSummary(summary));
+                System.Diagnostics.Debug.WriteLine(NotificationAndExitPolicies.FormatDeletionSummary(summary));
             }
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
-            System.Diagnostics.Debug.WriteLine(InkStartupCleanupLogPolicy.FormatFailureMessage(ex.Message));
+            System.Diagnostics.Debug.WriteLine(NotificationAndExitPolicies.FormatFailureMessage(ex.Message));
         }
     }
 

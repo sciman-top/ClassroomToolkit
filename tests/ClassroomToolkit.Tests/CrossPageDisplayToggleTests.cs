@@ -9,7 +9,7 @@ public sealed class CrossPageDisplayToggleFlagUpdatePolicyTests
     [Fact]
     public void Resolve_ShouldSkip_WhenBothFlagsAlreadyMatchRequested()
     {
-        var decision = CrossPageDisplayToggleFlagUpdatePolicy.Resolve(
+        var decision = CrossPageDisplayUpdatePolicies.ResolveCrossPageDisplayToggleFlagUpdate(
             currentCrossPageDisplayEnabled: true,
             requestedEnabled: true);
 
@@ -20,7 +20,7 @@ public sealed class CrossPageDisplayToggleFlagUpdatePolicyTests
     [Fact]
     public void Resolve_ShouldSkip_WhenCurrentFlagMatchesRequested()
     {
-        var decision = CrossPageDisplayToggleFlagUpdatePolicy.Resolve(
+        var decision = CrossPageDisplayUpdatePolicies.ResolveCrossPageDisplayToggleFlagUpdate(
             currentCrossPageDisplayEnabled: true,
             requestedEnabled: true);
 
@@ -33,7 +33,7 @@ public sealed class CrossPageDisplayToggleFlagUpdatePolicyTests
     [InlineData(false)]
     public void Resolve_ShouldSetBothFlagsToRequested_WhenApplyRequired(bool requested)
     {
-        var decision = CrossPageDisplayToggleFlagUpdatePolicy.Resolve(
+        var decision = CrossPageDisplayUpdatePolicies.ResolveCrossPageDisplayToggleFlagUpdate(
             currentCrossPageDisplayEnabled: !requested,
             requestedEnabled: requested);
 
@@ -48,7 +48,7 @@ public sealed class CrossPageDisplayToggleRuntimePlanPolicyTests
     [Fact]
     public void Resolve_ShouldEnableUnifiedRestore_WhenPhotoInkCrossPageAndUnifiedReady()
     {
-        var plan = CrossPageDisplayToggleRuntimePlanPolicy.Resolve(
+        var plan = CrossPageDisplayUpdatePolicies.ResolveCrossPageDisplayToggleRuntimePlan(
             photoInkModeActive: true,
             crossPageDisplayEnabled: true,
             photoDocumentIsPdf: false,
@@ -64,7 +64,7 @@ public sealed class CrossPageDisplayToggleRuntimePlanPolicyTests
     [Fact]
     public void Resolve_ShouldEnableUnifiedSave_WhenPhotoInkCrossPageAndUnifiedNotReady()
     {
-        var plan = CrossPageDisplayToggleRuntimePlanPolicy.Resolve(
+        var plan = CrossPageDisplayUpdatePolicies.ResolveCrossPageDisplayToggleRuntimePlan(
             photoInkModeActive: true,
             crossPageDisplayEnabled: true,
             photoDocumentIsPdf: true,
@@ -80,7 +80,7 @@ public sealed class CrossPageDisplayToggleRuntimePlanPolicyTests
     [Fact]
     public void Resolve_ShouldResetArtifacts_WhenCrossPageDisabled()
     {
-        var plan = CrossPageDisplayToggleRuntimePlanPolicy.Resolve(
+        var plan = CrossPageDisplayUpdatePolicies.ResolveCrossPageDisplayToggleRuntimePlan(
             photoInkModeActive: true,
             crossPageDisplayEnabled: false,
             photoDocumentIsPdf: false,

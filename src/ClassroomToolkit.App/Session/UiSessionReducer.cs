@@ -14,27 +14,27 @@ internal static class UiSessionReducer
             EnterPresentationFullscreenEvent => current with
             {
                 Scene = UiSceneKind.PresentationFullscreen,
-                FocusOwner = UiSessionFocusOwnerPolicy.Resolve(UiSceneKind.PresentationFullscreen)
+                FocusOwner = UiSessionPolicies.ResolveFocusOwner(UiSceneKind.PresentationFullscreen)
             },
             ExitPresentationFullscreenEvent when current.Scene == UiSceneKind.PresentationFullscreen => current with
             {
                 Scene = UiSceneKind.Idle,
-                FocusOwner = UiSessionFocusOwnerPolicy.Resolve(UiSceneKind.Idle)
+                FocusOwner = UiSessionPolicies.ResolveFocusOwner(UiSceneKind.Idle)
             },
             EnterPhotoFullscreenEvent => current with
             {
                 Scene = UiSceneKind.PhotoFullscreen,
-                FocusOwner = UiSessionFocusOwnerPolicy.Resolve(UiSceneKind.PhotoFullscreen)
+                FocusOwner = UiSessionPolicies.ResolveFocusOwner(UiSceneKind.PhotoFullscreen)
             },
             ExitPhotoFullscreenEvent when current.Scene == UiSceneKind.PhotoFullscreen => current with
             {
                 Scene = UiSceneKind.Idle,
-                FocusOwner = UiSessionFocusOwnerPolicy.Resolve(UiSceneKind.Idle)
+                FocusOwner = UiSessionPolicies.ResolveFocusOwner(UiSceneKind.Idle)
             },
             EnterWhiteboardEvent => current with
             {
                 Scene = UiSceneKind.Whiteboard,
-                FocusOwner = UiSessionFocusOwnerPolicy.Resolve(UiSceneKind.Whiteboard)
+                FocusOwner = UiSessionPolicies.ResolveFocusOwner(UiSceneKind.Whiteboard)
             },
             ExitWhiteboardEvent whiteboardExit when current.Scene == UiSceneKind.Whiteboard =>
                 ReduceWhiteboardExit(current, whiteboardExit),
@@ -58,10 +58,10 @@ internal static class UiSessionReducer
 
     private static UiSessionState ApplyDerivedState(UiSessionState state)
     {
-        var navigationMode = UiSessionNavigationPolicy.Resolve(state.Scene, state.ToolMode);
-        var inkVisibility = UiSessionInkVisibilityPolicy.Resolve(state.Scene, state.ToolMode);
-        var overlayRequired = UiSessionOverlayVisibilityPolicy.IsOverlayTopmostRequired(state.Scene);
-        var overlayVisible = UiSessionOverlayVisibilityPolicy.AreFloatingWidgetsVisible(state.Scene);
+        var navigationMode = UiSessionPolicies.ResolveNavigation(state.Scene, state.ToolMode);
+        var inkVisibility = UiSessionPolicies.ResolveInkVisibility(state.Scene, state.ToolMode);
+        var overlayRequired = UiSessionPolicies.IsOverlayTopmostRequired(state.Scene);
+        var overlayVisible = UiSessionPolicies.AreFloatingWidgetsVisible(state.Scene);
 
         return state with
         {
@@ -81,17 +81,17 @@ internal static class UiSessionReducer
             UiSceneKind.PhotoFullscreen => current with
             {
                 Scene = UiSceneKind.PhotoFullscreen,
-                FocusOwner = UiSessionFocusOwnerPolicy.Resolve(UiSceneKind.PhotoFullscreen)
+                FocusOwner = UiSessionPolicies.ResolveFocusOwner(UiSceneKind.PhotoFullscreen)
             },
             UiSceneKind.PresentationFullscreen => current with
             {
                 Scene = UiSceneKind.PresentationFullscreen,
-                FocusOwner = UiSessionFocusOwnerPolicy.Resolve(UiSceneKind.PresentationFullscreen)
+                FocusOwner = UiSessionPolicies.ResolveFocusOwner(UiSceneKind.PresentationFullscreen)
             },
             _ => current with
             {
                 Scene = UiSceneKind.Idle,
-                FocusOwner = UiSessionFocusOwnerPolicy.Resolve(UiSceneKind.Idle)
+                FocusOwner = UiSessionPolicies.ResolveFocusOwner(UiSceneKind.Idle)
             }
         };
     }

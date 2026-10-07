@@ -18,7 +18,7 @@ public partial class MainWindow
             return;
         }
 
-        var transitionPlan = RollCallVisibilityTransitionPolicy.Resolve(
+        var transitionPlan = RollCallWindowingPolicies.ResolveRollCallVisibilityTransition(
             CaptureRollCallVisibilityTransitionContext());
         ApplyRollCallTransition(transitionPlan);
         UpdateToggleButtons();
@@ -89,7 +89,7 @@ public partial class MainWindow
             return;
         }
 
-        var transitionPlan = RollCallVisibilityTransitionPolicy.Resolve(
+        var transitionPlan = RollCallWindowingPolicies.ResolveRollCallVisibilityTransition(
             CaptureRollCallVisibilityTransitionContext());
         ApplyRollCallTransition(transitionPlan);
         UpdateToggleButtons();

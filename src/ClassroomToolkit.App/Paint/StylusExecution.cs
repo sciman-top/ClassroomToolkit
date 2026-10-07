@@ -14,7 +14,118 @@ internal static class InputGeometryDefaults
     internal const double MinRenderableImageSideDip = 0.5;
 }
 
-internal static class StylusBatchDispatchPolicy
+internal static class StylusBatchTimingDefaults
+{
+    internal const int FallbackHzWhenEmpty = 240;
+    internal const int MinPerSampleHz = 480;
+    internal const int MaxPerSampleHz = 45;
+    internal const int FallbackSpanHz = 120;
+}
+
+internal enum StylusDownExecutionAction
+{
+    None = 0,
+    HandleFirstStylusPoint = 1,
+    HandlePointerPosition = 2
+}
+
+internal readonly record struct StylusDownExecutionPlan(
+    StylusDownExecutionAction Action,
+    bool ShouldResetTimestampState,
+    bool ShouldMarkHandled);
+
+internal static class StylusInterpolationDefaults
+{
+    internal const double MinDtMsForSpeed = 0.2;
+    internal const double SpeedNormBase = 0.9;
+    internal const double SpeedNormRange = 2.4;
+    internal const double StepScaleBase = 0.9;
+    internal const double StepScaleSpeedMultiplier = 0.55;
+    internal const double InterpolationStepMinDip = 3.0;
+    internal const double InterpolationStepMaxDip = 12.0;
+    internal const double DistanceTriggerMultiplier = 1.4;
+
+    internal const double FastSpeedThreshold = 3.2;
+    internal const double MediumSpeedThreshold = 2.2;
+    internal const double SlowSpeedThreshold = 1.4;
+    internal const int FastSpeedMaxSegments = 4;
+    internal const int MediumSpeedMaxSegments = 5;
+    internal const int SlowSpeedMaxSegments = 6;
+    internal const int DefaultMaxSegments = 7;
+    internal const int MinSegmentCount = 2;
+    internal const double SlowFrameDtThresholdMs = 10.0;
+    internal const int SlowFrameMaxSegmentsBonus = 1;
+    internal const int MaxSegmentsCap = 8;
+    internal const double SegmentProgressUpperBound = 1.0;
+    internal const int MinTimestampStepTicks = 1;
+}
+
+internal enum StylusMoveExecutionAction
+{
+    None = 0,
+    HandlePointerPosition = 1,
+    HandleBrushBatch = 2,
+    HandleStylusPointsIndividually = 3
+}
+
+internal readonly record struct StylusMoveExecutionPlan(
+    StylusMoveExecutionAction Action,
+    bool ShouldMarkHandled);
+
+internal static class StylusRuntimeDefaults
+{
+    internal const double PressureGammaStable = 1.16;
+    internal const double PressureGammaResponsive = 0.88;
+    internal const double PressureGammaDefault = 1.0;
+
+    internal const double CalibratedRangeSeedMinWidth = 0.01;
+    internal const double CalibratedLowDefault = 0.0;
+    internal const double CalibratedHighDefault = 1.0;
+}
+
+internal readonly record struct StylusSampleTimestampState(
+    bool HasTimestamp,
+    long LastTimestampTicks)
+{
+    internal static StylusSampleTimestampState Default => new(
+        HasTimestamp: false,
+        LastTimestampTicks: 0);
+}
+
+internal static class StylusSampleTimestampStateUpdater
+{
+    internal static void Reset(ref StylusSampleTimestampState state)
+    {
+        state = StylusSampleTimestampState.Default;
+    }
+
+    internal static void Remember(
+        ref StylusSampleTimestampState state,
+        long timestampTicks)
+    {
+        if (timestampTicks <= 0)
+        {
+            return;
+        }
+
+        state = new StylusSampleTimestampState(
+            HasTimestamp: true,
+            LastTimestampTicks: timestampTicks);
+    }
+}
+
+internal enum StylusUpExecutionAction
+{
+    None = 0,
+    HandleLastStylusPoint = 1,
+    HandlePointerPosition = 2
+}
+
+internal readonly record struct StylusUpExecutionPlan(
+    StylusUpExecutionAction Action,
+    bool ShouldMarkHandled);
+
+internal static class StylusExecutionPolicies
 {
     internal const int MinStepTicks = 1;
     internal const int MinSampleCountForDivision = 1;
@@ -29,18 +140,7 @@ internal static class StylusBatchDispatchPolicy
     {
         return nowTicks - (stepTicks * Math.Max(MinBatchOffsetSamples, sampleCount - 1));
     }
-}
 
-internal static class StylusBatchTimingDefaults
-{
-    internal const int FallbackHzWhenEmpty = 240;
-    internal const int MinPerSampleHz = 480;
-    internal const int MaxPerSampleHz = 45;
-    internal const int FallbackSpanHz = 120;
-}
-
-internal static class StylusBatchTimingPolicy
-{
     internal static long ResolveSpanTicks(
         long stopwatchFrequency,
         long nowTicks,
@@ -74,23 +174,8 @@ internal static class StylusBatchTimingPolicy
 
         return Math.Clamp(observedSpan, minSpanTicks, maxSpanTicks);
     }
-}
 
-internal enum StylusDownExecutionAction
-{
-    None = 0,
-    HandleFirstStylusPoint = 1,
-    HandlePointerPosition = 2
-}
-
-internal readonly record struct StylusDownExecutionPlan(
-    StylusDownExecutionAction Action,
-    bool ShouldResetTimestampState,
-    bool ShouldMarkHandled);
-
-internal static class StylusDownExecutionPolicy
-{
-    internal static StylusDownExecutionPlan Resolve(
+    internal static StylusDownExecutionPlan ResolveStylusDownExecution(
         bool photoLoading,
         bool handledByPhotoPan,
         bool shouldIgnoreFromPhotoControls,
@@ -111,36 +196,7 @@ internal static class StylusDownExecutionPolicy
             ShouldResetTimestampState: true,
             ShouldMarkHandled: true);
     }
-}
 
-internal static class StylusInterpolationDefaults
-{
-    internal const double MinDtMsForSpeed = 0.2;
-    internal const double SpeedNormBase = 0.9;
-    internal const double SpeedNormRange = 2.4;
-    internal const double StepScaleBase = 0.9;
-    internal const double StepScaleSpeedMultiplier = 0.55;
-    internal const double InterpolationStepMinDip = 3.0;
-    internal const double InterpolationStepMaxDip = 12.0;
-    internal const double DistanceTriggerMultiplier = 1.4;
-
-    internal const double FastSpeedThreshold = 3.2;
-    internal const double MediumSpeedThreshold = 2.2;
-    internal const double SlowSpeedThreshold = 1.4;
-    internal const int FastSpeedMaxSegments = 4;
-    internal const int MediumSpeedMaxSegments = 5;
-    internal const int SlowSpeedMaxSegments = 6;
-    internal const int DefaultMaxSegments = 7;
-    internal const int MinSegmentCount = 2;
-    internal const double SlowFrameDtThresholdMs = 10.0;
-    internal const int SlowFrameMaxSegmentsBonus = 1;
-    internal const int MaxSegmentsCap = 8;
-    internal const double SegmentProgressUpperBound = 1.0;
-    internal const int MinTimestampStepTicks = 1;
-}
-
-internal static class StylusInterpolationPolicy
-{
     internal static double ResolveInterpolationStepDip(double brushSize, double distance, long totalTicks, long stopwatchFrequency)
     {
         double dtMs = totalTicks * 1000.0 / Math.Max(stopwatchFrequency, 1);
@@ -218,23 +274,8 @@ internal static class StylusInterpolationPolicy
 
         return angle;
     }
-}
 
-internal enum StylusMoveExecutionAction
-{
-    None = 0,
-    HandlePointerPosition = 1,
-    HandleBrushBatch = 2,
-    HandleStylusPointsIndividually = 3
-}
-
-internal readonly record struct StylusMoveExecutionPlan(
-    StylusMoveExecutionAction Action,
-    bool ShouldMarkHandled);
-
-internal static class StylusMoveExecutionPolicy
-{
-    internal static StylusMoveExecutionPlan Resolve(
+    internal static StylusMoveExecutionPlan ResolveStylusMoveExecution(
         bool photoLoading,
         bool handledByPhotoPan,
         bool inkOperationActive,
@@ -270,28 +311,14 @@ internal static class StylusMoveExecutionPolicy
             StylusMoveExecutionAction.HandleStylusPointsIndividually,
             ShouldMarkHandled: true);
     }
-}
 
-internal static class StylusRuntimeDefaults
-{
-    internal const double PressureGammaStable = 1.16;
-    internal const double PressureGammaResponsive = 0.88;
-    internal const double PressureGammaDefault = 1.0;
-
-    internal const double CalibratedRangeSeedMinWidth = 0.01;
-    internal const double CalibratedLowDefault = 0.0;
-    internal const double CalibratedHighDefault = 1.0;
-}
-
-internal static class StylusSampleTimestampPolicy
-{
     internal static long ResolveBatchSpanTicks(
         long stopwatchFrequency,
         long nowTicks,
         int sampleCount,
         in StylusSampleTimestampState state)
     {
-        return StylusBatchTimingPolicy.ResolveSpanTicks(
+        return StylusExecutionPolicies.ResolveSpanTicks(
             stopwatchFrequency,
             nowTicks,
             sampleCount,
@@ -315,53 +342,8 @@ internal static class StylusSampleTimestampPolicy
 
         return timestampTicks;
     }
-}
 
-internal readonly record struct StylusSampleTimestampState(
-    bool HasTimestamp,
-    long LastTimestampTicks)
-{
-    internal static StylusSampleTimestampState Default => new(
-        HasTimestamp: false,
-        LastTimestampTicks: 0);
-}
-
-internal static class StylusSampleTimestampStateUpdater
-{
-    internal static void Reset(ref StylusSampleTimestampState state)
-    {
-        state = StylusSampleTimestampState.Default;
-    }
-
-    internal static void Remember(
-        ref StylusSampleTimestampState state,
-        long timestampTicks)
-    {
-        if (timestampTicks <= 0)
-        {
-            return;
-        }
-
-        state = new StylusSampleTimestampState(
-            HasTimestamp: true,
-            LastTimestampTicks: timestampTicks);
-    }
-}
-
-internal enum StylusUpExecutionAction
-{
-    None = 0,
-    HandleLastStylusPoint = 1,
-    HandlePointerPosition = 2
-}
-
-internal readonly record struct StylusUpExecutionPlan(
-    StylusUpExecutionAction Action,
-    bool ShouldMarkHandled);
-
-internal static class StylusUpExecutionPolicy
-{
-    internal static StylusUpExecutionPlan Resolve(
+    internal static StylusUpExecutionPlan ResolveStylusUpExecution(
         bool photoLoading,
         bool handledByPhotoPan,
         bool inkOperationActive,

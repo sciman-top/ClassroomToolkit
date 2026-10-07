@@ -92,7 +92,58 @@ internal static class CrossPageInteractiveHoldDurationDefaults
     internal const int EraserModeExtraMs = 40;
 }
 
-internal static class CrossPageInteractiveHoldDurationPolicy
+internal enum CrossPageInteractiveInkSlotRemapAction
+{
+    KeepCurrentFrame = 0,
+    UsePreservedFrame = 1,
+    ClearCurrentFrame = 2
+}
+
+internal readonly record struct CrossPageNeighborInkFrameDecision(
+    bool ClearCurrentFrame,
+    bool AllowResolvedInkReplacement,
+    bool KeepVisible);
+
+internal readonly record struct CrossPageNeighborInkRenderSurfacePlan(
+    int PixelWidth,
+    int PixelHeight,
+    double HorizontalOffsetDip);
+
+internal readonly record struct CrossPageNeighborPageFrameDecision(
+    bool HoldCurrentFrame,
+    bool CollapseSlot);
+
+internal static class CrossPageNeighborPagesClearDefaults
+{
+    internal const int MinGraceMs = 0;
+}
+
+internal static class CrossPageNeighborPrefetchDefaults
+{
+    internal const int RadiusDefault = 2;
+    internal const int RadiusMin = 1;
+    internal const int RadiusMax = 4;
+    internal const int NeighborInkCacheLimit = 10;
+}
+
+internal static class CrossPageSwitchBitmapResolver
+{
+    internal static TBitmap? ResolveForInteractiveSwitch<TBitmap>(
+        bool interactiveSwitch,
+        TBitmap? preloadedBitmap,
+        Func<TBitmap?> loadBitmap)
+        where TBitmap : class
+    {
+        if (interactiveSwitch && preloadedBitmap != null)
+        {
+            return preloadedBitmap;
+        }
+
+        return loadBitmap();
+    }
+}
+
+internal static class CrossPageNeighborInkPolicies
 {
     internal static int ResolveMs(
         int visibleNeighborPages,
@@ -122,10 +173,7 @@ internal static class CrossPageInteractiveHoldDurationPolicy
 
         return Math.Clamp(value, 1, maxMs);
     }
-}
 
-internal static class CrossPageInteractiveInkClearPolicy
-{
     internal static bool ShouldClearCurrentFrame(
         bool holdInkReplacement,
         bool hasNeighborInkStrokes,
@@ -137,10 +185,7 @@ internal static class CrossPageInteractiveInkClearPolicy
             && !inkOperationActive
             && !hasNeighborInkStrokes;
     }
-}
 
-internal static class CrossPageInteractiveInkFrameHoldPolicy
-{
     internal static bool ShouldHoldReplacement(
         int pageIndex,
         int pinnedNeighborPage,
@@ -163,11 +208,8 @@ internal static class CrossPageInteractiveInkFrameHoldPolicy
 
         return nowUtc <= holdUntilUtc;
     }
-}
 
-internal static class CrossPageInteractiveInkReplacementPolicy
-{
-    internal static bool ShouldReplace(
+    internal static bool ShouldReplaceCrossPageInteractiveInkReplacement(
         bool hasResolvedInkBitmap,
         bool holdInkReplacement,
         bool hasCurrentInkFrame,
@@ -188,18 +230,8 @@ internal static class CrossPageInteractiveInkReplacementPolicy
         // For same-slot updates, allow replacement unless hold explicitly blocks it.
         return !holdInkReplacement || !hasCurrentInkFrame;
     }
-}
 
-internal enum CrossPageInteractiveInkSlotRemapAction
-{
-    KeepCurrentFrame = 0,
-    UsePreservedFrame = 1,
-    ClearCurrentFrame = 2
-}
-
-internal static class CrossPageInteractiveInkSlotRemapPolicy
-{
-    internal static CrossPageInteractiveInkSlotRemapAction Resolve(
+    internal static CrossPageInteractiveInkSlotRemapAction ResolveCrossPageInteractiveInkSlotRemap(
         bool slotPageChanged,
         bool hasResolvedInkBitmap,
         bool hasCurrentInkFrame,
@@ -236,11 +268,8 @@ internal static class CrossPageInteractiveInkSlotRemapPolicy
             ? CrossPageInteractiveInkSlotRemapAction.ClearCurrentFrame
             : CrossPageInteractiveInkSlotRemapAction.KeepCurrentFrame;
     }
-}
 
-internal static class CrossPageInteractiveNeighborInkHoldPolicy
-{
-    internal static bool Resolve(
+    internal static bool ResolveCrossPageInteractiveNeighborInkHold(
         bool baseHoldReplacement,
         bool interactionActive,
         bool hasCurrentInkFrame,
@@ -264,11 +293,8 @@ internal static class CrossPageInteractiveNeighborInkHoldPolicy
         // temporarily ride on top of a remapped neighbor page.
         return interactionActive && inkOperationActive && hasCurrentInkFrame;
     }
-}
 
-internal static class CrossPageInteractivePageReplacementPolicy
-{
-    internal static bool ShouldReplace(
+    internal static bool ShouldReplaceCrossPageInteractivePageReplacement(
         bool hasResolvedTargetFrame,
         bool interactionActive,
         bool slotPageChanged,
@@ -303,10 +329,7 @@ internal static class CrossPageInteractivePageReplacementPolicy
         // Reusing old frame here causes cross-page ghost duplication.
         return !slotPageChanged;
     }
-}
 
-internal static class CrossPageInteractivePinLifetimePolicy
-{
     internal static bool ShouldReleasePin(
         DateTime holdUntilUtc,
         DateTime nowUtc,
@@ -324,10 +347,7 @@ internal static class CrossPageInteractivePinLifetimePolicy
 
         return nowUtc > holdUntilUtc;
     }
-}
 
-internal static class CrossPageInteractiveSeedInkFramePolicy
-{
     internal static bool ShouldReplaceFrame(
         bool inkShowEnabled,
         bool hasCurrentFrame,
@@ -354,10 +374,7 @@ internal static class CrossPageInteractiveSeedInkFramePolicy
         // Keep current frame when target bitmap is temporarily unavailable.
         return !hasCurrentFrame;
     }
-}
 
-internal static class CrossPageMutationNeighborInkCarryoverPolicy
-{
     internal static bool ShouldClearPreservedNeighborInkFrames(
         bool pageChanged,
         bool interactiveSwitch,
@@ -371,10 +388,7 @@ internal static class CrossPageMutationNeighborInkCarryoverPolicy
 
         return mode == PaintToolMode.Brush;
     }
-}
 
-internal static class CrossPageMutationNeighborRetentionPolicy
-{
     internal static int ResolvePreservedPage(
         bool clearPreservedNeighborInkFrames,
         bool pageChanged,
@@ -393,10 +407,7 @@ internal static class CrossPageMutationNeighborRetentionPolicy
 
         return previousPage;
     }
-}
 
-internal static class CrossPageMutationNeighborSeedPolicy
-{
     internal static bool ShouldSeedPreviousPageAfterClear(
         bool clearPreservedNeighborInkFrames,
         bool pageChanged,
@@ -415,11 +426,8 @@ internal static class CrossPageMutationNeighborSeedPolicy
 
         return true;
     }
-}
 
-internal static class CrossPageNeighborBitmapResolvePolicy
-{
-    internal static bool ShouldAllowSynchronousResolve(
+    internal static bool ShouldAllowSynchronousResolveCrossPageNeighborBitmapResolve(
         bool interactionActive,
         bool slotPageChanged)
     {
@@ -432,11 +440,8 @@ internal static class CrossPageNeighborBitmapResolvePolicy
         // Slot remap should stay async to avoid decode/render spikes and ghost flashes.
         return !slotPageChanged;
     }
-}
 
-internal static class CrossPageNeighborHeightResolvePolicy
-{
-    internal static bool ShouldAllowSynchronousResolve(
+    internal static bool ShouldAllowSynchronousResolveCrossPageNeighborHeightResolve(
         bool interactionActive,
         bool photoDocumentIsPdf)
     {
@@ -449,16 +454,8 @@ internal static class CrossPageNeighborHeightResolvePolicy
         // Keep image sequence interaction on async path to avoid decode stalls.
         return photoDocumentIsPdf;
     }
-}
 
-internal readonly record struct CrossPageNeighborInkFrameDecision(
-    bool ClearCurrentFrame,
-    bool AllowResolvedInkReplacement,
-    bool KeepVisible);
-
-internal static class CrossPageNeighborInkFramePolicy
-{
-    internal static CrossPageNeighborInkFrameDecision Resolve(
+    internal static CrossPageNeighborInkFrameDecision ResolveFrame(
         bool slotPageChanged,
         bool hasCurrentInkFrame,
         bool hasTargetInkStrokes,
@@ -477,7 +474,7 @@ internal static class CrossPageNeighborInkFramePolicy
                 KeepVisible: retainCurrentFrame);
         }
 
-        var keepExistingFrame = CrossPageNeighborInkPolicy.ShouldKeepExistingInkFrame(
+        var keepExistingFrame = CrossPageNeighborInkPolicies.ShouldKeepExistingInkFrame(
             slotPageChanged,
             hasCurrentInkFrame);
         var preservePreservedUntilReplacement = usedPreservedInkFrame && !hasResolvedInkBitmap;
@@ -486,7 +483,7 @@ internal static class CrossPageNeighborInkFramePolicy
             && !preservePreservedUntilReplacement;
         var allowResolvedInkReplacement = hasResolvedInkBitmap
             && !holdInkReplacement
-            && CrossPageNeighborInkReplacementPolicy.ShouldReplace(
+            && CrossPageNeighborInkPolicies.ShouldReplaceReplacement(
                 slotPageChanged,
                 hasCurrentInkFrame,
                 usedPreservedInkFrame);
@@ -507,10 +504,7 @@ internal static class CrossPageNeighborInkFramePolicy
     {
         return decision.ClearCurrentFrame && !hasResolvedInkBitmap;
     }
-}
 
-internal static class CrossPageNeighborInkPolicy
-{
     internal static bool ShouldKeepExistingInkFrame(
         bool slotPageChanged,
         bool hasExistingInkFrame)
@@ -524,10 +518,7 @@ internal static class CrossPageNeighborInkPolicy
         // regardless of interaction state, to avoid one-frame flash.
         return true;
     }
-}
 
-internal static class CrossPageNeighborInkRenderAdmissionPolicy
-{
     internal static bool ShouldRejectStaleCacheKey(string cacheKey, string expectedCacheKey)
     {
         if (string.IsNullOrWhiteSpace(expectedCacheKey))
@@ -537,20 +528,12 @@ internal static class CrossPageNeighborInkRenderAdmissionPolicy
 
         return !string.Equals(cacheKey, expectedCacheKey, System.StringComparison.Ordinal);
     }
-}
 
-internal readonly record struct CrossPageNeighborInkRenderSurfacePlan(
-    int PixelWidth,
-    int PixelHeight,
-    double HorizontalOffsetDip);
-
-internal static class CrossPageNeighborInkRenderSurfacePolicy
-{
     // Keep horizontal overflow bounded to avoid large RenderTargetBitmap allocations
     // when malformed stroke geometry reports extreme bounds.
     internal const int MaxHorizontalOverflowDipPerSidePx = 320;
 
-    internal static CrossPageNeighborInkRenderSurfacePlan Resolve(
+    internal static CrossPageNeighborInkRenderSurfacePlan ResolveRenderSurface(
         int pagePixelWidth,
         int pagePixelHeight,
         double dpiX,
@@ -597,11 +580,8 @@ internal static class CrossPageNeighborInkRenderSurfacePolicy
         var resolvedOffsetDip = leftOverflowPx * 96.0 / safeDpiX;
         return new CrossPageNeighborInkRenderSurfacePlan(resolvedWidth, pagePixelHeight, resolvedOffsetDip);
     }
-}
 
-internal static class CrossPageNeighborInkReplacementPolicy
-{
-    internal static bool ShouldReplace(
+    internal static bool ShouldReplaceReplacement(
         bool slotPageChanged,
         bool hasCurrentInkFrame,
         bool usedPreservedInkFrame)
@@ -619,10 +599,7 @@ internal static class CrossPageNeighborInkReplacementPolicy
         // During slot remap, keep preserved frame until a truly newer render arrives.
         return !usedPreservedInkFrame;
     }
-}
 
-internal static class CrossPageNeighborPageCandidatePolicy
-{
     internal static bool ShouldUseCandidate(
         Visibility visibility,
         bool hasBitmap,
@@ -642,11 +619,8 @@ internal static class CrossPageNeighborPageCandidatePolicy
         }
         return pointerInsideRect;
     }
-}
 
-internal static class CrossPageNeighborPageDedupPolicy
-{
-    internal static List<(int PageIndex, double Top)> Resolve(
+    internal static List<(int PageIndex, double Top)> ResolveCrossPageNeighborPageDedup(
         List<(int PageIndex, double Top)> neighborPages)
     {
         if (neighborPages.Count <= 1)
@@ -666,15 +640,8 @@ internal static class CrossPageNeighborPageDedupPolicy
         }
         return result;
     }
-}
 
-internal readonly record struct CrossPageNeighborPageFrameDecision(
-    bool HoldCurrentFrame,
-    bool CollapseSlot);
-
-internal static class CrossPageNeighborPageFramePolicy
-{
-    internal static CrossPageNeighborPageFrameDecision Resolve(
+    internal static CrossPageNeighborPageFrameDecision ResolveCrossPageNeighborPageFrame(
         bool slotPageChanged,
         bool hasCurrentFrame,
         bool hasResolvedTargetFrame,
@@ -706,15 +673,7 @@ internal static class CrossPageNeighborPageFramePolicy
             HoldCurrentFrame: false,
             CollapseSlot: true);
     }
-}
 
-internal static class CrossPageNeighborPagesClearDefaults
-{
-    internal const int MinGraceMs = 0;
-}
-
-internal static class CrossPageNeighborPagesClearPolicy
-{
     internal static bool ShouldKeepFrames(
         bool hasVisibleNeighborFrame,
         bool interactionActive,
@@ -740,18 +699,7 @@ internal static class CrossPageNeighborPagesClearPolicy
 
         return (nowUtc - lastNonEmptyUtc).TotalMilliseconds < clearGraceMs;
     }
-}
 
-internal static class CrossPageNeighborPrefetchDefaults
-{
-    internal const int RadiusDefault = 2;
-    internal const int RadiusMin = 1;
-    internal const int RadiusMax = 4;
-    internal const int NeighborInkCacheLimit = 10;
-}
-
-internal static class CrossPageNeighborPrefetchGatePolicy
-{
     internal static bool ShouldSchedule(
         bool photoModeActive,
         bool photoDocumentIsPdf,
@@ -781,22 +729,5 @@ internal static class CrossPageNeighborPrefetchGatePolicy
             && !photoDocumentIsPdf
             && crossPageDisplayEnabled
             && !interactionActive;
-    }
-}
-
-internal static class CrossPageSwitchBitmapResolver
-{
-    internal static TBitmap? ResolveForInteractiveSwitch<TBitmap>(
-        bool interactiveSwitch,
-        TBitmap? preloadedBitmap,
-        Func<TBitmap?> loadBitmap)
-        where TBitmap : class
-    {
-        if (interactiveSwitch && preloadedBitmap != null)
-        {
-            return preloadedBitmap;
-        }
-
-        return loadBitmap();
     }
 }

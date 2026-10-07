@@ -111,7 +111,7 @@ public partial class PaintOverlayWindow
 
     private void TrackInkWalSnapshot(string sourcePath, int pageIndex, IReadOnlyList<InkStrokeData> strokes, string hash)
     {
-        if (!InkPersistenceTogglePolicy.ShouldTrackWal(_inkSaveEnabled))
+        if (!InkPersistencePolicies.ShouldTrackWal(_inkSaveEnabled))
         {
             return;
         }
@@ -128,7 +128,7 @@ public partial class PaintOverlayWindow
 
     private void RecoverInkWalForDirectory(string sourcePath)
     {
-        if (!InkPersistenceTogglePolicy.ShouldRecoverWal(_inkSaveEnabled)
+        if (!InkPersistencePolicies.ShouldRecoverWal(_inkSaveEnabled)
             || string.IsNullOrWhiteSpace(sourcePath)
             || _inkPersistence == null)
         {

@@ -85,7 +85,7 @@ public sealed class PhotoInputAlignmentPolicyTests
         bool inkOperationActive,
         bool expected)
     {
-        var actual = StylusCursorPolicy.ShouldPanPhoto(
+        var actual = PhotoInkInteropPolicies.ShouldPanPhoto(
             photoModeActive,
             boardActive,
             mode,
@@ -102,7 +102,7 @@ public sealed class PhotoInputAlignmentPolicyTests
         bool photoPanning,
         bool expected)
     {
-        var actual = PhotoPanBeginGuardPolicy.ShouldBegin(shouldPanPhoto, photoPanning);
+        var actual = PhotoInkInteropPolicies.ShouldBegin(shouldPanPhoto, photoPanning);
         actual.Should().Be(expected);
     }
 
@@ -119,7 +119,7 @@ public sealed class PhotoInputAlignmentPolicyTests
         int phase,
         int expected)
     {
-        var decision = StylusPhotoPanRoutingPolicy.Resolve(
+        var decision = PhotoInkInteropPolicies.ResolveStylusPhotoPanRouting(
             shouldPanPhoto,
             photoPanning,
             (StylusPhotoPanPhase)phase);
@@ -195,7 +195,7 @@ public sealed class PhotoInputAlignmentPolicyTests
         int activeTouchCount,
         int expected)
     {
-        var decision = PhotoManipulationRoutingPolicy.Resolve(
+        var decision = PhotoInkInteropPolicies.ResolvePhotoManipulationRouting(
             photoModeActive,
             boardActive,
             mode,
@@ -222,7 +222,7 @@ public sealed class PhotoInputAlignmentPolicyTests
         int expectedAction,
         bool expectedHandled)
     {
-        var plan = StylusPhotoPanExecutionPolicy.Resolve(
+        var plan = PhotoInkInteropPolicies.ResolveStylusPhotoPanExecution(
             (StylusPhotoPanRoutingDecision)routingDecision,
             sourceShouldContinue,
             sourceShouldMarkHandled,
@@ -241,7 +241,7 @@ public sealed class PhotoInputAlignmentPolicyTests
         bool expectedShouldHandle,
         bool expectedShouldMarkHandled)
     {
-        var plan = PhotoManipulationEventHandlingPolicy.Resolve((PhotoManipulationRoutingDecision)decision);
+        var plan = PhotoInkInteropPolicies.ResolvePhotoManipulationEventHandling((PhotoManipulationRoutingDecision)decision);
 
         plan.ShouldHandle.Should().Be(expectedShouldHandle);
         plan.ShouldMarkHandled.Should().Be(expectedShouldMarkHandled);

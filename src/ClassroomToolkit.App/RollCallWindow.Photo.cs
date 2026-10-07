@@ -69,7 +69,7 @@ public partial class RollCallWindow
         SafeActionExecutionExecutor.TryExecute(
             _photoOverlay.CloseOverlay,
             ex => System.Diagnostics.Debug.WriteLine(
-                RollCallWindowDiagnosticsPolicy.FormatPhotoOverlayCloseFailureMessage(
+                RollCallWindowingPolicies.FormatPhotoOverlayCloseFailureMessage(
                     "hide-overlay",
                     ex.GetType().Name,
                     ex.Message)));
@@ -84,14 +84,14 @@ public partial class RollCallWindow
         SafeActionExecutionExecutor.TryExecute(
             _photoOverlay.CloseOverlay,
             ex => System.Diagnostics.Debug.WriteLine(
-                RollCallWindowDiagnosticsPolicy.FormatPhotoOverlayCloseFailureMessage(
+                RollCallWindowingPolicies.FormatPhotoOverlayCloseFailureMessage(
                     "close-overlay",
                     ex.GetType().Name,
                     ex.Message)));
         SafeActionExecutionExecutor.TryExecute(
             _photoOverlay.Close,
             ex => System.Diagnostics.Debug.WriteLine(
-                RollCallWindowDiagnosticsPolicy.FormatPhotoOverlayCloseFailureMessage(
+                RollCallWindowingPolicies.FormatPhotoOverlayCloseFailureMessage(
                     "close-window",
                     ex.GetType().Name,
                     ex.Message)));

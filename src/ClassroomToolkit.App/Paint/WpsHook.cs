@@ -64,188 +64,11 @@ internal static class MessageBoxWpsHookUnavailableNotifier
     }
 }
 
-internal static class WpsFullscreenExitPolicy
-{
-    internal static bool ShouldTreatAsActiveFullscreen(
-        bool hasFullscreenCandidate,
-        PresentationType foregroundType,
-        bool foregroundIsFullscreen,
-        bool foregroundOwnedByCurrentProcess)
-    {
-        if (!hasFullscreenCandidate)
-        {
-            return false;
-        }
-
-        if (foregroundOwnedByCurrentProcess)
-        {
-            return true;
-        }
-
-        // WPS may leave a background fullscreen candidate alive briefly after exit.
-        // If foreground already returned to a non-fullscreen WPS window, treat slideshow as ended.
-        if (foregroundType == PresentationType.Wps && !foregroundIsFullscreen)
-        {
-            return false;
-        }
-
-        return true;
-    }
-}
-
-internal static class WpsHookEnableGatePolicy
-{
-    internal static bool ShouldAttemptResolveTarget(
-        bool allowWps,
-        bool boardActive,
-        bool overlayVisible,
-        bool photoModeActive)
-    {
-        if (!allowWps || boardActive || !overlayVisible || photoModeActive)
-        {
-            return false;
-        }
-
-        return true;
-    }
-
-    internal static bool ShouldEnableWithTarget(
-        bool shouldAttemptResolveTarget,
-        bool targetValid,
-        bool targetIsSlideshow)
-    {
-        if (!shouldAttemptResolveTarget)
-        {
-            return false;
-        }
-
-        return targetValid && targetIsSlideshow;
-    }
-}
-
-internal static class WpsHookInputDebouncePolicy
-{
-    internal static bool IsRecent(
-        DateTime lastHookInputUtc,
-        DateTime nowUtc,
-        int debounceMs)
-    {
-        if (lastHookInputUtc == PresentationRuntimeDefaults.UnsetTimestampUtc)
-        {
-            return false;
-        }
-
-        return (nowUtc - lastHookInputUtc).TotalMilliseconds < debounceMs;
-    }
-}
-
 internal sealed record WpsHookInterceptDecision(
     bool InterceptKeyboard,
     bool InterceptWheel,
     bool BlockOnly,
     bool EmitWheelOnBlock);
-
-internal static class WpsHookInterceptPolicy
-{
-    internal static WpsHookInterceptDecision Resolve(
-        bool shouldEnable,
-        PaintToolMode mode,
-        bool targetIsSlideshow,
-        bool targetForeground,
-        bool isRawSendMode,
-        bool wheelForward)
-    {
-        var blockOnly = false;
-        var interceptKeyboard = true;
-        // When WPS already owns the foreground, keep its native wheel path and
-        // do not also inject a key from the hook.  Wheel mapping is only a
-        // background-target bridge; this removes the native-wheel + injected-key
-        // double channel that debounce cannot prove away.
-        var interceptWheel = wheelForward && !targetForeground;
-        var emitWheelOnBlock = interceptWheel;
-
-        if (!shouldEnable)
-        {
-            return new WpsHookInterceptDecision(
-                InterceptKeyboard: false,
-                InterceptWheel: false,
-                BlockOnly: false,
-                EmitWheelOnBlock: false);
-        }
-
-        if (mode == PaintToolMode.Cursor)
-        {
-            if (targetIsSlideshow && !targetForeground)
-            {
-                // Cursor mode prefers passthrough, but keep keyboard fallback
-                // when WPS slideshow is not foreground to avoid navigation dead zones.
-                return new WpsHookInterceptDecision(
-                    InterceptKeyboard: true,
-                    InterceptWheel: false,
-                    BlockOnly: false,
-                    EmitWheelOnBlock: false);
-            }
-
-            return new WpsHookInterceptDecision(
-                InterceptKeyboard: false,
-                InterceptWheel: false,
-                BlockOnly: false,
-                EmitWheelOnBlock: false);
-        }
-
-        // In inking mode, overlay is usually foreground. Keep hook interception
-        // active for presentation scene even when target isn't foreground.
-        if (!targetForeground && !targetIsSlideshow)
-        {
-            return new WpsHookInterceptDecision(
-                InterceptKeyboard: false,
-                InterceptWheel: false,
-                BlockOnly: false,
-                EmitWheelOnBlock: false);
-        }
-
-        if (mode != PaintToolMode.Cursor && isRawSendMode)
-        {
-            // In drawing mode, avoid swallowing keyboard/wheel input.
-            // Keep hook for remote clickers while local input still goes through.
-            blockOnly = false;
-            emitWheelOnBlock = wheelForward;
-        }
-
-        return new WpsHookInterceptDecision(
-            InterceptKeyboard: interceptKeyboard,
-            InterceptWheel: interceptWheel,
-            BlockOnly: blockOnly,
-            EmitWheelOnBlock: emitWheelOnBlock);
-    }
-}
-
-internal static class WpsHookNavigationInjectionGatePolicy
-{
-    /// <summary>
-    /// 决定 LL hook 收到的导航事件是否需要由本进程再注入一次翻页命令。
-    /// 只有明确授权的覆盖层/工具条前台时才允许把输入中继到后台放映窗；
-    /// 外部应用及本进程其他窗口都 fail-closed。
-    /// </summary>
-    internal static bool ShouldSuppressInjection(
-        bool targetIsForeground,
-        bool foregroundInputAuthorized,
-        bool wheelSource,
-        bool wheelAsKeyEnabled)
-    {
-        if (!targetIsForeground)
-        {
-            // 外来应用或本进程其他窗口持有前台时，输入属于该窗口（如 Word
-            // 或设置对话框中的文本输入），不得转译为后台放映翻页；只有
-            // 明确授权的覆盖层/工具条 HWND 才保留翻页笔中继。
-            return !foregroundInputAuthorized;
-        }
-
-        // 放映窗在前台时始终保留原生输入。WheelAsKey 只用于后台目标桥接；
-        // 前台再注入会与 WPS 原生滚轮形成无法确认的双翻页。
-        return true;
-    }
-}
 
 internal readonly record struct WpsHookRuntimeState(
     bool IsActive,
@@ -378,8 +201,183 @@ internal sealed class WpsHookOrchestrator
     }
 }
 
-internal static class WpsHookUnavailableNotificationPolicy
+internal readonly record struct WpsNavigationDebounceState(
+    (int Code, IntPtr Target, DateTime Timestamp)? LastEvent);
+
+internal static class WpsNavigationDebounceStateUpdater
 {
+    internal static void Apply(
+        ref (int Code, IntPtr Target, DateTime Timestamp)? lastEvent,
+        WpsNavigationDebounceState state)
+    {
+        lastEvent = state.LastEvent;
+    }
+}
+
+internal static class WpsHookPolicies
+{
+    internal static bool ShouldTreatAsActiveFullscreen(
+        bool hasFullscreenCandidate,
+        PresentationType foregroundType,
+        bool foregroundIsFullscreen,
+        bool foregroundOwnedByCurrentProcess)
+    {
+        if (!hasFullscreenCandidate)
+        {
+            return false;
+        }
+
+        if (foregroundOwnedByCurrentProcess)
+        {
+            return true;
+        }
+
+        // WPS may leave a background fullscreen candidate alive briefly after exit.
+        // If foreground already returned to a non-fullscreen WPS window, treat slideshow as ended.
+        if (foregroundType == PresentationType.Wps && !foregroundIsFullscreen)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    internal static bool ShouldAttemptResolveTarget(
+        bool allowWps,
+        bool boardActive,
+        bool overlayVisible,
+        bool photoModeActive)
+    {
+        if (!allowWps || boardActive || !overlayVisible || photoModeActive)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    internal static bool ShouldEnableWithTarget(
+        bool shouldAttemptResolveTarget,
+        bool targetValid,
+        bool targetIsSlideshow)
+    {
+        if (!shouldAttemptResolveTarget)
+        {
+            return false;
+        }
+
+        return targetValid && targetIsSlideshow;
+    }
+
+    internal static bool IsRecent(
+        DateTime lastHookInputUtc,
+        DateTime nowUtc,
+        int debounceMs)
+    {
+        if (lastHookInputUtc == PresentationRuntimeDefaults.UnsetTimestampUtc)
+        {
+            return false;
+        }
+
+        return (nowUtc - lastHookInputUtc).TotalMilliseconds < debounceMs;
+    }
+
+    internal static WpsHookInterceptDecision Resolve(
+        bool shouldEnable,
+        PaintToolMode mode,
+        bool targetIsSlideshow,
+        bool targetForeground,
+        bool isRawSendMode,
+        bool wheelForward)
+    {
+        var blockOnly = false;
+        var interceptKeyboard = true;
+        // When WPS already owns the foreground, keep its native wheel path and
+        // do not also inject a key from the hook.  Wheel mapping is only a
+        // background-target bridge; this removes the native-wheel + injected-key
+        // double channel that debounce cannot prove away.
+        var interceptWheel = wheelForward && !targetForeground;
+        var emitWheelOnBlock = interceptWheel;
+
+        if (!shouldEnable)
+        {
+            return new WpsHookInterceptDecision(
+                InterceptKeyboard: false,
+                InterceptWheel: false,
+                BlockOnly: false,
+                EmitWheelOnBlock: false);
+        }
+
+        if (mode == PaintToolMode.Cursor)
+        {
+            if (targetIsSlideshow && !targetForeground)
+            {
+                // Cursor mode prefers passthrough, but keep keyboard fallback
+                // when WPS slideshow is not foreground to avoid navigation dead zones.
+                return new WpsHookInterceptDecision(
+                    InterceptKeyboard: true,
+                    InterceptWheel: false,
+                    BlockOnly: false,
+                    EmitWheelOnBlock: false);
+            }
+
+            return new WpsHookInterceptDecision(
+                InterceptKeyboard: false,
+                InterceptWheel: false,
+                BlockOnly: false,
+                EmitWheelOnBlock: false);
+        }
+
+        // In inking mode, overlay is usually foreground. Keep hook interception
+        // active for presentation scene even when target isn't foreground.
+        if (!targetForeground && !targetIsSlideshow)
+        {
+            return new WpsHookInterceptDecision(
+                InterceptKeyboard: false,
+                InterceptWheel: false,
+                BlockOnly: false,
+                EmitWheelOnBlock: false);
+        }
+
+        if (mode != PaintToolMode.Cursor && isRawSendMode)
+        {
+            // In drawing mode, avoid swallowing keyboard/wheel input.
+            // Keep hook for remote clickers while local input still goes through.
+            blockOnly = false;
+            emitWheelOnBlock = wheelForward;
+        }
+
+        return new WpsHookInterceptDecision(
+            InterceptKeyboard: interceptKeyboard,
+            InterceptWheel: interceptWheel,
+            BlockOnly: blockOnly,
+            EmitWheelOnBlock: emitWheelOnBlock);
+    }
+
+    /// <summary>
+    /// 决定 LL hook 收到的导航事件是否需要由本进程再注入一次翻页命令。
+    /// 只有明确授权的覆盖层/工具条前台时才允许把输入中继到后台放映窗；
+    /// 外部应用及本进程其他窗口都 fail-closed。
+    /// </summary>
+    internal static bool ShouldSuppressInjection(
+        bool targetIsForeground,
+        bool foregroundInputAuthorized,
+        bool wheelSource,
+        bool wheelAsKeyEnabled)
+    {
+        if (!targetIsForeground)
+        {
+            // 外来应用或本进程其他窗口持有前台时，输入属于该窗口（如 Word
+            // 或设置对话框中的文本输入），不得转译为后台放映翻页；只有
+            // 明确授权的覆盖层/工具条 HWND 才保留翻页笔中继。
+            return !foregroundInputAuthorized;
+        }
+
+        // 放映窗在前台时始终保留原生输入。WheelAsKey 只用于后台目标桥接；
+        // 前台再注入会与 WPS 原生滚轮形成无法确认的双翻页。
+        return true;
+    }
+
     internal static bool IsNotified(ref int notifiedState)
     {
         return Volatile.Read(ref notifiedState) != 0;
@@ -394,13 +392,7 @@ internal static class WpsHookUnavailableNotificationPolicy
     {
         Interlocked.Exchange(ref notifiedState, 0);
     }
-}
 
-internal readonly record struct WpsNavigationDebounceState(
-    (int Code, IntPtr Target, DateTime Timestamp)? LastEvent);
-
-internal static class WpsNavigationDebouncePolicy
-{
     // 仅抑制同方向+同目标的重复导航（滚轮洪泛/多路径重复触发）；
     // 反方向是用户刻意的翻页纠正，不得被全域阻断窗口吞掉。
     internal static bool ShouldSuppress(
@@ -436,28 +428,12 @@ internal static class WpsNavigationDebouncePolicy
         return new WpsNavigationDebounceState(
             LastEvent: (direction, target, nowUtc));
     }
-}
 
-internal static class WpsNavigationDebounceStateUpdater
-{
-    internal static void Apply(
-        ref (int Code, IntPtr Target, DateTime Timestamp)? lastEvent,
-        WpsNavigationDebounceState state)
-    {
-        lastEvent = state.LastEvent;
-    }
-}
-
-internal static class WpsPresentationRuntimePolicy
-{
     internal static bool IsDedicatedSlideshowRuntime(string? processName)
     {
         return PresentationClassifier.IsDedicatedWpsPresentationRuntime(processName);
     }
-}
 
-internal static class WpsRawFallbackTargetPolicy
-{
     internal static bool ShouldResolveWpsRawTarget(bool presentationTargetValid, bool allowWps)
     {
         return !presentationTargetValid && allowWps;
@@ -467,10 +443,7 @@ internal static class WpsRawFallbackTargetPolicy
     {
         return wpsTargetValid && wpsSendMode == InputStrategy.Raw;
     }
-}
 
-internal static class WpsWheelRoutingPolicy
-{
     internal static bool ShouldBypassDirectSend(
         bool hookActive,
         bool hookInterceptWheel,

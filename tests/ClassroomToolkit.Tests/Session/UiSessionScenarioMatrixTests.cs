@@ -34,7 +34,7 @@ public sealed class UiSessionScenarioMatrixTests
 
         state.Scene.Should().Be(to);
         state.FocusOwner.Should().Be(ExpectedFocusOwner(to));
-        state.NavigationMode.Should().Be(UiSessionNavigationPolicy.Resolve(to, toolMode));
+        state.NavigationMode.Should().Be(UiSessionPolicies.ResolveNavigation(to, toolMode));
         UiSessionInvariants.Validate(state).Should().BeEmpty();
     }
 

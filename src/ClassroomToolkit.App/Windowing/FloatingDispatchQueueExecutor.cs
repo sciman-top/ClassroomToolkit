@@ -13,7 +13,7 @@ internal static class FloatingDispatchQueueExecutor
     {
         ArgumentNullException.ThrowIfNull(queueApply);
 
-        var decision = FloatingDispatchQueuePolicy.RequestApply(state, forceEnforceZOrder);
+        var decision = FloatingWindowCoordinationPolicies.RequestApply(state, forceEnforceZOrder);
         if (decision.Action == FloatingDispatchQueueAction.QueueApply)
         {
             Exception? dispatchFailure = null;
@@ -59,7 +59,7 @@ internal static class FloatingDispatchQueueExecutor
         }
         finally
         {
-            state = FloatingDispatchQueuePolicy.OnApplyExecuted(state);
+            state = FloatingWindowCoordinationPolicies.OnApplyExecuted(state);
         }
 
         return state;

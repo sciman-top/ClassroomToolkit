@@ -35,7 +35,7 @@ public partial class PaintSettingsDialog
 
     private void ApplyPresetScheme(string preset)
     {
-        if (!PresetSchemePolicy.TryResolveManagedParameters(preset, out var parameters))
+        if (!PresetSchemePolicies.TryResolveManagedParameters(preset, out var parameters))
         {
             return;
         }
@@ -57,7 +57,7 @@ public partial class PaintSettingsDialog
 
     private static string ResolveInitialPresetScheme(AppSettings settings)
     {
-        return PresetSchemePolicy.ResolveInitialScheme(settings);
+        return PresetSchemePolicies.ResolveInitialScheme(settings);
     }
 
     private void UpdatePresetHint(string preset)

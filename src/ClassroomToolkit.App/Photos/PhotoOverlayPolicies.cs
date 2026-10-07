@@ -10,32 +10,23 @@ public sealed record FolderItem(string Path)
     }
 }
 
-internal static class PhotoCursorModeFocusPolicy
+internal static class PhotoOverlayPolicies
 {
     internal static bool ShouldFocusOverlay(bool photoModeActive)
     {
         return photoModeActive;
     }
-}
 
-internal static class PhotoModeOwnerSyncPolicy
-{
     internal static bool ShouldSyncOwners(bool touchPhotoFullscreenSurface)
     {
         return !touchPhotoFullscreenSurface;
     }
-}
 
-internal static class PhotoShowInkOverlayChangePolicy
-{
     internal static bool ShouldApply(bool currentEnabled, bool nextEnabled)
     {
         return currentEnabled != nextEnabled;
     }
-}
 
-internal static class PhotoOverlayDiagnosticsPolicy
-{
     internal static string FormatSessionStartMessage()
     {
         var timestamp = PhotoNavigationDiagnosticsTimestampPolicy.Format(DateTime.Now);
@@ -47,10 +38,7 @@ internal static class PhotoOverlayDiagnosticsPolicy
         var timestamp = PhotoNavigationDiagnosticsTimestampPolicy.Format(DateTime.Now);
         return $"[PhotoOverlay][{eventName}] {timestamp} {message}";
     }
-}
 
-internal static class StudentPhotoCachePolicy
-{
     internal static bool ShouldReuseCache(
         DateTime nowUtc,
         DateTime cachedUtc,
@@ -71,10 +59,7 @@ internal static class StudentPhotoCachePolicy
 
         return nowUtc - lastMissProbeUtc < probeInterval;
     }
-}
 
-internal static class PhotoUnifiedTransformChangePolicy
-{
     internal static bool HasChanged(
         bool unifiedTransformEnabled,
         double currentScaleX,

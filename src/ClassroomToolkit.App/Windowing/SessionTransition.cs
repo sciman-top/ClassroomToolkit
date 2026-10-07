@@ -17,9 +17,150 @@ internal enum SessionFloatingWidgetVisibilityReason
     VisibilityChangedButNoWidgetBecameVisible = 4
 }
 
-internal static class SessionFloatingWidgetVisibilityPolicy
+internal enum SessionTransitionApplyGateReason
 {
-    internal static SessionFloatingWidgetVisibilityDecision Resolve(
+    None = 0,
+    NoZOrderAction = 1,
+    TouchSurfaceRequested = 2,
+    ZOrderApplyRequested = 3,
+    ForceEnforceRequested = 4
+}
+
+internal readonly record struct SessionTransitionApplyGateDecision(
+    bool ShouldApply,
+    SessionTransitionApplyGateReason Reason);
+
+internal readonly record struct SessionTransitionApplyDecision(
+    bool RequestZOrderApply,
+    bool ForceEnforceZOrder,
+    SessionTransitionApplyReason Reason);
+
+internal enum SessionTransitionApplyReason
+{
+    None = 0,
+    EnsureFloatingRequested = 1,
+    SceneChanged = 2,
+    WidgetBecameVisible = 3,
+    NoApplyRequested = 4,
+    WidgetVisibilityChangedButNoWidgetBecameVisible = 5
+}
+
+internal static class SessionTransitionDecisionFactory
+{
+    internal static SurfaceZOrderDecision Create(
+        SessionTransitionSurfaceDecision surfaceDecision,
+        SessionTransitionApplyDecision applyDecision)
+    {
+        var decision = surfaceDecision.ShouldTouchSurface
+            ? ForegroundSurfaceDecisionFactory.Touch(surfaceDecision.Surface)
+            : ForegroundSurfaceDecisionFactory.NoTouch(applyDecision.RequestZOrderApply);
+
+        return decision with
+        {
+            RequestZOrderApply = applyDecision.RequestZOrderApply,
+            ForceEnforceZOrder = applyDecision.ForceEnforceZOrder
+        };
+    }
+}
+
+internal enum SessionTransitionDuplicateReason
+{
+    None = 0,
+    TransitionAdvanced = 1,
+    DuplicateTransitionId = 2,
+    RegressedTransitionId = 3
+}
+
+internal readonly record struct SessionTransitionDuplicateDecision(
+    bool ShouldApply,
+    SessionTransitionDuplicateReason Reason);
+
+internal enum SessionTransitionDuplicateResetReason
+{
+    None = 0,
+    OverlayNotRewired = 1,
+    NoAppliedTransition = 2,
+    ResetRequired = 3
+}
+
+internal readonly record struct SessionTransitionDuplicateResetDecision(
+    bool ShouldReset,
+    SessionTransitionDuplicateResetReason Reason);
+
+internal static class SessionTransitionDuplicateStateUpdater
+{
+    internal static void Reset(ref long lastAppliedTransitionId)
+    {
+        lastAppliedTransitionId = 0;
+    }
+
+    internal static void MarkApplied(
+        ref long lastAppliedTransitionId,
+        long currentTransitionId)
+    {
+        if (currentTransitionId > lastAppliedTransitionId)
+        {
+            lastAppliedTransitionId = currentTransitionId;
+        }
+    }
+}
+
+internal enum SessionTransitionAdmissionReason
+{
+    None = 0,
+    NoStateChange = 1,
+    DuplicateTransitionId = 2,
+    RegressedTransitionId = 3
+}
+
+internal readonly record struct SessionTransitionAdmissionDecision(
+    bool ShouldProcess,
+    SessionTransitionAdmissionReason Reason);
+
+internal readonly record struct SessionTransitionSurfaceDecision(
+    bool ShouldTouchSurface,
+    ZOrderSurface Surface,
+    SessionTransitionSurfaceReason Reason);
+
+internal enum SessionTransitionSurfaceReason
+{
+    None = 0,
+    SurfaceRetouchRequested = 1,
+    NoSurfaceRetouchRequested = 2
+}
+
+internal enum SessionTransitionWindowingReason
+{
+    None = 0,
+    EnsureFloatingRequested = 1,
+    SceneChanged = 2,
+    WidgetBecameVisible = 3,
+    NoApplyRequested = 4,
+    WidgetVisibilityChangedButNoWidgetBecameVisible = 5
+}
+
+internal readonly record struct SessionTransitionWindowingDecision(
+    SurfaceZOrderDecision ZOrderDecision,
+    SessionTransitionWindowingReason Reason,
+    SessionFloatingWidgetVisibilityReason WidgetVisibilityReason,
+    SessionTransitionApplyReason ApplyReason,
+    SessionTransitionSurfaceReason SurfaceReason);
+
+internal enum SessionTransitionZOrderRetouchReason
+{
+    None = 0,
+    SceneChangedToSurface = 1,
+    SceneUnchanged = 2,
+    SceneChangedToNoneSurface = 3
+}
+
+internal readonly record struct SessionTransitionZOrderRetouchDecision(
+    bool ShouldRetouchSurface,
+    SessionTransitionZOrderRetouchReason Reason);
+
+internal static class SessionTransitionPolicies
+{
+    internal static SessionFloatingWidgetVisibilityDecision ResolveSessionFloatingWidgetVisibility(
         UiSessionState previous,
         UiSessionState current)
     {
@@ -48,24 +189,8 @@ internal static class SessionFloatingWidgetVisibilityPolicy
             AnyWidgetBecameVisible: anyBecameVisible,
             Reason: reason);
     }
-}
 
-internal enum SessionTransitionApplyGateReason
-{
-    None = 0,
-    NoZOrderAction = 1,
-    TouchSurfaceRequested = 2,
-    ZOrderApplyRequested = 3,
-    ForceEnforceRequested = 4
-}
-
-internal readonly record struct SessionTransitionApplyGateDecision(
-    bool ShouldApply,
-    SessionTransitionApplyGateReason Reason);
-
-internal static class SessionTransitionApplyGatePolicy
-{
-    internal static SessionTransitionApplyGateDecision Resolve(SurfaceZOrderDecision decision)
+    internal static SessionTransitionApplyGateDecision ResolveApplyGate(SurfaceZOrderDecision decision)
     {
         if (decision.ShouldTouchSurface)
         {
@@ -93,30 +218,12 @@ internal static class SessionTransitionApplyGatePolicy
             Reason: SessionTransitionApplyGateReason.NoZOrderAction);
     }
 
-    internal static bool ShouldApply(SurfaceZOrderDecision decision)
+    internal static bool ShouldApplyApplyGate(SurfaceZOrderDecision decision)
     {
-        return Resolve(decision).ShouldApply;
+        return ResolveApplyGate(decision).ShouldApply;
     }
-}
 
-internal readonly record struct SessionTransitionApplyDecision(
-    bool RequestZOrderApply,
-    bool ForceEnforceZOrder,
-    SessionTransitionApplyReason Reason);
-
-internal enum SessionTransitionApplyReason
-{
-    None = 0,
-    EnsureFloatingRequested = 1,
-    SceneChanged = 2,
-    WidgetBecameVisible = 3,
-    NoApplyRequested = 4,
-    WidgetVisibilityChangedButNoWidgetBecameVisible = 5
-}
-
-internal static class SessionTransitionApplyPolicy
-{
-    internal static SessionTransitionApplyDecision Resolve(
+    internal static SessionTransitionApplyDecision ResolveApply(
         bool shouldEnsureFloating,
         bool overlayTopmostRequired,
         bool sceneChanged,
@@ -138,28 +245,7 @@ internal static class SessionTransitionApplyPolicy
                 || (sceneChanged && overlayTopmostRequired),
             Reason: reason);
     }
-}
 
-internal static class SessionTransitionDecisionFactory
-{
-    internal static SurfaceZOrderDecision Create(
-        SessionTransitionSurfaceDecision surfaceDecision,
-        SessionTransitionApplyDecision applyDecision)
-    {
-        var decision = surfaceDecision.ShouldTouchSurface
-            ? ForegroundSurfaceDecisionFactory.Touch(surfaceDecision.Surface)
-            : ForegroundSurfaceDecisionFactory.NoTouch(applyDecision.RequestZOrderApply);
-
-        return decision with
-        {
-            RequestZOrderApply = applyDecision.RequestZOrderApply,
-            ForceEnforceZOrder = applyDecision.ForceEnforceZOrder
-        };
-    }
-}
-
-internal static class SessionTransitionDiagnosticsPolicy
-{
     internal static string FormatAdmissionSkipMessage(
         long transitionId,
         SessionTransitionAdmissionReason reason)
@@ -206,23 +292,8 @@ internal static class SessionTransitionDiagnosticsPolicy
     {
         return $"[UiSession][Surface] #{transitionId} reason={reason}";
     }
-}
 
-internal enum SessionTransitionDuplicateReason
-{
-    None = 0,
-    TransitionAdvanced = 1,
-    DuplicateTransitionId = 2,
-    RegressedTransitionId = 3
-}
-
-internal readonly record struct SessionTransitionDuplicateDecision(
-    bool ShouldApply,
-    SessionTransitionDuplicateReason Reason);
-
-internal static class SessionTransitionDuplicatePolicy
-{
-    internal static SessionTransitionDuplicateDecision Resolve(long lastAppliedTransitionId, long currentTransitionId)
+    internal static SessionTransitionDuplicateDecision ResolveDuplicate(long lastAppliedTransitionId, long currentTransitionId)
     {
         if (currentTransitionId > lastAppliedTransitionId)
         {
@@ -243,27 +314,12 @@ internal static class SessionTransitionDuplicatePolicy
             Reason: SessionTransitionDuplicateReason.RegressedTransitionId);
     }
 
-    internal static bool ShouldApply(long lastAppliedTransitionId, long currentTransitionId)
+    internal static bool ShouldApplyDuplicate(long lastAppliedTransitionId, long currentTransitionId)
     {
-        return Resolve(lastAppliedTransitionId, currentTransitionId).ShouldApply;
+        return ResolveDuplicate(lastAppliedTransitionId, currentTransitionId).ShouldApply;
     }
-}
 
-internal enum SessionTransitionDuplicateResetReason
-{
-    None = 0,
-    OverlayNotRewired = 1,
-    NoAppliedTransition = 2,
-    ResetRequired = 3
-}
-
-internal readonly record struct SessionTransitionDuplicateResetDecision(
-    bool ShouldReset,
-    SessionTransitionDuplicateResetReason Reason);
-
-internal static class SessionTransitionDuplicateResetPolicy
-{
-    internal static SessionTransitionDuplicateResetDecision Resolve(
+    internal static SessionTransitionDuplicateResetDecision ResolveDuplicateReset(
         bool overlayWindowRewired,
         long lastAppliedTransitionId)
     {
@@ -290,43 +346,10 @@ internal static class SessionTransitionDuplicateResetPolicy
         bool overlayWindowRewired,
         long lastAppliedTransitionId)
     {
-        return Resolve(overlayWindowRewired, lastAppliedTransitionId).ShouldReset;
-    }
-}
-
-internal static class SessionTransitionDuplicateStateUpdater
-{
-    internal static void Reset(ref long lastAppliedTransitionId)
-    {
-        lastAppliedTransitionId = 0;
+        return ResolveDuplicateReset(overlayWindowRewired, lastAppliedTransitionId).ShouldReset;
     }
 
-    internal static void MarkApplied(
-        ref long lastAppliedTransitionId,
-        long currentTransitionId)
-    {
-        if (currentTransitionId > lastAppliedTransitionId)
-        {
-            lastAppliedTransitionId = currentTransitionId;
-        }
-    }
-}
-
-internal enum SessionTransitionAdmissionReason
-{
-    None = 0,
-    NoStateChange = 1,
-    DuplicateTransitionId = 2,
-    RegressedTransitionId = 3
-}
-
-internal readonly record struct SessionTransitionAdmissionDecision(
-    bool ShouldProcess,
-    SessionTransitionAdmissionReason Reason);
-
-internal static class SessionTransitionEventAdmissionPolicy
-{
-    internal static SessionTransitionAdmissionDecision Resolve(
+    internal static SessionTransitionAdmissionDecision ResolveEventAdmission(
         bool hasStateChange,
         long lastAppliedTransitionId,
         long currentTransitionId)
@@ -338,7 +361,7 @@ internal static class SessionTransitionEventAdmissionPolicy
                 Reason: SessionTransitionAdmissionReason.NoStateChange);
         }
 
-        var duplicateDecision = SessionTransitionDuplicatePolicy.Resolve(
+        var duplicateDecision = SessionTransitionPolicies.ResolveDuplicate(
             lastAppliedTransitionId,
             currentTransitionId);
         if (!duplicateDecision.ShouldApply)
@@ -360,30 +383,15 @@ internal static class SessionTransitionEventAdmissionPolicy
         long lastAppliedTransitionId,
         long currentTransitionId)
     {
-        return Resolve(
+        return ResolveEventAdmission(
             hasStateChange,
             lastAppliedTransitionId,
             currentTransitionId).ShouldProcess;
     }
-}
 
-internal readonly record struct SessionTransitionSurfaceDecision(
-    bool ShouldTouchSurface,
-    ZOrderSurface Surface,
-    SessionTransitionSurfaceReason Reason);
-
-internal enum SessionTransitionSurfaceReason
-{
-    None = 0,
-    SurfaceRetouchRequested = 1,
-    NoSurfaceRetouchRequested = 2
-}
-
-internal static class SessionTransitionSurfacePolicy
-{
-    internal static SessionTransitionSurfaceDecision Resolve(UiSessionState previous, UiSessionState current)
+    internal static SessionTransitionSurfaceDecision ResolveSurface(UiSessionState previous, UiSessionState current)
     {
-        var shouldTouch = SessionTransitionZOrderPolicy.ShouldRetouchSurface(previous, current);
+        var shouldTouch = SessionTransitionPolicies.ShouldRetouchSurface(previous, current);
         var surface = shouldTouch
             ? UiSceneSurfaceMapper.Map(current.Scene)
             : ZOrderSurface.None;
@@ -392,38 +400,18 @@ internal static class SessionTransitionSurfacePolicy
             : SessionTransitionSurfaceReason.NoSurfaceRetouchRequested;
         return new SessionTransitionSurfaceDecision(shouldTouch, surface, reason);
     }
-}
 
-internal enum SessionTransitionWindowingReason
-{
-    None = 0,
-    EnsureFloatingRequested = 1,
-    SceneChanged = 2,
-    WidgetBecameVisible = 3,
-    NoApplyRequested = 4,
-    WidgetVisibilityChangedButNoWidgetBecameVisible = 5
-}
-
-internal readonly record struct SessionTransitionWindowingDecision(
-    SurfaceZOrderDecision ZOrderDecision,
-    SessionTransitionWindowingReason Reason,
-    SessionFloatingWidgetVisibilityReason WidgetVisibilityReason,
-    SessionTransitionApplyReason ApplyReason,
-    SessionTransitionSurfaceReason SurfaceReason);
-
-internal static class SessionTransitionWindowingPolicy
-{
     internal static SessionTransitionWindowingDecision ResolveDecision(UiSessionTransition transition)
     {
-        var surfaceDecision = SessionTransitionSurfacePolicy.Resolve(
+        var surfaceDecision = SessionTransitionPolicies.ResolveSurface(
             transition.Previous,
             transition.Current);
-        var floatingDecision = FloatingTopmostRetouchPolicy.Resolve(transition);
+        var floatingDecision = FloatingTopmostPolicies.ResolveRetouch(transition);
         var sceneChanged = transition.Previous.Scene != transition.Current.Scene;
-        var widgetVisibility = SessionFloatingWidgetVisibilityPolicy.Resolve(
+        var widgetVisibility = SessionTransitionPolicies.ResolveSessionFloatingWidgetVisibility(
             transition.Previous,
             transition.Current);
-        var applyDecision = SessionTransitionApplyPolicy.Resolve(
+        var applyDecision = SessionTransitionPolicies.ResolveApply(
             floatingDecision.ShouldEnsureFloatingOnTransition,
             transition.Current.OverlayTopmostRequired,
             sceneChanged,
@@ -446,27 +434,12 @@ internal static class SessionTransitionWindowingPolicy
             SurfaceReason: surfaceDecision.Reason);
     }
 
-    internal static SurfaceZOrderDecision Resolve(UiSessionTransition transition)
+    internal static SurfaceZOrderDecision ResolveWindowing(UiSessionTransition transition)
     {
         return ResolveDecision(transition).ZOrderDecision;
     }
-}
 
-internal enum SessionTransitionZOrderRetouchReason
-{
-    None = 0,
-    SceneChangedToSurface = 1,
-    SceneUnchanged = 2,
-    SceneChangedToNoneSurface = 3
-}
-
-internal readonly record struct SessionTransitionZOrderRetouchDecision(
-    bool ShouldRetouchSurface,
-    SessionTransitionZOrderRetouchReason Reason);
-
-internal static class SessionTransitionZOrderPolicy
-{
-    internal static SessionTransitionZOrderRetouchDecision Resolve(UiSessionState previous, UiSessionState current)
+    internal static SessionTransitionZOrderRetouchDecision ResolveZOrder(UiSessionState previous, UiSessionState current)
     {
         if (previous.Scene == current.Scene)
         {
@@ -486,6 +459,6 @@ internal static class SessionTransitionZOrderPolicy
 
     internal static bool ShouldRetouchSurface(UiSessionState previous, UiSessionState current)
     {
-        return Resolve(previous, current).ShouldRetouchSurface;
+        return ResolveZOrder(previous, current).ShouldRetouchSurface;
     }
 }

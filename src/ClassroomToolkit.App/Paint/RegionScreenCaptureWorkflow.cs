@@ -52,7 +52,7 @@ internal static class RegionScreenCaptureWorkflow
         }
 
         var cursorPosition = initialPointerScreenPoint ?? Cursor.Position;
-        var initialPassthroughDecision = RegionCaptureInitialPassthroughPolicy.Resolve(
+        var initialPassthroughDecision = SceneResolversPolicies.ResolveRegionCaptureInitialPassthrough(
             cursorPosition.X,
             cursorPosition.Y,
             passthroughRegions);

@@ -30,7 +30,7 @@ public partial class MainWindow
     private void ApplyImageManagerSurfaceTransition(ImageManagerSurfaceTransitionKind kind)
     {
         ApplySurfaceZOrderDecision(
-            ImageManagerSurfaceTransitionPolicy.Resolve(
+            ImageManagerWindowingPolicies.ResolveImageManagerSurfaceTransition(
                 kind,
                 overlayVisible: IsOverlayVisibleForWindowing()));
     }
@@ -47,7 +47,7 @@ public partial class MainWindow
             ForceEnforceZOrder: forceEnforceZOrder,
             OverlayVisible: IsOverlayVisibleForWindowing());
         ApplySurfaceZOrderDecision(
-            PhotoModeSurfaceTransitionPolicy.Resolve(
+            PhotoOverlayTransitionsPolicies.ResolvePhotoModeSurfaceTransition(
                 kind,
                 context));
     }
@@ -63,12 +63,12 @@ public partial class MainWindow
         {
             return;
         }
-        var selectionPlan = PhotoSelectionPreparationPolicy.Resolve(
+        var selectionPlan = PhotoOverlayTransitionsPolicies.ResolvePhotoSelectionPreparation(
             imageManagerVisible: _imageManagerWindow?.IsVisible == true,
             whiteboardActive: _toolbarWindow?.BoardActive == true);
         // Capture "显示笔迹" state before closing ImageManager (Closed handler nullifies the reference)
         var showInk = _imageManagerWindow?.ViewModel?.ShowInkOverlay ?? _settings.PhotoShowInkOverlay;
-        if (PhotoShowInkOverlayChangePolicy.ShouldApply(_settings.PhotoShowInkOverlay, showInk))
+        if (PhotoOverlayPolicies.ShouldApply(_settings.PhotoShowInkOverlay, showInk))
         {
             _settings.PhotoShowInkOverlay = showInk;
             SaveSettings();
@@ -101,7 +101,7 @@ public partial class MainWindow
         bool preserveImageOriginalScale,
         Action<string> logAction)
     {
-        var entryPlan = PhotoOverlayEntryPolicy.Resolve(!string.IsNullOrWhiteSpace(path));
+        var entryPlan = PhotoOverlayTransitionsPolicies.ResolvePhotoOverlayEntry(!string.IsNullOrWhiteSpace(path));
         if (entryPlan.UpdateSequence)
         {
             overlay.SetPhotoSequence(_photoNavigationSession.Sequence, _photoNavigationSession.CurrentIndex);
@@ -127,7 +127,7 @@ public partial class MainWindow
             overlay.CenterPhotoAtOriginalScale();
         }
         ApplySurfaceZOrderDecision(
-            PhotoOverlayEntrySurfaceTransitionPolicy.Resolve(entryPlan.TouchPhotoSurface));
+            PhotoOverlayTransitionsPolicies.ResolvePhotoOverlayEntrySurfaceTransition(entryPlan.TouchPhotoSurface));
         if (entryPlan.FocusOverlay)
         {
             FocusOverlayForPhotoNavigation(defer: true, avoidActivate: true);
@@ -145,7 +145,7 @@ public partial class MainWindow
         var closeContext = new ImageManagerVisibilityCloseContext(
             ImageManagerVisible: imageManagerWindow.IsVisible,
             OwnerAlreadyOverlay: imageManagerWindow.Owner == _overlayWindow && _overlayWindow != null);
-        var closePlan = ImageManagerVisibilityTransitionPolicy.ResolveCloseForPhotoSelection(closeContext);
+        var closePlan = ImageManagerWindowingPolicies.ResolveCloseForPhotoSelection(closeContext);
         ImageManagerVisibilityTransitionCoordinator.ApplyCloseForPhotoSelection(
             closePlan,
             () => DetachOverlayOwnedWindow(imageManagerWindow),
@@ -153,7 +153,7 @@ public partial class MainWindow
                 imageManagerWindow.Close,
                 ex => PhotoNavigationDiagnostics.Log(
                     "MainWindow.Select",
-                    LifecycleSafeExecutionDiagnosticsPolicy.FormatFailureMessage(
+                    WindowingDiagnosticsPolicies.FormatFailureMessageLifecycleSafeExecutionDiagnostics(
                         "photo-selection",
                         "close-image-manager-window",
                         ex.GetType().Name,
@@ -249,7 +249,7 @@ public partial class MainWindow
         {
             return;
         }
-        var transitionPlan = PaintVisibilityTransitionPolicy.ResolvePhotoModeChange(
+        var transitionPlan = PaintWindowVisibilityPolicies.ResolvePhotoModeChange(
             photoModeActive: active,
             toolbarWindowState: _toolbarWindow.WindowState);
         var toolbarWindow = _toolbarWindow;
@@ -269,7 +269,7 @@ public partial class MainWindow
 
     private void OnPhotoCursorModeFocusRequested()
     {
-        if (!PhotoCursorModeFocusPolicy.ShouldFocusOverlay(_overlayWindow?.IsPhotoModeActive == true))
+        if (!PhotoOverlayPolicies.ShouldFocusOverlay(_overlayWindow?.IsPhotoModeActive == true))
         {
             return;
         }
@@ -360,7 +360,7 @@ public partial class MainWindow
         if (!result.Applied)
         {
             System.Diagnostics.Debug.WriteLine(
-                OverlayActivationDiagnosticsPolicy.FormatRetouchSkipMessage(
+                OverlayActivationPolicies.FormatRetouchSkipMessage(
                     result.Reason));
         }
     }
@@ -423,7 +423,7 @@ public partial class MainWindow
             return;
         }
 
-        var changed = PhotoUnifiedTransformChangePolicy.HasChanged(
+        var changed = PhotoOverlayPolicies.HasChanged(
             _settings.PhotoUnifiedTransformEnabled,
             _settings.PhotoUnifiedScaleX,
             _settings.PhotoUnifiedScaleY,

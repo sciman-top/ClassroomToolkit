@@ -606,7 +606,7 @@ public partial class PaintToolbarWindow : Window
 
     private void RefreshBoardButtonVisualState()
     {
-        SetBoardButtonChecked(ToolbarBoardSelectionVisualPolicy.Resolve(
+        SetBoardButtonChecked(ToolbarPolicies.ResolveBoardSelectionVisual(
             _boardActive,
             IsOverlayWhiteboardSceneActive() || _overlay?.IsWhiteboardActive == true,
             IsSessionCaptureWhiteboardActive(),
@@ -699,7 +699,7 @@ public partial class PaintToolbarWindow : Window
         SafeActionExecutionExecutor.TryExecute(
             () => result = dialog.SafeShowDialog() == true,
             ex => System.Diagnostics.Debug.WriteLine(
-                DialogShowDiagnosticsPolicy.FormatFailureMessage(
+                WindowingDiagnosticsPolicies.FormatFailureMessageDialogShowDiagnostics(
                     dialogName,
                     ex.Message)));
         return result;

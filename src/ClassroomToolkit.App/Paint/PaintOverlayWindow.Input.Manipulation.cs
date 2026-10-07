@@ -31,7 +31,7 @@ public partial class PaintOverlayWindow
             return;
         }
         _photoManipulating = true;
-        e.TranslationBehavior.DesiredDeceleration = PhotoManipulationInertiaPolicy.ResolveTranslationDeceleration(
+        e.TranslationBehavior.DesiredDeceleration = PhotoWindowTransformPolicies.ResolveTranslationDeceleration(
             interactionState.CrossPageDisplayActive,
             _photoPanInertiaTuning);
         e.Handled = true;
@@ -63,7 +63,7 @@ public partial class PaintOverlayWindow
         ApplyPhotoZoomInput(PhotoZoomInputSource.Gesture, factor, ResolvePhotoZoomAnchor());
         LogPhotoInputTelemetry("gesture-zoom", $"factor={factor:0.####}");
         var translation = e.DeltaManipulation.Translation;
-        var deltaExecutionPlan = PhotoManipulationDeltaExecutionPolicy.Resolve(
+        var deltaExecutionPlan = PhotoWindowTransformPolicies.ResolvePhotoManipulationDeltaExecution(
             translation,
             PhotoZoomInputDefaults.ManipulationTranslationEpsilonDip,
             interactionState.CrossPageDisplayActive);
@@ -74,14 +74,14 @@ public partial class PaintOverlayWindow
             ApplyPhotoPanBounds(allowResistance: true);
             if (interactionState.CrossPageDisplayActive
                 && !IsPhotoZoomInteractionActive()
-                && PhotoPanDragActivationPolicy.ShouldActivateCrossPageDrag(
+                && PhotoPanPolicies.ShouldActivateCrossPageDrag(
                     crossPageDisplayActive: true,
                     deltaYDip: e.CumulativeManipulation.Translation.Y))
             {
                 _crossPageDragging = true;
             }
             UpdatePhotoInkPanCompensation();
-            var shouldRefresh = PhotoPanInteractiveRefreshPolicy.ShouldRefresh(
+            var shouldRefresh = PhotoPanPolicies.ShouldRefresh(
                 _lastPhotoInteractiveRefreshTranslateX,
                 _lastPhotoInteractiveRefreshTranslateY,
                 _photoTranslate.X,
@@ -91,7 +91,7 @@ public partial class PaintOverlayWindow
             {
                 SyncPhotoInteractiveRefreshAnchor();
                 UpdateNeighborTransformsForPan();
-                if (PhotoInkPanRedrawPolicy.ShouldRequest(
+                if (PhotoInkInteropPolicies.ShouldRequest(
                         IsPhotoInkModeActive(),
                         _photoTranslate.X,
                         _photoTranslate.Y,
@@ -165,7 +165,7 @@ public partial class PaintOverlayWindow
         InputEventArgs e,
         InputInteractionState interactionState)
     {
-        var handlingPlan = PhotoManipulationAdmissionPolicy.Resolve(
+        var handlingPlan = PhotoWindowTransformPolicies.ResolvePhotoManipulationAdmission(
             interactionState.PhotoModeActive,
             interactionState.BoardActive,
             _mode,

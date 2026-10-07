@@ -3,14 +3,6 @@ using System;
 
 namespace ClassroomToolkit.App.Diagnostics;
 
-internal static class StartupDiagnosticsGatePolicy
-{
-    internal static bool ShouldRun(string? disableFlag)
-    {
-        return !string.Equals(disableFlag?.Trim(), "1", StringComparison.OrdinalIgnoreCase);
-    }
-}
-
 public sealed record DiagnosticsResult(
     bool HasIssues,
     string Title,
@@ -36,8 +28,20 @@ public sealed record DiagnosticsResult(
     }
 }
 
-internal static class StartupCompatibilitySuppressionPolicy
+internal enum CompatibilityHealthStatus
 {
+    Normal = 0,
+    Degraded = 1,
+    Blocked = 2
+}
+
+internal static class StartupDiagnosticsPolicies
+{
+    internal static bool ShouldRun(string? disableFlag)
+    {
+        return !string.Equals(disableFlag?.Trim(), "1", StringComparison.OrdinalIgnoreCase);
+    }
+
     internal static StartupCompatibilityReport FilterWarnings(
         StartupCompatibilityReport report,
         IReadOnlyCollection<string>? suppressedCodes)
@@ -72,17 +76,7 @@ internal static class StartupCompatibilitySuppressionPolicy
 
         return merged.ToList();
     }
-}
 
-internal enum CompatibilityHealthStatus
-{
-    Normal = 0,
-    Degraded = 1,
-    Blocked = 2
-}
-
-internal static class StartupCompatibilityStatusPolicy
-{
     public static CompatibilityHealthStatus Resolve(StartupCompatibilityReport? report)
     {
         if (report == null)

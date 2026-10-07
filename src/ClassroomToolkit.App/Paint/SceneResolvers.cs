@@ -14,101 +14,14 @@ internal readonly record struct RegionCaptureInitialPassthroughDecision(
     RegionScreenCapturePassthroughInputKind InputKind,
     System.Drawing.Point? ScreenPoint);
 
-internal static class RegionCaptureInitialPassthroughPolicy
-{
-    internal static RegionCaptureInitialPassthroughDecision Resolve(
-        int pointerScreenX,
-        int pointerScreenY,
-        IReadOnlyCollection<Rectangle>? passthroughRegions)
-    {
-        if (passthroughRegions == null)
-        {
-            return new RegionCaptureInitialPassthroughDecision(
-                ShouldCancel: false,
-                InputKind: RegionScreenCapturePassthroughInputKind.None,
-                ScreenPoint: null);
-        }
-
-        foreach (var region in passthroughRegions)
-        {
-            if (region.Width <= 0 || region.Height <= 0)
-            {
-                continue;
-            }
-
-            if (region.Contains(pointerScreenX, pointerScreenY))
-            {
-                return new RegionCaptureInitialPassthroughDecision(
-                    ShouldCancel: true,
-                    InputKind: RegionScreenCapturePassthroughInputKind.PointerMove,
-                    ScreenPoint: new System.Drawing.Point(pointerScreenX, pointerScreenY));
-            }
-        }
-
-        return new RegionCaptureInitialPassthroughDecision(
-            ShouldCancel: false,
-            InputKind: RegionScreenCapturePassthroughInputKind.None,
-            ScreenPoint: null);
-    }
-}
-
 internal readonly record struct RegionCaptureResumeTriggerDecision(
     bool ShouldClearDirectWhiteboardEntryArm,
     bool ShouldResumeRegionCapture);
-
-internal static class RegionCaptureResumeTriggerPolicy
-{
-    internal static RegionCaptureResumeTriggerDecision Resolve(
-        bool resumeArmed,
-        bool toolbarVisible,
-        bool toolbarLoaded,
-        bool boardActive,
-        bool overlayWhiteboardActive,
-        bool pointerInsideToolbar)
-    {
-        if (!resumeArmed || !toolbarVisible || !toolbarLoaded)
-        {
-            return new RegionCaptureResumeTriggerDecision(
-                ShouldClearDirectWhiteboardEntryArm: false,
-                ShouldResumeRegionCapture: false);
-        }
-
-        if (boardActive || overlayWhiteboardActive)
-        {
-            return new RegionCaptureResumeTriggerDecision(
-                ShouldClearDirectWhiteboardEntryArm: true,
-                ShouldResumeRegionCapture: false);
-        }
-
-        if (pointerInsideToolbar)
-        {
-            return new RegionCaptureResumeTriggerDecision(
-                ShouldClearDirectWhiteboardEntryArm: false,
-                ShouldResumeRegionCapture: false);
-        }
-
-        return new RegionCaptureResumeTriggerDecision(
-            ShouldClearDirectWhiteboardEntryArm: false,
-            ShouldResumeRegionCapture: true);
-    }
-}
 
 internal enum RegionSelectionCompletionDecision
 {
     KeepWaiting = 0,
     Accept = 1
-}
-
-internal static class RegionSelectionCompletionPolicy
-{
-    internal const double MinimumSelectionSize = 4;
-
-    internal static RegionSelectionCompletionDecision ResolvePointerRelease(double width, double height)
-    {
-        return width >= MinimumSelectionSize && height >= MinimumSelectionSize
-            ? RegionSelectionCompletionDecision.Accept
-            : RegionSelectionCompletionDecision.KeepWaiting;
-    }
 }
 
 internal static class SessionSceneSourceMapper
@@ -164,33 +77,6 @@ internal static class WhiteboardResumeSceneResolver
     }
 }
 
-internal static class WindowDipToScreenRectPolicy
-{
-    internal static Rectangle ResolveFromDip(
-        double leftDip,
-        double topDip,
-        double widthDip,
-        double heightDip,
-        double dpiScaleX,
-        double dpiScaleY)
-    {
-        var scaleX = dpiScaleX > 0 ? dpiScaleX : 1.0;
-        var scaleY = dpiScaleY > 0 ? dpiScaleY : 1.0;
-        var left = (int)Math.Floor(leftDip * scaleX);
-        var top = (int)Math.Floor(topDip * scaleY);
-        var width = Math.Max((int)Math.Ceiling(Math.Max(widthDip, 1.0) * scaleX), 1);
-        var height = Math.Max((int)Math.Ceiling(Math.Max(heightDip, 1.0) * scaleY), 1);
-        return new Rectangle(left, top, width, height);
-    }
-
-    internal static Rectangle ResolveFromScreenRect(int left, int top, int right, int bottom)
-    {
-        var width = Math.Max(right - left, 1);
-        var height = Math.Max(bottom - top, 1);
-        return new Rectangle(left, top, width, height);
-    }
-}
-
 internal static class WindowScreenBoundsResolver
 {
     private static readonly NativeCursorWindowGeometryInteropAdapter WindowGeometryAdapter = new();
@@ -213,7 +99,7 @@ internal static class WindowScreenBoundsResolver
         if (handle != IntPtr.Zero
             && WindowGeometryAdapter.TryGetWindowRect(handle, out var left, out var top, out var right, out var bottom))
         {
-            bounds = WindowDipToScreenRectPolicy.ResolveFromScreenRect(
+            bounds = SceneResolversPolicies.ResolveFromScreenRect(
                 left,
                 top,
                 right,
@@ -226,7 +112,7 @@ internal static class WindowScreenBoundsResolver
             return false;
         }
 
-        bounds = WindowDipToScreenRectPolicy.ResolveFromDip(
+        bounds = SceneResolversPolicies.ResolveFromDip(
             window.Left,
             window.Top,
             Math.Max(window.ActualWidth, 1),
@@ -234,5 +120,110 @@ internal static class WindowScreenBoundsResolver
             dpiScaleX,
             dpiScaleY);
         return true;
+    }
+}
+
+internal static class SceneResolversPolicies
+{
+    internal static RegionCaptureInitialPassthroughDecision ResolveRegionCaptureInitialPassthrough(
+        int pointerScreenX,
+        int pointerScreenY,
+        IReadOnlyCollection<Rectangle>? passthroughRegions)
+    {
+        if (passthroughRegions == null)
+        {
+            return new RegionCaptureInitialPassthroughDecision(
+                ShouldCancel: false,
+                InputKind: RegionScreenCapturePassthroughInputKind.None,
+                ScreenPoint: null);
+        }
+
+        foreach (var region in passthroughRegions)
+        {
+            if (region.Width <= 0 || region.Height <= 0)
+            {
+                continue;
+            }
+
+            if (region.Contains(pointerScreenX, pointerScreenY))
+            {
+                return new RegionCaptureInitialPassthroughDecision(
+                    ShouldCancel: true,
+                    InputKind: RegionScreenCapturePassthroughInputKind.PointerMove,
+                    ScreenPoint: new System.Drawing.Point(pointerScreenX, pointerScreenY));
+            }
+        }
+
+        return new RegionCaptureInitialPassthroughDecision(
+            ShouldCancel: false,
+            InputKind: RegionScreenCapturePassthroughInputKind.None,
+            ScreenPoint: null);
+    }
+
+    internal static RegionCaptureResumeTriggerDecision ResolveRegionCaptureResumeTrigger(
+        bool resumeArmed,
+        bool toolbarVisible,
+        bool toolbarLoaded,
+        bool boardActive,
+        bool overlayWhiteboardActive,
+        bool pointerInsideToolbar)
+    {
+        if (!resumeArmed || !toolbarVisible || !toolbarLoaded)
+        {
+            return new RegionCaptureResumeTriggerDecision(
+                ShouldClearDirectWhiteboardEntryArm: false,
+                ShouldResumeRegionCapture: false);
+        }
+
+        if (boardActive || overlayWhiteboardActive)
+        {
+            return new RegionCaptureResumeTriggerDecision(
+                ShouldClearDirectWhiteboardEntryArm: true,
+                ShouldResumeRegionCapture: false);
+        }
+
+        if (pointerInsideToolbar)
+        {
+            return new RegionCaptureResumeTriggerDecision(
+                ShouldClearDirectWhiteboardEntryArm: false,
+                ShouldResumeRegionCapture: false);
+        }
+
+        return new RegionCaptureResumeTriggerDecision(
+            ShouldClearDirectWhiteboardEntryArm: false,
+            ShouldResumeRegionCapture: true);
+    }
+
+    internal const double MinimumSelectionSize = 4;
+
+    internal static RegionSelectionCompletionDecision ResolvePointerRelease(double width, double height)
+    {
+        return width >= MinimumSelectionSize && height >= MinimumSelectionSize
+            ? RegionSelectionCompletionDecision.Accept
+            : RegionSelectionCompletionDecision.KeepWaiting;
+    }
+
+    internal static Rectangle ResolveFromDip(
+        double leftDip,
+        double topDip,
+        double widthDip,
+        double heightDip,
+        double dpiScaleX,
+        double dpiScaleY)
+    {
+        var scaleX = dpiScaleX > 0 ? dpiScaleX : 1.0;
+        var scaleY = dpiScaleY > 0 ? dpiScaleY : 1.0;
+        var left = (int)Math.Floor(leftDip * scaleX);
+        var top = (int)Math.Floor(topDip * scaleY);
+        var width = Math.Max((int)Math.Ceiling(Math.Max(widthDip, 1.0) * scaleX), 1);
+        var height = Math.Max((int)Math.Ceiling(Math.Max(heightDip, 1.0) * scaleY), 1);
+        return new Rectangle(left, top, width, height);
+    }
+
+    internal static Rectangle ResolveFromScreenRect(int left, int top, int right, int bottom)
+    {
+        var width = Math.Max(right - left, 1);
+        var height = Math.Max(bottom - top, 1);
+        return new Rectangle(left, top, width, height);
     }
 }

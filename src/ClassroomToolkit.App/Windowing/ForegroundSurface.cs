@@ -75,7 +75,7 @@ internal static class ForegroundSurfaceRetouchCoordinator
                 Reason: OverlayActivationRetouchReason.NoApplyRequest);
         }
 
-        var retouchDecision = OverlayActivationRetouchPolicy.Resolve(
+        var retouchDecision = OverlayActivationPolicies.ResolveRetouch(
             decision,
             lastRetouchUtc,
             nowUtc,
@@ -88,7 +88,7 @@ internal static class ForegroundSurfaceRetouchCoordinator
                 Reason: retouchDecision.Reason);
         }
 
-        if (OverlayActivationRetouchPolicy.ShouldUpdateLastRetouchUtc(retouchDecision))
+        if (OverlayActivationPolicies.ShouldUpdateLastRetouchUtc(retouchDecision))
         {
             markRetouched(nowUtc);
         }

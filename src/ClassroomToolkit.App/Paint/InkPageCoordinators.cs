@@ -435,7 +435,7 @@ internal static class InkPageLoadCoordinator
                 LoadedStrokeCount: cached.Count);
         }
 
-        if (InkPersistenceTogglePolicy.ShouldLoadPersistedInk(allowDiskFallback)
+        if (InkPersistencePolicies.ShouldLoadPersistedInk(allowDiskFallback)
             && hasInkPersistence
             && tryLoadInkFromSidecar())
         {
@@ -516,7 +516,7 @@ internal static class InkShowTransitionCoordinator
         ArgumentNullException.ThrowIfNull(loadCurrentPageIfExists);
         ArgumentNullException.ThrowIfNull(requestCrossPageDisplayUpdate);
 
-        var transitionPlan = InkShowUpdateTransitionPolicy.Resolve(
+        var transitionPlan = InkPersistencePolicies.ResolveInkShowUpdateTransition(
             currentInkShowEnabled,
             requestedEnabled,
             photoModeActive);

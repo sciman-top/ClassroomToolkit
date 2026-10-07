@@ -12,12 +12,12 @@ public partial class PaintOverlayWindow
 {
     private bool TryBeginPhotoPan(MouseButtonEventArgs e)
     {
-        var shouldPanPhoto = StylusCursorPolicy.ShouldPanPhoto(
+        var shouldPanPhoto = PhotoInkInteropPolicies.ShouldPanPhoto(
             _photoModeActive,
             IsBoardActive(),
             _mode,
             IsInkOperationActive());
-        if (!PhotoPanBeginGuardPolicy.ShouldBegin(shouldPanPhoto, _photoPanning))
+        if (!PhotoInkInteropPolicies.ShouldBegin(shouldPanPhoto, _photoPanning))
         {
             return false;
         }
@@ -78,13 +78,13 @@ public partial class PaintOverlayWindow
             MarkPhotoInteractionForRenderQuality();
         }
         UpdatePhotoInkPanCompensation();
-        var shouldRefresh = PhotoPanInteractiveRefreshPolicy.ShouldRefresh(
+        var shouldRefresh = PhotoPanPolicies.ShouldRefresh(
             _lastPhotoInteractiveRefreshTranslateX,
             _lastPhotoInteractiveRefreshTranslateY,
             _photoTranslate.X,
             _photoTranslate.Y);
         // Enable cross-page drag mode only when vertical drag exceeds threshold.
-        if (shouldRefresh && PhotoPanDragActivationPolicy.ShouldActivateCrossPageDrag(
+        if (shouldRefresh && PhotoPanPolicies.ShouldActivateCrossPageDrag(
                 IsCrossPageDisplayActive(),
                 delta.Y))
         {
@@ -102,7 +102,7 @@ public partial class PaintOverlayWindow
             RequestCrossPageDisplayUpdate(CrossPageUpdateSources.PhotoPan);
         }
         SchedulePhotoTransformSave(userAdjusted: true);
-        if (PhotoInkPanRedrawPolicy.ShouldRequest(
+        if (PhotoInkInteropPolicies.ShouldRequest(
                 IsPhotoInkModeActive(),
                 _photoTranslate.X,
                 _photoTranslate.Y,
@@ -242,7 +242,7 @@ public partial class PaintOverlayWindow
             return false;
         }
 
-        var xRange = PhotoHorizontalPanRangePolicy.Resolve(
+        var xRange = PhotoPanPolicies.ResolvePhotoHorizontalPanRange(
             viewportWidth,
             pageWidth,
             includeSlack);

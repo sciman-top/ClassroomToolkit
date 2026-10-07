@@ -6,44 +6,13 @@ internal readonly record struct InputInteractionState(
     bool BoardActive,
     bool CrossPageDisplayEnabled)
 {
-    internal bool PhotoOrBoardActive => PhotoInteractionModePolicy.IsPhotoOrBoardActive(PhotoModeActive, BoardActive);
-    internal bool PhotoNavigationEnabled => PhotoInteractionModePolicy.IsPhotoNavigationEnabled(PhotoModeActive, BoardActive);
-    internal bool CrossPageDisplayActive => CrossPageInputDisplayPolicy.IsActive(
+    internal bool PhotoOrBoardActive => PhotoWindowPolicies.IsPhotoOrBoardActive(PhotoModeActive, BoardActive);
+    internal bool PhotoNavigationEnabled => PhotoWindowPolicies.IsPhotoNavigationEnabled(PhotoModeActive, BoardActive);
+    internal bool CrossPageDisplayActive => CrossPageInputSwitchPolicies.IsActive(
         PhotoModeActive,
         BoardActive,
         CrossPageDisplayEnabled);
     internal bool CrossPageInputDisplayActive => CrossPageDisplayActive;
-}
-
-internal static class InputInteractionStatePolicy
-{
-    internal static InputInteractionState Resolve(
-        bool photoModeActive,
-        bool boardActive,
-        bool crossPageDisplayEnabled)
-    {
-        return new InputInteractionState(
-            PhotoModeActive: photoModeActive,
-            BoardActive: boardActive,
-            CrossPageDisplayEnabled: crossPageDisplayEnabled);
-    }
-}
-
-internal static class PointerCaptureCleanupPolicy
-{
-    internal static bool ShouldDeferCleanup(
-        string reason,
-        bool mouseCaptured,
-        bool stylusCaptured)
-    {
-        if (!string.Equals(reason, "mouse-capture-lost", StringComparison.Ordinal)
-            && !string.Equals(reason, "stylus-capture-lost", StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        return mouseCaptured || stylusCaptured;
-    }
 }
 
 internal enum PointerDownToolAction
@@ -59,9 +28,56 @@ internal readonly record struct PointerDownToolExecutionPlan(
     PointerDownToolAction Action,
     bool ShouldCapturePointer);
 
-internal static class PointerDownToolExecutionPolicy
+internal enum PointerMoveToolAction
 {
-    internal static PointerDownToolExecutionPlan Resolve(PaintToolMode mode)
+    None = 0,
+    UpdateBrushStroke = 1,
+    UpdateEraser = 2,
+    UpdateRegionSelection = 3,
+    UpdateShapePreview = 4
+}
+
+internal enum PointerUpToolAction
+{
+    None = 0,
+    EndBrushStroke = 1,
+    EndEraser = 2,
+    EndRegionSelection = 3,
+    EndShape = 4
+}
+
+internal readonly record struct PointerUpToolExecutionPlan(
+    PointerUpToolAction Action,
+    bool ShouldRefreshAdaptiveRenderer);
+
+internal static class PointerToolExecutionPolicies
+{
+    internal static InputInteractionState ResolveInputInteractionState(
+        bool photoModeActive,
+        bool boardActive,
+        bool crossPageDisplayEnabled)
+    {
+        return new InputInteractionState(
+            PhotoModeActive: photoModeActive,
+            BoardActive: boardActive,
+            CrossPageDisplayEnabled: crossPageDisplayEnabled);
+    }
+
+    internal static bool ShouldDeferCleanup(
+        string reason,
+        bool mouseCaptured,
+        bool stylusCaptured)
+    {
+        if (!string.Equals(reason, "mouse-capture-lost", StringComparison.Ordinal)
+            && !string.Equals(reason, "stylus-capture-lost", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return mouseCaptured || stylusCaptured;
+    }
+
+    internal static PointerDownToolExecutionPlan ResolvePointerDownToolExecution(PaintToolMode mode)
     {
         return mode switch
         {
@@ -82,20 +98,8 @@ internal static class PointerDownToolExecutionPolicy
                 ShouldCapturePointer: false)
         };
     }
-}
 
-internal enum PointerMoveToolAction
-{
-    None = 0,
-    UpdateBrushStroke = 1,
-    UpdateEraser = 2,
-    UpdateRegionSelection = 3,
-    UpdateShapePreview = 4
-}
-
-internal static class PointerMoveToolExecutionPolicy
-{
-    internal static PointerMoveToolAction Resolve(PaintToolMode mode)
+    internal static PointerMoveToolAction ResolvePointerMoveToolExecution(PaintToolMode mode)
     {
         return mode switch
         {
@@ -106,24 +110,8 @@ internal static class PointerMoveToolExecutionPolicy
             _ => PointerMoveToolAction.None
         };
     }
-}
 
-internal enum PointerUpToolAction
-{
-    None = 0,
-    EndBrushStroke = 1,
-    EndEraser = 2,
-    EndRegionSelection = 3,
-    EndShape = 4
-}
-
-internal readonly record struct PointerUpToolExecutionPlan(
-    PointerUpToolAction Action,
-    bool ShouldRefreshAdaptiveRenderer);
-
-internal static class PointerUpToolExecutionPolicy
-{
-    internal static PointerUpToolExecutionPlan Resolve(
+    internal static PointerUpToolExecutionPlan ResolvePointerUpToolExecution(
         PaintToolMode mode,
         bool pendingAdaptiveRendererRefresh)
     {

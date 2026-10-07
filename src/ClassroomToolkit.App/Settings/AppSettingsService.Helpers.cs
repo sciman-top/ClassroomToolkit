@@ -405,7 +405,7 @@ public sealed partial class AppSettingsService
 
     private static int NormalizePhotoPostInputRefreshDelayMs(int delayMs)
     {
-        return CrossPagePostInputRefreshDelayClampPolicy.Clamp(delayMs);
+        return CrossPageRefreshCoordinationPolicies.Clamp(delayMs);
     }
 
     private static double NormalizePhotoWheelZoomBase(double wheelZoomBase)

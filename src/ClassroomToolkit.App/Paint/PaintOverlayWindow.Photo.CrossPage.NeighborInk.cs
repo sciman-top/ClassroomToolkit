@@ -54,7 +54,7 @@ public partial class PaintOverlayWindow
         }
 
         var pageWidthDip = GetBitmapDisplayWidthInDip(pageBitmap);
-        return CrossPageNeighborInkRenderSurfacePolicy.Resolve(
+        return CrossPageNeighborInkPolicies.ResolveRenderSurface(
             pagePixelWidth: pageBitmap.PixelWidth,
             pagePixelHeight: pageBitmap.PixelHeight,
             dpiX: pageBitmap.DpiX,
@@ -277,7 +277,7 @@ public partial class PaintOverlayWindow
                     return;
                 }
                 var expectedCacheKey = BuildNeighborInkCacheKey(pageIndex);
-                if (CrossPageNeighborInkRenderAdmissionPolicy.ShouldRejectStaleCacheKey(cacheKey, expectedCacheKey))
+                if (CrossPageNeighborInkPolicies.ShouldRejectStaleCacheKey(cacheKey, expectedCacheKey))
                 {
                     _inkDiagnostics?.OnCrossPageUpdateEvent("skip", CrossPageUpdateSources.NeighborSidecar, "stale-cache-key");
                     return;
@@ -327,7 +327,7 @@ public partial class PaintOverlayWindow
                     return;
                 }
                 var expectedCacheKey = BuildNeighborInkCacheKey(pageIndex);
-                if (CrossPageNeighborInkRenderAdmissionPolicy.ShouldRejectStaleCacheKey(cacheKey, expectedCacheKey))
+                if (CrossPageNeighborInkPolicies.ShouldRejectStaleCacheKey(cacheKey, expectedCacheKey))
                 {
                     _neighborInkCache.Remove(cacheKey);
                     return;
@@ -508,7 +508,7 @@ public partial class PaintOverlayWindow
 
     private static bool TryAssignFrameSource(WpfImage target, ImageSource? source, bool forceAssign = false)
     {
-        if (!CrossPageFrameSourceAssignmentPolicy.ShouldAssign(target.Source, source, forceAssign))
+        if (!CrossPageInteractiveMiscPolicies.ShouldAssign(target.Source, source, forceAssign))
         {
             return false;
         }

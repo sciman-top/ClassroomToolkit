@@ -21,98 +21,14 @@ internal static class CrossPageDelayExecutionHelper
         {
             return (
                 Success: false,
-                FailureDetail: CrossPageDelayedDispatchFailureDiagnosticsPolicy.FormatDelayFailureDetail(
+                FailureDetail: CrossPageReplayPolicies.FormatDelayFailureDetail(
                     ex.GetType().Name));
         }
     }
 }
 
-internal static class CrossPageDelayedDispatchFailureDiagnosticsPolicy
-{
-    internal static string FormatDelayFailureDetail(string exceptionType)
-    {
-        return $"delayed-delay-failed ex={exceptionType}";
-    }
-
-    internal static string FormatInlineRecoveryDetail(bool tokenMatched)
-    {
-        return tokenMatched
-            ? "delayed-delay-failed-inline-recovered"
-            : "delayed-delay-failed-inline-skip-token-mismatch";
-    }
-}
-
 internal readonly record struct CrossPageDelayedDispatchFailureRecoveryDecision(
     bool ShouldRecoverInline);
-
-internal static class CrossPageDelayedDispatchFailureRecoveryPolicy
-{
-    internal static CrossPageDelayedDispatchFailureRecoveryDecision Resolve(
-        bool recoveryDispatchScheduled,
-        bool dispatcherCheckAccess,
-        bool dispatcherShutdownStarted,
-        bool dispatcherShutdownFinished)
-    {
-        if (recoveryDispatchScheduled)
-        {
-            return new CrossPageDelayedDispatchFailureRecoveryDecision(
-                ShouldRecoverInline: false);
-        }
-
-        if (dispatcherShutdownStarted || dispatcherShutdownFinished)
-        {
-            return new CrossPageDelayedDispatchFailureRecoveryDecision(
-                ShouldRecoverInline: false);
-        }
-
-        return new CrossPageDelayedDispatchFailureRecoveryDecision(
-            ShouldRecoverInline: dispatcherCheckAccess);
-    }
-}
-
-internal static class CrossPageDuplicateSkipReplayQueuePolicy
-{
-    internal static CrossPageReplayQueueDecision Resolve(
-        CrossPageDuplicateWindowDecision duplicateDecision,
-        CrossPageUpdateSourceKind kind,
-        string source)
-    {
-        if (!duplicateDecision.ShouldSkip)
-        {
-            return CrossPageReplayQueueDecisionFactory.None();
-        }
-
-        if (duplicateDecision.Reason is not CrossPageDuplicateWindowSkipReason.VisualSync
-            and not CrossPageDuplicateWindowSkipReason.Interaction)
-        {
-            return CrossPageReplayQueueDecisionFactory.None();
-        }
-
-        return CrossPageReplayQueuePolicy.Resolve(kind, source);
-    }
-}
-
-internal static class CrossPageImmediateDispatchPolicy
-{
-    internal static CrossPageDisplayUpdateDispatchDecision Resolve(
-        CrossPageDisplayUpdateDispatchDecision decision,
-        CrossPageUpdateDispatchSuffix suffix)
-    {
-        if (suffix != CrossPageUpdateDispatchSuffix.Immediate)
-        {
-            return decision;
-        }
-
-        if (decision.Mode != CrossPageDisplayUpdateDispatchMode.Delayed)
-        {
-            return decision;
-        }
-
-        return new CrossPageDisplayUpdateDispatchDecision(
-            Mode: CrossPageDisplayUpdateDispatchMode.Direct,
-            DelayMs: 0);
-    }
-}
 
 internal readonly record struct CrossPageReplayDispatchExecutionResult(
     bool ScheduledDispatch,
@@ -144,7 +60,7 @@ internal static class CrossPageReplayDispatchCoordinator
             return default;
         }
 
-        var source = CrossPageReplayDispatchRequestPolicy.ResolveSource(target);
+        var source = CrossPageReplayPolicies.ResolveSource(target);
         if (string.IsNullOrWhiteSpace(source))
         {
             CrossPageReplayPendingStateUpdater.MarkDispatchFailed(ref state, target);
@@ -167,7 +83,7 @@ internal static class CrossPageReplayDispatchCoordinator
                 Source: source);
         }
 
-        var fallbackDecision = CrossPageReplayDispatchScheduleFallbackPolicy.Resolve(
+        var fallbackDecision = CrossPageReplayPolicies.ResolveDispatchScheduleFallback(
             dispatchScheduled: false,
             dispatcherCheckAccess: dispatcherCheckAccess(),
             dispatcherShutdownStarted: dispatcherShutdownStarted(),
@@ -209,83 +125,11 @@ internal static class CrossPageReplayDispatchCoordinator
     }
 }
 
-internal static class CrossPageReplayDispatchFailurePolicy
-{
-    internal static CrossPageReplayQueueDecision Resolve(CrossPageReplayDispatchTarget target)
-    {
-        return target switch
-        {
-            CrossPageReplayDispatchTarget.VisualSync => CrossPageReplayQueueDecisionFactory.VisualSync(),
-            CrossPageReplayDispatchTarget.Interaction => CrossPageReplayQueueDecisionFactory.Interaction(),
-            _ => CrossPageReplayQueueDecisionFactory.None()
-        };
-    }
-}
-
 internal enum CrossPageReplayDispatchTarget
 {
     None = 0,
     VisualSync = 1,
     Interaction = 2
-}
-
-internal static class CrossPageReplayDispatchPolicy
-{
-    internal static CrossPageReplayDispatchTarget Resolve(
-        bool visualSyncReplayPending,
-        bool interactionReplayPending)
-    {
-        if (visualSyncReplayPending)
-        {
-            return CrossPageReplayDispatchTarget.VisualSync;
-        }
-
-        if (interactionReplayPending)
-        {
-            return CrossPageReplayDispatchTarget.Interaction;
-        }
-
-        return CrossPageReplayDispatchTarget.None;
-    }
-
-    internal static CrossPageReplayDispatchTarget Resolve(
-        bool visualSyncReplayPending,
-        bool interactionReplayPending,
-        CrossPageReplayDispatchTarget lastDispatchedTarget,
-        bool preferInteractionReplay)
-    {
-        if (!visualSyncReplayPending && !interactionReplayPending)
-        {
-            return CrossPageReplayDispatchTarget.None;
-        }
-
-        if (visualSyncReplayPending && interactionReplayPending)
-        {
-            if (preferInteractionReplay)
-            {
-                return CrossPageReplayDispatchTarget.Interaction;
-            }
-
-            return lastDispatchedTarget == CrossPageReplayDispatchTarget.VisualSync
-                ? CrossPageReplayDispatchTarget.Interaction
-                : CrossPageReplayDispatchTarget.VisualSync;
-        }
-
-        return Resolve(visualSyncReplayPending, interactionReplayPending);
-    }
-}
-
-internal static class CrossPageReplayDispatchRequestPolicy
-{
-    internal static string? ResolveSource(CrossPageReplayDispatchTarget target)
-    {
-        return target switch
-        {
-            CrossPageReplayDispatchTarget.VisualSync => CrossPageUpdateSources.InkVisualSyncReplay,
-            CrossPageReplayDispatchTarget.Interaction => CrossPageUpdateSources.InteractionReplay,
-            _ => null
-        };
-    }
 }
 
 internal enum CrossPageReplayDispatchScheduleFallbackReason
@@ -299,37 +143,6 @@ internal readonly record struct CrossPageReplayDispatchScheduleFallbackDecision(
     bool ShouldRunInline,
     bool ShouldRequeuePending,
     CrossPageReplayDispatchScheduleFallbackReason Reason);
-
-internal static class CrossPageReplayDispatchScheduleFallbackPolicy
-{
-    internal static CrossPageReplayDispatchScheduleFallbackDecision Resolve(
-        bool dispatchScheduled,
-        bool dispatcherCheckAccess,
-        bool dispatcherShutdownStarted,
-        bool dispatcherShutdownFinished)
-    {
-        if (dispatchScheduled)
-        {
-            return new CrossPageReplayDispatchScheduleFallbackDecision(
-                ShouldRunInline: false,
-                ShouldRequeuePending: false,
-                Reason: CrossPageReplayDispatchScheduleFallbackReason.None);
-        }
-
-        if (dispatcherCheckAccess && !dispatcherShutdownStarted && !dispatcherShutdownFinished)
-        {
-            return new CrossPageReplayDispatchScheduleFallbackDecision(
-                ShouldRunInline: true,
-                ShouldRequeuePending: false,
-                Reason: CrossPageReplayDispatchScheduleFallbackReason.InlineCurrentThread);
-        }
-
-        return new CrossPageReplayDispatchScheduleFallbackDecision(
-            ShouldRunInline: false,
-            ShouldRequeuePending: true,
-            Reason: CrossPageReplayDispatchScheduleFallbackReason.RequeuePending);
-    }
-}
 
 internal readonly record struct CrossPageReplayFlushExecutionResult(
     bool ShouldFlush,
@@ -346,7 +159,7 @@ internal static class CrossPageReplayFlushCoordinator
         bool interactionActive)
     {
         var replayPending = CrossPageReplayPendingStateUpdater.HasPending(replayState);
-        var shouldFlush = CrossPageUpdateReplayPolicy.ShouldFlushReplay(
+        var shouldFlush = CrossPageDisplayUpdatePolicies.ShouldFlushReplay(
             replayPending,
             crossPageUpdatePending,
             photoModeActive,
@@ -360,7 +173,7 @@ internal static class CrossPageReplayFlushCoordinator
                 DispatchTarget: CrossPageReplayDispatchTarget.None);
         }
 
-        var target = CrossPageReplayDispatchPolicy.Resolve(
+        var target = CrossPageReplayPolicies.ResolveDispatch(
             replayState.VisualSyncReplayPending,
             replayState.InteractionReplayPending,
             replayState.LastDispatchTarget,
@@ -432,7 +245,7 @@ internal static class CrossPageReplayPendingStateUpdater
         ref CrossPageReplayRuntimeState state,
         CrossPageReplayDispatchTarget target)
     {
-        var decision = CrossPageReplayDispatchFailurePolicy.Resolve(target);
+        var decision = CrossPageReplayPolicies.ResolveDispatchFailure(target);
         ApplyQueueDecision(ref state, decision);
     }
 
@@ -455,7 +268,7 @@ internal static class CrossPageReplayPendingStateUpdater
         ref bool interactionReplayPending,
         CrossPageReplayDispatchTarget target)
     {
-        var decision = CrossPageReplayDispatchFailurePolicy.Resolve(target);
+        var decision = CrossPageReplayPolicies.ResolveDispatchFailure(target);
         ApplyQueueDecision(
             ref visualSyncReplayPending,
             ref interactionReplayPending,
@@ -505,36 +318,6 @@ internal static class CrossPageReplayQueueDecisionFactory
 internal readonly record struct CrossPageReplayQueueDecision(
     bool QueueVisualSyncReplay,
     bool QueueInteractionReplay);
-
-internal static class CrossPageReplayQueuePolicy
-{
-    internal static CrossPageReplayQueueDecision Resolve(CrossPageUpdateSourceKind kind)
-    {
-        return Resolve(kind, source: CrossPageUpdateSources.Unspecified);
-    }
-
-    internal static CrossPageReplayQueueDecision Resolve(CrossPageUpdateSourceKind kind, string source)
-    {
-        if (!CrossPageUpdateReplayPolicy.ShouldQueueReplay(kind))
-        {
-            return CrossPageReplayQueueDecisionFactory.None();
-        }
-
-        var parsed = CrossPageUpdateSourceParser.Parse(source);
-        var immediateSuffix = parsed.Suffix == CrossPageUpdateDispatchSuffix.Immediate;
-
-        return kind switch
-        {
-            CrossPageUpdateSourceKind.VisualSync when immediateSuffix
-                => CrossPageReplayQueueDecisionFactory.VisualSyncAndInteraction(),
-            CrossPageUpdateSourceKind.VisualSync
-                => CrossPageReplayQueueDecisionFactory.VisualSync(),
-            CrossPageUpdateSourceKind.Interaction
-                => CrossPageReplayQueueDecisionFactory.Interaction(),
-            _ => CrossPageReplayQueueDecisionFactory.None()
-        };
-    }
-}
 
 internal readonly record struct CrossPageReplayRuntimeState(
     bool VisualSyncReplayPending,
@@ -632,3 +415,196 @@ internal sealed class LatestRequestCoordinator<TRequest>
 }
 
 internal readonly record struct LatestRequestTicket<TRequest>(long Generation, TRequest Request);
+
+internal static class CrossPageReplayPolicies
+{
+    internal static string FormatDelayFailureDetail(string exceptionType)
+    {
+        return $"delayed-delay-failed ex={exceptionType}";
+    }
+
+    internal static string FormatInlineRecoveryDetail(bool tokenMatched)
+    {
+        return tokenMatched
+            ? "delayed-delay-failed-inline-recovered"
+            : "delayed-delay-failed-inline-skip-token-mismatch";
+    }
+
+    internal static CrossPageDelayedDispatchFailureRecoveryDecision ResolveCrossPageDelayedDispatchFailureRecovery(
+        bool recoveryDispatchScheduled,
+        bool dispatcherCheckAccess,
+        bool dispatcherShutdownStarted,
+        bool dispatcherShutdownFinished)
+    {
+        if (recoveryDispatchScheduled)
+        {
+            return new CrossPageDelayedDispatchFailureRecoveryDecision(
+                ShouldRecoverInline: false);
+        }
+
+        if (dispatcherShutdownStarted || dispatcherShutdownFinished)
+        {
+            return new CrossPageDelayedDispatchFailureRecoveryDecision(
+                ShouldRecoverInline: false);
+        }
+
+        return new CrossPageDelayedDispatchFailureRecoveryDecision(
+            ShouldRecoverInline: dispatcherCheckAccess);
+    }
+
+    internal static CrossPageReplayQueueDecision ResolveCrossPageDuplicateSkipReplayQueue(
+        CrossPageDuplicateWindowDecision duplicateDecision,
+        CrossPageUpdateSourceKind kind,
+        string source)
+    {
+        if (!duplicateDecision.ShouldSkip)
+        {
+            return CrossPageReplayQueueDecisionFactory.None();
+        }
+
+        if (duplicateDecision.Reason is not CrossPageDuplicateWindowSkipReason.VisualSync
+            and not CrossPageDuplicateWindowSkipReason.Interaction)
+        {
+            return CrossPageReplayQueueDecisionFactory.None();
+        }
+
+        return CrossPageReplayPolicies.ResolveQueue(kind, source);
+    }
+
+    internal static CrossPageDisplayUpdateDispatchDecision ResolveCrossPageImmediateDispatch(
+        CrossPageDisplayUpdateDispatchDecision decision,
+        CrossPageUpdateDispatchSuffix suffix)
+    {
+        if (suffix != CrossPageUpdateDispatchSuffix.Immediate)
+        {
+            return decision;
+        }
+
+        if (decision.Mode != CrossPageDisplayUpdateDispatchMode.Delayed)
+        {
+            return decision;
+        }
+
+        return new CrossPageDisplayUpdateDispatchDecision(
+            Mode: CrossPageDisplayUpdateDispatchMode.Direct,
+            DelayMs: 0);
+    }
+
+    internal static CrossPageReplayQueueDecision ResolveDispatchFailure(CrossPageReplayDispatchTarget target)
+    {
+        return target switch
+        {
+            CrossPageReplayDispatchTarget.VisualSync => CrossPageReplayQueueDecisionFactory.VisualSync(),
+            CrossPageReplayDispatchTarget.Interaction => CrossPageReplayQueueDecisionFactory.Interaction(),
+            _ => CrossPageReplayQueueDecisionFactory.None()
+        };
+    }
+
+    internal static CrossPageReplayDispatchTarget ResolveDispatch(
+        bool visualSyncReplayPending,
+        bool interactionReplayPending)
+    {
+        if (visualSyncReplayPending)
+        {
+            return CrossPageReplayDispatchTarget.VisualSync;
+        }
+
+        if (interactionReplayPending)
+        {
+            return CrossPageReplayDispatchTarget.Interaction;
+        }
+
+        return CrossPageReplayDispatchTarget.None;
+    }
+
+    internal static CrossPageReplayDispatchTarget ResolveDispatch(
+        bool visualSyncReplayPending,
+        bool interactionReplayPending,
+        CrossPageReplayDispatchTarget lastDispatchedTarget,
+        bool preferInteractionReplay)
+    {
+        if (!visualSyncReplayPending && !interactionReplayPending)
+        {
+            return CrossPageReplayDispatchTarget.None;
+        }
+
+        if (visualSyncReplayPending && interactionReplayPending)
+        {
+            if (preferInteractionReplay)
+            {
+                return CrossPageReplayDispatchTarget.Interaction;
+            }
+
+            return lastDispatchedTarget == CrossPageReplayDispatchTarget.VisualSync
+                ? CrossPageReplayDispatchTarget.Interaction
+                : CrossPageReplayDispatchTarget.VisualSync;
+        }
+
+        return ResolveDispatch(visualSyncReplayPending, interactionReplayPending);
+    }
+
+    internal static string? ResolveSource(CrossPageReplayDispatchTarget target)
+    {
+        return target switch
+        {
+            CrossPageReplayDispatchTarget.VisualSync => CrossPageUpdateSources.InkVisualSyncReplay,
+            CrossPageReplayDispatchTarget.Interaction => CrossPageUpdateSources.InteractionReplay,
+            _ => null
+        };
+    }
+
+    internal static CrossPageReplayDispatchScheduleFallbackDecision ResolveDispatchScheduleFallback(
+        bool dispatchScheduled,
+        bool dispatcherCheckAccess,
+        bool dispatcherShutdownStarted,
+        bool dispatcherShutdownFinished)
+    {
+        if (dispatchScheduled)
+        {
+            return new CrossPageReplayDispatchScheduleFallbackDecision(
+                ShouldRunInline: false,
+                ShouldRequeuePending: false,
+                Reason: CrossPageReplayDispatchScheduleFallbackReason.None);
+        }
+
+        if (dispatcherCheckAccess && !dispatcherShutdownStarted && !dispatcherShutdownFinished)
+        {
+            return new CrossPageReplayDispatchScheduleFallbackDecision(
+                ShouldRunInline: true,
+                ShouldRequeuePending: false,
+                Reason: CrossPageReplayDispatchScheduleFallbackReason.InlineCurrentThread);
+        }
+
+        return new CrossPageReplayDispatchScheduleFallbackDecision(
+            ShouldRunInline: false,
+            ShouldRequeuePending: true,
+            Reason: CrossPageReplayDispatchScheduleFallbackReason.RequeuePending);
+    }
+
+    internal static CrossPageReplayQueueDecision ResolveQueue(CrossPageUpdateSourceKind kind)
+    {
+        return ResolveQueue(kind, source: CrossPageUpdateSources.Unspecified);
+    }
+
+    internal static CrossPageReplayQueueDecision ResolveQueue(CrossPageUpdateSourceKind kind, string source)
+    {
+        if (!CrossPageDisplayUpdatePolicies.ShouldQueueReplay(kind))
+        {
+            return CrossPageReplayQueueDecisionFactory.None();
+        }
+
+        var parsed = CrossPageUpdateSourceParser.Parse(source);
+        var immediateSuffix = parsed.Suffix == CrossPageUpdateDispatchSuffix.Immediate;
+
+        return kind switch
+        {
+            CrossPageUpdateSourceKind.VisualSync when immediateSuffix
+                => CrossPageReplayQueueDecisionFactory.VisualSyncAndInteraction(),
+            CrossPageUpdateSourceKind.VisualSync
+                => CrossPageReplayQueueDecisionFactory.VisualSync(),
+            CrossPageUpdateSourceKind.Interaction
+                => CrossPageReplayQueueDecisionFactory.Interaction(),
+            _ => CrossPageReplayQueueDecisionFactory.None()
+        };
+    }
+}

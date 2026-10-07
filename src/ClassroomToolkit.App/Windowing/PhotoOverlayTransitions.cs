@@ -15,30 +15,6 @@ internal readonly record struct PhotoCloseTransitionPlan(
     bool RequestZOrderApply,
     bool ForceEnforceZOrder);
 
-internal static class PhotoCloseTransitionPolicy
-{
-    internal static PhotoCloseTransitionPlan Resolve(PhotoCloseTransitionContext context)
-    {
-        return Resolve(context.OverlayVisible);
-    }
-
-    internal static PhotoCloseTransitionPlan Resolve(bool overlayVisible)
-    {
-        return new PhotoCloseTransitionPlan(
-            SyncFloatingOwnersVisible: false,
-            RequestZOrderApply: overlayVisible,
-            ForceEnforceZOrder: overlayVisible);
-    }
-}
-
-internal static class PhotoCloseOwnerDetachmentPolicy
-{
-    internal static bool ShouldDetachOwners(bool syncFloatingOwnersVisible)
-    {
-        return !syncFloatingOwnersVisible;
-    }
-}
-
 internal readonly record struct PhotoModeSurfaceTransitionContext(
     bool PhotoModeActive,
     bool RequestZOrderApply,
@@ -51,13 +27,134 @@ internal enum PhotoModeSurfaceTransitionKind
     PresentationFullscreenDetected = 1
 }
 
-internal static class PhotoModeSurfaceTransitionPolicy
+internal readonly record struct PhotoModeTransitionExecutionResult(
+    bool UpdatedImageManagerKeyboardSuppression,
+    bool NormalizedToolbarWindowState,
+    bool ShowedToolbarWindow,
+    bool SyncedOwners,
+    bool AppliedSurfaceDecision);
+
+internal static class PhotoModeTransitionCoordinator
 {
-    internal static SurfaceZOrderDecision Resolve(
+    internal static PhotoModeTransitionExecutionResult Apply(
+        bool active,
+        PaintVisibilityTransitionPlan transitionPlan,
+        Action<bool> setImageManagerKeyboardNavigationSuppressed,
+        Action normalizeToolbarWindowState,
+        Action showToolbarWindow,
+        Action syncOwners,
+        Action applyPhotoModeSurfaceTransition)
+    {
+        ArgumentNullException.ThrowIfNull(setImageManagerKeyboardNavigationSuppressed);
+        ArgumentNullException.ThrowIfNull(normalizeToolbarWindowState);
+        ArgumentNullException.ThrowIfNull(showToolbarWindow);
+        ArgumentNullException.ThrowIfNull(syncOwners);
+        ArgumentNullException.ThrowIfNull(applyPhotoModeSurfaceTransition);
+
+        setImageManagerKeyboardNavigationSuppressed(active);
+        normalizeToolbarWindowState();
+
+        if (transitionPlan.ShowToolbar)
+        {
+            showToolbarWindow();
+        }
+
+        if (PhotoOverlayPolicies.ShouldSyncOwners(transitionPlan.TouchPhotoFullscreenSurface))
+        {
+            syncOwners();
+        }
+
+        var appliedSurfaceDecision = false;
+        if (transitionPlan.RequestZOrderApply)
+        {
+            applyPhotoModeSurfaceTransition();
+            appliedSurfaceDecision = true;
+        }
+
+        return new PhotoModeTransitionExecutionResult(
+            UpdatedImageManagerKeyboardSuppression: true,
+            NormalizedToolbarWindowState: transitionPlan.NormalizeToolbarWindowState,
+            ShowedToolbarWindow: transitionPlan.ShowToolbar,
+            SyncedOwners: PhotoOverlayPolicies.ShouldSyncOwners(transitionPlan.TouchPhotoFullscreenSurface),
+            AppliedSurfaceDecision: appliedSurfaceDecision);
+    }
+}
+
+internal static class PhotoSelectionPreparationDefaults
+{
+    internal const int PresentationForegroundSuppressionMs = 800;
+}
+
+internal readonly record struct PhotoSelectionPreparationPlan(
+    bool CloseImageManager,
+    bool DisableWhiteboard,
+    bool SuppressPresentationForeground,
+    int PresentationForegroundSuppressionMs);
+
+internal enum PhotoCursorModeFocusRequestReason
+{
+    None = 0,
+    PhotoModeInactive = 1,
+    ToolModeNotCursor = 2,
+    FocusRequested = 3
+}
+
+internal readonly record struct PhotoCursorModeFocusRequestDecision(
+    bool ShouldRequestFocus,
+    PhotoCursorModeFocusRequestReason Reason);
+
+internal readonly record struct PhotoOverlayEntryPlan(
+    bool UpdateSequence,
+    bool UpdateInkVisibility,
+    bool SuppressNextOverlayActivatedApply,
+    bool EnterPhotoMode,
+    bool TouchPhotoSurface,
+    bool FocusOverlay);
+
+internal static class PhotoOverlayEntrySurfaceDecisionFactory
+{
+    internal static SurfaceZOrderDecision Resolve(bool touchPhotoSurface)
+    {
+        if (!touchPhotoSurface)
+        {
+            return ForegroundSurfaceDecisionFactory.NoTouch(requestZOrderApply: false);
+        }
+
+        var decision = ForegroundSurfaceDecisionFactory.Touch(ZOrderSurface.PhotoFullscreen);
+        return decision with { RequestZOrderApply = false };
+    }
+}
+
+internal readonly record struct PhotoOverlayReentryPlan(
+    bool NormalizeWindowState,
+    bool ActivateOverlay,
+    bool ReturnEarly);
+
+internal static class PhotoOverlayTransitionsPolicies
+{
+    internal static PhotoCloseTransitionPlan ResolvePhotoCloseTransition(PhotoCloseTransitionContext context)
+    {
+        return ResolvePhotoCloseTransition(context.OverlayVisible);
+    }
+
+    internal static PhotoCloseTransitionPlan ResolvePhotoCloseTransition(bool overlayVisible)
+    {
+        return new PhotoCloseTransitionPlan(
+            SyncFloatingOwnersVisible: false,
+            RequestZOrderApply: overlayVisible,
+            ForceEnforceZOrder: overlayVisible);
+    }
+
+    internal static bool ShouldDetachOwners(bool syncFloatingOwnersVisible)
+    {
+        return !syncFloatingOwnersVisible;
+    }
+
+    internal static SurfaceZOrderDecision ResolvePhotoModeSurfaceTransition(
         PhotoModeSurfaceTransitionKind kind,
         PhotoModeSurfaceTransitionContext context)
     {
-        return Resolve(
+        return ResolvePhotoModeSurfaceTransition(
             kind,
             context.PhotoModeActive,
             context.RequestZOrderApply,
@@ -65,7 +162,7 @@ internal static class PhotoModeSurfaceTransitionPolicy
             context.OverlayVisible);
     }
 
-    internal static SurfaceZOrderDecision Resolve(
+    internal static SurfaceZOrderDecision ResolvePhotoModeSurfaceTransition(
         PhotoModeSurfaceTransitionKind kind,
         bool photoModeActive,
         bool requestZOrderApply,
@@ -107,75 +204,8 @@ internal static class PhotoModeSurfaceTransitionPolicy
                 overlayVisible)
         };
     }
-}
 
-internal readonly record struct PhotoModeTransitionExecutionResult(
-    bool UpdatedImageManagerKeyboardSuppression,
-    bool NormalizedToolbarWindowState,
-    bool ShowedToolbarWindow,
-    bool SyncedOwners,
-    bool AppliedSurfaceDecision);
-
-internal static class PhotoModeTransitionCoordinator
-{
-    internal static PhotoModeTransitionExecutionResult Apply(
-        bool active,
-        PaintVisibilityTransitionPlan transitionPlan,
-        Action<bool> setImageManagerKeyboardNavigationSuppressed,
-        Action normalizeToolbarWindowState,
-        Action showToolbarWindow,
-        Action syncOwners,
-        Action applyPhotoModeSurfaceTransition)
-    {
-        ArgumentNullException.ThrowIfNull(setImageManagerKeyboardNavigationSuppressed);
-        ArgumentNullException.ThrowIfNull(normalizeToolbarWindowState);
-        ArgumentNullException.ThrowIfNull(showToolbarWindow);
-        ArgumentNullException.ThrowIfNull(syncOwners);
-        ArgumentNullException.ThrowIfNull(applyPhotoModeSurfaceTransition);
-
-        setImageManagerKeyboardNavigationSuppressed(active);
-        normalizeToolbarWindowState();
-
-        if (transitionPlan.ShowToolbar)
-        {
-            showToolbarWindow();
-        }
-
-        if (PhotoModeOwnerSyncPolicy.ShouldSyncOwners(transitionPlan.TouchPhotoFullscreenSurface))
-        {
-            syncOwners();
-        }
-
-        var appliedSurfaceDecision = false;
-        if (transitionPlan.RequestZOrderApply)
-        {
-            applyPhotoModeSurfaceTransition();
-            appliedSurfaceDecision = true;
-        }
-
-        return new PhotoModeTransitionExecutionResult(
-            UpdatedImageManagerKeyboardSuppression: true,
-            NormalizedToolbarWindowState: transitionPlan.NormalizeToolbarWindowState,
-            ShowedToolbarWindow: transitionPlan.ShowToolbar,
-            SyncedOwners: PhotoModeOwnerSyncPolicy.ShouldSyncOwners(transitionPlan.TouchPhotoFullscreenSurface),
-            AppliedSurfaceDecision: appliedSurfaceDecision);
-    }
-}
-
-internal static class PhotoSelectionPreparationDefaults
-{
-    internal const int PresentationForegroundSuppressionMs = 800;
-}
-
-internal readonly record struct PhotoSelectionPreparationPlan(
-    bool CloseImageManager,
-    bool DisableWhiteboard,
-    bool SuppressPresentationForeground,
-    int PresentationForegroundSuppressionMs);
-
-internal static class PhotoSelectionPreparationPolicy
-{
-    internal static PhotoSelectionPreparationPlan Resolve(
+    internal static PhotoSelectionPreparationPlan ResolvePhotoSelectionPreparation(
         bool imageManagerVisible,
         bool whiteboardActive)
     {
@@ -185,23 +215,8 @@ internal static class PhotoSelectionPreparationPolicy
             SuppressPresentationForeground: true,
             PresentationForegroundSuppressionMs: PhotoSelectionPreparationDefaults.PresentationForegroundSuppressionMs);
     }
-}
 
-internal enum PhotoCursorModeFocusRequestReason
-{
-    None = 0,
-    PhotoModeInactive = 1,
-    ToolModeNotCursor = 2,
-    FocusRequested = 3
-}
-
-internal readonly record struct PhotoCursorModeFocusRequestDecision(
-    bool ShouldRequestFocus,
-    PhotoCursorModeFocusRequestReason Reason);
-
-internal static class PhotoCursorModeFocusRequestPolicy
-{
-    internal static PhotoCursorModeFocusRequestDecision Resolve(bool photoModeActive, PaintToolMode mode)
+    internal static PhotoCursorModeFocusRequestDecision ResolvePhotoCursorModeFocusRequest(bool photoModeActive, PaintToolMode mode)
     {
         if (!photoModeActive)
         {
@@ -224,21 +239,10 @@ internal static class PhotoCursorModeFocusRequestPolicy
 
     internal static bool ShouldRequestFocus(bool photoModeActive, PaintToolMode mode)
     {
-        return Resolve(photoModeActive, mode).ShouldRequestFocus;
+        return ResolvePhotoCursorModeFocusRequest(photoModeActive, mode).ShouldRequestFocus;
     }
-}
 
-internal readonly record struct PhotoOverlayEntryPlan(
-    bool UpdateSequence,
-    bool UpdateInkVisibility,
-    bool SuppressNextOverlayActivatedApply,
-    bool EnterPhotoMode,
-    bool TouchPhotoSurface,
-    bool FocusOverlay);
-
-internal static class PhotoOverlayEntryPolicy
-{
-    internal static PhotoOverlayEntryPlan Resolve(bool hasPath)
+    internal static PhotoOverlayEntryPlan ResolvePhotoOverlayEntry(bool hasPath)
     {
         if (!hasPath)
         {
@@ -259,38 +263,13 @@ internal static class PhotoOverlayEntryPolicy
             TouchPhotoSurface: true,
             FocusOverlay: true);
     }
-}
 
-internal static class PhotoOverlayEntrySurfaceTransitionPolicy
-{
-    internal static SurfaceZOrderDecision Resolve(bool touchPhotoSurface)
+    internal static SurfaceZOrderDecision ResolvePhotoOverlayEntrySurfaceTransition(bool touchPhotoSurface)
     {
         return PhotoOverlayEntrySurfaceDecisionFactory.Resolve(touchPhotoSurface);
     }
-}
 
-internal static class PhotoOverlayEntrySurfaceDecisionFactory
-{
-    internal static SurfaceZOrderDecision Resolve(bool touchPhotoSurface)
-    {
-        if (!touchPhotoSurface)
-        {
-            return ForegroundSurfaceDecisionFactory.NoTouch(requestZOrderApply: false);
-        }
-
-        var decision = ForegroundSurfaceDecisionFactory.Touch(ZOrderSurface.PhotoFullscreen);
-        return decision with { RequestZOrderApply = false };
-    }
-}
-
-internal readonly record struct PhotoOverlayReentryPlan(
-    bool NormalizeWindowState,
-    bool ActivateOverlay,
-    bool ReturnEarly);
-
-internal static class PhotoOverlayReentryPolicy
-{
-    public static PhotoOverlayReentryPlan Resolve(
+    public static PhotoOverlayReentryPlan ResolvePhotoOverlayReentry(
         bool windowMinimized,
         bool photoModeActive,
         bool sameSourcePath)

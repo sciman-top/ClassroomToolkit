@@ -23,93 +23,6 @@ internal readonly record struct OverlayActivationDecision(
     bool ShouldActivate,
     OverlayActivationReason Reason);
 
-internal static class OverlayActivationPolicy
-{
-    internal static OverlayActivationDecision Resolve(
-        bool overlayVisible,
-        bool overlayShouldActivate,
-        bool overlayActive,
-        bool toolbarActive,
-        bool imageManagerActive,
-        bool rollCallActive,
-        bool launcherActive)
-    {
-        if (!overlayVisible)
-        {
-            return new OverlayActivationDecision(
-                ShouldActivate: false,
-                Reason: OverlayActivationReason.OverlayHidden);
-        }
-
-        if (!overlayShouldActivate)
-        {
-            return new OverlayActivationDecision(
-                ShouldActivate: false,
-                Reason: OverlayActivationReason.SurfaceNotActivatable);
-        }
-
-        if (overlayActive)
-        {
-            return new OverlayActivationDecision(
-                ShouldActivate: false,
-                Reason: OverlayActivationReason.OverlayAlreadyActive);
-        }
-
-        var guardDecision = FloatingActivationGuardPolicy.Resolve(
-            new FloatingUtilityActivitySnapshot(
-                ToolbarActive: toolbarActive,
-                RollCallActive: rollCallActive,
-                ImageManagerActive: imageManagerActive,
-                LauncherActive: launcherActive));
-        return guardDecision.IsBlocked
-            ? new OverlayActivationDecision(
-                ShouldActivate: false,
-                Reason: guardDecision.Reason switch
-                {
-                    FloatingActivationGuardReason.ToolbarActive => OverlayActivationReason.BlockedByToolbar,
-                    FloatingActivationGuardReason.RollCallActive => OverlayActivationReason.BlockedByRollCall,
-                    FloatingActivationGuardReason.ImageManagerActive => OverlayActivationReason.BlockedByImageManager,
-                    FloatingActivationGuardReason.LauncherActive => OverlayActivationReason.BlockedByLauncher,
-                    _ => OverlayActivationReason.BlockedByToolbar
-                })
-            : new OverlayActivationDecision(
-                ShouldActivate: true,
-                Reason: OverlayActivationReason.None);
-    }
-
-    internal static bool ShouldActivate(
-        bool overlayVisible,
-        bool overlayShouldActivate,
-        bool overlayActive,
-        bool toolbarActive,
-        bool imageManagerActive,
-        bool rollCallActive,
-        bool launcherActive)
-    {
-        return Resolve(
-            overlayVisible,
-            overlayShouldActivate,
-            overlayActive,
-            toolbarActive: toolbarActive,
-            imageManagerActive: imageManagerActive,
-            rollCallActive: rollCallActive,
-            launcherActive: launcherActive).ShouldActivate;
-    }
-}
-
-internal static class OverlayActivationDiagnosticsPolicy
-{
-    internal static string FormatRetouchSkipMessage(OverlayActivationRetouchReason reason)
-    {
-        return $"[OverlayActivation][Retouch] skip reason={reason}";
-    }
-
-    internal static string FormatSuppressionMessage(OverlayActivationSuppressionReason reason)
-    {
-        return $"[OverlayActivation][Suppression] apply reason={reason}";
-    }
-}
-
 internal enum OverlayActivationSuppressionReason
 {
     None = 0,
@@ -119,25 +32,6 @@ internal enum OverlayActivationSuppressionReason
 internal readonly record struct OverlayActivationSuppressionDecision(
     bool ShouldSuppress,
     OverlayActivationSuppressionReason Reason);
-
-internal static class OverlayActivationSuppressionPolicy
-{
-    internal static OverlayActivationSuppressionDecision Resolve(bool suppressNextOverlayActivatedZOrderApply)
-    {
-        return suppressNextOverlayActivatedZOrderApply
-            ? new OverlayActivationSuppressionDecision(
-                ShouldSuppress: true,
-                Reason: OverlayActivationSuppressionReason.SuppressionRequested)
-            : new OverlayActivationSuppressionDecision(
-                ShouldSuppress: false,
-                Reason: OverlayActivationSuppressionReason.None);
-    }
-
-    internal static bool ShouldSuppress(bool suppressNextOverlayActivatedZOrderApply)
-    {
-        return Resolve(suppressNextOverlayActivatedZOrderApply).ShouldSuppress;
-    }
-}
 
 internal static class OverlayActivationSuppressionPolicyAdapter
 {
@@ -165,33 +59,6 @@ internal readonly record struct OverlayActivationSurfaceDecision(
     bool ShouldActivate,
     OverlayActivationSurfaceReason Reason);
 
-internal static class OverlayActivationSurfacePolicy
-{
-    internal static OverlayActivationSurfaceDecision Resolve(bool overlayVisible, ZOrderSurface frontSurface)
-    {
-        if (!overlayVisible)
-        {
-            return new OverlayActivationSurfaceDecision(
-                ShouldActivate: false,
-                Reason: OverlayActivationSurfaceReason.OverlayHidden);
-        }
-
-        var supported = frontSurface is ZOrderSurface.PhotoFullscreen or ZOrderSurface.Whiteboard;
-        return supported
-            ? new OverlayActivationSurfaceDecision(
-                ShouldActivate: true,
-                Reason: OverlayActivationSurfaceReason.None)
-            : new OverlayActivationSurfaceDecision(
-                ShouldActivate: false,
-                Reason: OverlayActivationSurfaceReason.SurfaceNotSupported);
-    }
-
-    internal static bool ShouldActivate(bool overlayVisible, ZOrderSurface frontSurface)
-    {
-        return Resolve(overlayVisible, frontSurface).ShouldActivate;
-    }
-}
-
 internal enum OverlayActivationRetouchReason
 {
     None = 0,
@@ -204,71 +71,6 @@ internal readonly record struct OverlayActivationRetouchDecision(
     bool ShouldApply,
     bool ShouldUpdateLastRetouchUtc,
     OverlayActivationRetouchReason Reason);
-
-internal static class OverlayActivationRetouchPolicy
-{
-    internal static OverlayActivationRetouchDecision Resolve(
-        SurfaceZOrderDecision decision,
-        DateTime lastRetouchUtc,
-        DateTime nowUtc,
-        int minimumIntervalMs)
-    {
-        if (!decision.RequestZOrderApply)
-        {
-            return new OverlayActivationRetouchDecision(
-                ShouldApply: false,
-                ShouldUpdateLastRetouchUtc: false,
-                Reason: OverlayActivationRetouchReason.NoApplyRequest);
-        }
-
-        if (decision.ForceEnforceZOrder)
-        {
-            return new OverlayActivationRetouchDecision(
-                ShouldApply: true,
-                ShouldUpdateLastRetouchUtc: false,
-                Reason: OverlayActivationRetouchReason.Forced);
-        }
-
-        var shouldApply = WindowingDedupPolicies.ShouldAllowRetouch(
-            lastRetouchUtc,
-            nowUtc,
-            minimumIntervalMs);
-        return shouldApply
-            ? new OverlayActivationRetouchDecision(
-                ShouldApply: true,
-                ShouldUpdateLastRetouchUtc: true,
-                Reason: OverlayActivationRetouchReason.None)
-            : new OverlayActivationRetouchDecision(
-                ShouldApply: false,
-                ShouldUpdateLastRetouchUtc: false,
-                Reason: OverlayActivationRetouchReason.Throttled);
-    }
-
-    internal static bool ShouldApply(
-        SurfaceZOrderDecision decision,
-        DateTime lastRetouchUtc,
-        DateTime nowUtc,
-        int minimumIntervalMs)
-    {
-        return Resolve(
-            decision,
-            lastRetouchUtc,
-            nowUtc,
-            minimumIntervalMs).ShouldApply;
-    }
-
-    internal static bool ShouldUpdateLastRetouchUtc(
-        SurfaceZOrderDecision decision,
-        bool shouldApply)
-    {
-        return shouldApply && decision.RequestZOrderApply && !decision.ForceEnforceZOrder;
-    }
-
-    internal static bool ShouldUpdateLastRetouchUtc(OverlayActivationRetouchDecision decision)
-    {
-        return decision.ShouldUpdateLastRetouchUtc;
-    }
-}
 
 internal readonly record struct OverlayActivatedRetouchRuntimeState(
     bool SuppressNextApply,
@@ -300,16 +102,6 @@ internal static class OverlayActivatedRetouchStateUpdater
     internal static void MarkRetouched(ref OverlayActivatedRetouchRuntimeState state, DateTime nowUtc)
     {
         state = state with { LastRetouchUtc = nowUtc };
-    }
-}
-
-internal static class OverlayTopmostEnforcePolicy
-{
-    internal static bool ResolveForPhotoFullscreen(bool overlayCurrentlyTopmost)
-    {
-        // Keep fullscreen transitions stable: only force native z-order replay
-        // when overlay is not topmost yet.
-        return !overlayCurrentlyTopmost;
     }
 }
 
@@ -378,5 +170,198 @@ internal static class OverlayFullscreenBoundsRecoveryExecutor
         _ = SafeActionExecutionExecutor.TryExecute(() => normalizeWindowState(true));
         _ = SafeActionExecutionExecutor.TryExecute(applyImmediateBounds);
         _ = SafeActionExecutionExecutor.TryExecute(applyDeferredBounds);
+    }
+}
+
+internal static class OverlayActivationPolicies
+{
+    internal static OverlayActivationDecision ResolveOverlayActivation(
+        bool overlayVisible,
+        bool overlayShouldActivate,
+        bool overlayActive,
+        bool toolbarActive,
+        bool imageManagerActive,
+        bool rollCallActive,
+        bool launcherActive)
+    {
+        if (!overlayVisible)
+        {
+            return new OverlayActivationDecision(
+                ShouldActivate: false,
+                Reason: OverlayActivationReason.OverlayHidden);
+        }
+
+        if (!overlayShouldActivate)
+        {
+            return new OverlayActivationDecision(
+                ShouldActivate: false,
+                Reason: OverlayActivationReason.SurfaceNotActivatable);
+        }
+
+        if (overlayActive)
+        {
+            return new OverlayActivationDecision(
+                ShouldActivate: false,
+                Reason: OverlayActivationReason.OverlayAlreadyActive);
+        }
+
+        var guardDecision = FloatingWindowCoordinationPolicies.ResolveFloatingActivationGuard(
+            new FloatingUtilityActivitySnapshot(
+                ToolbarActive: toolbarActive,
+                RollCallActive: rollCallActive,
+                ImageManagerActive: imageManagerActive,
+                LauncherActive: launcherActive));
+        return guardDecision.IsBlocked
+            ? new OverlayActivationDecision(
+                ShouldActivate: false,
+                Reason: guardDecision.Reason switch
+                {
+                    FloatingActivationGuardReason.ToolbarActive => OverlayActivationReason.BlockedByToolbar,
+                    FloatingActivationGuardReason.RollCallActive => OverlayActivationReason.BlockedByRollCall,
+                    FloatingActivationGuardReason.ImageManagerActive => OverlayActivationReason.BlockedByImageManager,
+                    FloatingActivationGuardReason.LauncherActive => OverlayActivationReason.BlockedByLauncher,
+                    _ => OverlayActivationReason.BlockedByToolbar
+                })
+            : new OverlayActivationDecision(
+                ShouldActivate: true,
+                Reason: OverlayActivationReason.None);
+    }
+
+    internal static bool ShouldActivateOverlayActivation(
+        bool overlayVisible,
+        bool overlayShouldActivate,
+        bool overlayActive,
+        bool toolbarActive,
+        bool imageManagerActive,
+        bool rollCallActive,
+        bool launcherActive)
+    {
+        return ResolveOverlayActivation(
+            overlayVisible,
+            overlayShouldActivate,
+            overlayActive,
+            toolbarActive: toolbarActive,
+            imageManagerActive: imageManagerActive,
+            rollCallActive: rollCallActive,
+            launcherActive: launcherActive).ShouldActivate;
+    }
+
+    internal static string FormatRetouchSkipMessage(OverlayActivationRetouchReason reason)
+    {
+        return $"[OverlayActivation][Retouch] skip reason={reason}";
+    }
+
+    internal static string FormatSuppressionMessage(OverlayActivationSuppressionReason reason)
+    {
+        return $"[OverlayActivation][Suppression] apply reason={reason}";
+    }
+
+    internal static OverlayActivationSuppressionDecision ResolveSuppression(bool suppressNextOverlayActivatedZOrderApply)
+    {
+        return suppressNextOverlayActivatedZOrderApply
+            ? new OverlayActivationSuppressionDecision(
+                ShouldSuppress: true,
+                Reason: OverlayActivationSuppressionReason.SuppressionRequested)
+            : new OverlayActivationSuppressionDecision(
+                ShouldSuppress: false,
+                Reason: OverlayActivationSuppressionReason.None);
+    }
+
+    internal static bool ShouldSuppress(bool suppressNextOverlayActivatedZOrderApply)
+    {
+        return ResolveSuppression(suppressNextOverlayActivatedZOrderApply).ShouldSuppress;
+    }
+
+    internal static OverlayActivationSurfaceDecision ResolveSurface(bool overlayVisible, ZOrderSurface frontSurface)
+    {
+        if (!overlayVisible)
+        {
+            return new OverlayActivationSurfaceDecision(
+                ShouldActivate: false,
+                Reason: OverlayActivationSurfaceReason.OverlayHidden);
+        }
+
+        var supported = frontSurface is ZOrderSurface.PhotoFullscreen or ZOrderSurface.Whiteboard;
+        return supported
+            ? new OverlayActivationSurfaceDecision(
+                ShouldActivate: true,
+                Reason: OverlayActivationSurfaceReason.None)
+            : new OverlayActivationSurfaceDecision(
+                ShouldActivate: false,
+                Reason: OverlayActivationSurfaceReason.SurfaceNotSupported);
+    }
+
+    internal static bool ShouldActivateSurface(bool overlayVisible, ZOrderSurface frontSurface)
+    {
+        return ResolveSurface(overlayVisible, frontSurface).ShouldActivate;
+    }
+
+    internal static OverlayActivationRetouchDecision ResolveRetouch(
+        SurfaceZOrderDecision decision,
+        DateTime lastRetouchUtc,
+        DateTime nowUtc,
+        int minimumIntervalMs)
+    {
+        if (!decision.RequestZOrderApply)
+        {
+            return new OverlayActivationRetouchDecision(
+                ShouldApply: false,
+                ShouldUpdateLastRetouchUtc: false,
+                Reason: OverlayActivationRetouchReason.NoApplyRequest);
+        }
+
+        if (decision.ForceEnforceZOrder)
+        {
+            return new OverlayActivationRetouchDecision(
+                ShouldApply: true,
+                ShouldUpdateLastRetouchUtc: false,
+                Reason: OverlayActivationRetouchReason.Forced);
+        }
+
+        var shouldApply = WindowingDedupPolicies.ShouldAllowRetouch(
+            lastRetouchUtc,
+            nowUtc,
+            minimumIntervalMs);
+        return shouldApply
+            ? new OverlayActivationRetouchDecision(
+                ShouldApply: true,
+                ShouldUpdateLastRetouchUtc: true,
+                Reason: OverlayActivationRetouchReason.None)
+            : new OverlayActivationRetouchDecision(
+                ShouldApply: false,
+                ShouldUpdateLastRetouchUtc: false,
+                Reason: OverlayActivationRetouchReason.Throttled);
+    }
+
+    internal static bool ShouldApply(
+        SurfaceZOrderDecision decision,
+        DateTime lastRetouchUtc,
+        DateTime nowUtc,
+        int minimumIntervalMs)
+    {
+        return ResolveRetouch(
+            decision,
+            lastRetouchUtc,
+            nowUtc,
+            minimumIntervalMs).ShouldApply;
+    }
+
+    internal static bool ShouldUpdateLastRetouchUtc(
+        SurfaceZOrderDecision decision,
+        bool shouldApply)
+    {
+        return shouldApply && decision.RequestZOrderApply && !decision.ForceEnforceZOrder;
+    }
+
+    internal static bool ShouldUpdateLastRetouchUtc(OverlayActivationRetouchDecision decision)
+    {
+        return decision.ShouldUpdateLastRetouchUtc;
+    }
+
+    internal static bool ResolveForPhotoFullscreen(bool overlayCurrentlyTopmost)
+    {
+        // Keep fullscreen transitions stable: only force native z-order replay
+        // when overlay is not topmost yet.
+        return !overlayCurrentlyTopmost;
     }
 }

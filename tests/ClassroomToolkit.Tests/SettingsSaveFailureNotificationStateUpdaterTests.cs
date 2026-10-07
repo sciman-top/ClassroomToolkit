@@ -20,7 +20,7 @@ public sealed class SettingsSaveFailureNotificationStateUpdaterTests
     public void ApplyNotificationPlan_ShouldPersistNextNotificationState()
     {
         var saveFailedNotified = false;
-        var plan = SettingsSaveFailureNotificationPolicy.Resolve(alreadyNotified: saveFailedNotified);
+        var plan = NotificationAndExitPolicies.Resolve(alreadyNotified: saveFailedNotified);
 
         SettingsSaveFailureNotificationStateUpdater.ApplyNotificationPlan(
             ref saveFailedNotified,

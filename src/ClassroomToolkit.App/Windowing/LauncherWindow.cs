@@ -22,9 +22,71 @@ internal enum LauncherWindowRuntimeSelectionReason
     FallbackToBubbleBecauseMainNotVisible = 4
 }
 
-internal static class LauncherWindowRuntimeSnapshotPolicy
+internal readonly record struct LauncherMinimizeTransitionContext(
+    bool MainVisible,
+    bool BubbleVisible);
+
+internal readonly record struct LauncherRestoreTransitionContext(
+    bool MainVisible,
+    bool MainActive,
+    bool BubbleVisible);
+
+internal static class LauncherTopmostVisibilityHoldDefaults
 {
-    public static LauncherWindowRuntimeSnapshot Resolve(
+    internal const int HoldMs = 180;
+}
+
+internal enum LauncherTopmostVisibilityReason
+{
+    None = 0,
+    MainVisible = 1,
+    MainHiddenOrMinimized = 2,
+    BubbleVisible = 3,
+    BubbleHiddenOrMinimized = 4
+}
+
+internal readonly record struct LauncherTopmostVisibilityDecision(
+    bool IsVisible,
+    LauncherTopmostVisibilityReason Reason);
+
+internal readonly record struct LauncherVisibilityTransitionPlan(
+    bool ShowMainWindow,
+    bool HideMainWindow,
+    bool ShowBubbleWindow,
+    bool HideBubbleWindow,
+    bool ActivateMainWindow,
+    bool RequestZOrderApply,
+    bool ForceEnforceZOrder);
+
+internal enum LauncherVisibilityMinimizeReason
+{
+    None = 0,
+    HideMainAndShowBubble = 1,
+    HideMainOnly = 2,
+    ShowBubbleOnly = 3,
+    NoOp = 4
+}
+
+internal readonly record struct LauncherVisibilityMinimizeDecision(
+    LauncherVisibilityTransitionPlan Plan,
+    LauncherVisibilityMinimizeReason Reason);
+
+internal enum LauncherVisibilityRestoreReason
+{
+    None = 0,
+    ShowMainAndHideBubble = 1,
+    ShowMainOnly = 2,
+    HideBubbleOnly = 3,
+    NoOp = 4
+}
+
+internal readonly record struct LauncherVisibilityRestoreDecision(
+    LauncherVisibilityTransitionPlan Plan,
+    LauncherVisibilityRestoreReason Reason);
+
+internal static class LauncherWindowPolicies
+{
+    public static LauncherWindowRuntimeSnapshot ResolveRuntimeSnapshot(
         bool launcherMinimized,
         bool mainVisible,
         bool mainMinimized,
@@ -88,11 +150,8 @@ internal static class LauncherWindowRuntimeSnapshotPolicy
 
         return (LauncherWindowKind.Bubble, LauncherWindowRuntimeSelectionReason.FallbackToBubbleBecauseMainNotVisible);
     }
-}
 
-internal static class LauncherWindowResolverPolicy
-{
-    internal static LauncherWindowKind Resolve(
+    internal static LauncherWindowKind ResolveResolver(
         LauncherWindowKind preferredKind,
         bool bubbleExists,
         bool bubbleVisible,
@@ -123,24 +182,7 @@ internal static class LauncherWindowResolverPolicy
             ? LauncherWindowKind.Bubble
             : LauncherWindowKind.Main;
     }
-}
 
-internal readonly record struct LauncherMinimizeTransitionContext(
-    bool MainVisible,
-    bool BubbleVisible);
-
-internal readonly record struct LauncherRestoreTransitionContext(
-    bool MainVisible,
-    bool MainActive,
-    bool BubbleVisible);
-
-internal static class LauncherTopmostVisibilityHoldDefaults
-{
-    internal const int HoldMs = 180;
-}
-
-internal static class LauncherTopmostVisibilityHoldPolicy
-{
     internal static bool ResolveVisibleForRepair(
         bool currentVisibleForTopmost,
         DateTime lastVisibleForTopmostUtc,
@@ -160,23 +202,7 @@ internal static class LauncherTopmostVisibilityHoldPolicy
         var elapsedMs = (nowUtc - lastVisibleForTopmostUtc).TotalMilliseconds;
         return elapsedMs >= 0 && elapsedMs <= holdMs;
     }
-}
 
-internal enum LauncherTopmostVisibilityReason
-{
-    None = 0,
-    MainVisible = 1,
-    MainHiddenOrMinimized = 2,
-    BubbleVisible = 3,
-    BubbleHiddenOrMinimized = 4
-}
-
-internal readonly record struct LauncherTopmostVisibilityDecision(
-    bool IsVisible,
-    LauncherTopmostVisibilityReason Reason);
-
-internal static class LauncherVisibilityPolicy
-{
     internal static LauncherTopmostVisibilityDecision ResolveForTopmost(
         bool launcherMinimized,
         bool mainVisible,
@@ -218,45 +244,7 @@ internal static class LauncherVisibilityPolicy
             bubbleVisible,
             bubbleMinimized).IsVisible;
     }
-}
 
-internal readonly record struct LauncherVisibilityTransitionPlan(
-    bool ShowMainWindow,
-    bool HideMainWindow,
-    bool ShowBubbleWindow,
-    bool HideBubbleWindow,
-    bool ActivateMainWindow,
-    bool RequestZOrderApply,
-    bool ForceEnforceZOrder);
-
-internal enum LauncherVisibilityMinimizeReason
-{
-    None = 0,
-    HideMainAndShowBubble = 1,
-    HideMainOnly = 2,
-    ShowBubbleOnly = 3,
-    NoOp = 4
-}
-
-internal readonly record struct LauncherVisibilityMinimizeDecision(
-    LauncherVisibilityTransitionPlan Plan,
-    LauncherVisibilityMinimizeReason Reason);
-
-internal enum LauncherVisibilityRestoreReason
-{
-    None = 0,
-    ShowMainAndHideBubble = 1,
-    ShowMainOnly = 2,
-    HideBubbleOnly = 3,
-    NoOp = 4
-}
-
-internal readonly record struct LauncherVisibilityRestoreDecision(
-    LauncherVisibilityTransitionPlan Plan,
-    LauncherVisibilityRestoreReason Reason);
-
-internal static class LauncherVisibilityTransitionPolicy
-{
     internal static LauncherVisibilityTransitionPlan ResolveMinimize(LauncherMinimizeTransitionContext context)
     {
         return ResolveMinimizeDecision(
@@ -329,7 +317,7 @@ internal static class LauncherVisibilityTransitionPolicy
         var showMainWindow = !mainVisible;
         var hideBubbleWindow = bubbleVisible;
         var requestZOrderApply = showMainWindow || hideBubbleWindow;
-        var activateMainWindowDecision = UserInitiatedWindowActivationPolicy.Resolve(
+        var activateMainWindowDecision = WindowExecutionPolicies.ResolveUserInitiatedWindowActivation(
             windowVisible: true,
             windowActive: mainActive);
         var reason = showMainWindow && hideBubbleWindow

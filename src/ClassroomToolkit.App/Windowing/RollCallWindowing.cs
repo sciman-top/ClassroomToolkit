@@ -14,17 +14,60 @@ internal readonly record struct RollCallVisibilityTransitionPlan(
     bool RequestZOrderApply,
     bool ForceEnforceZOrder);
 
-internal static class RollCallVisibilityTransitionPolicy
+internal readonly record struct RollCallAuxOverlayTopmostPlan(
+    bool PhotoOverlayTopmost,
+    bool PhotoOverlayEnforceZOrder,
+    bool GroupOverlayTopmost,
+    bool GroupOverlayEnforceZOrder);
+
+internal enum RollCallTransparencyReason
 {
-    internal static RollCallVisibilityTransitionPlan Resolve(RollCallVisibilityTransitionContext context)
+    None = 0,
+    Enabled = 1,
+    Hovering = 2,
+    PaintModeDisallow = 3
+}
+
+internal readonly record struct RollCallTransparencyDecision(
+    bool TransparentEnabled,
+    RollCallTransparencyReason Reason);
+
+internal enum RollCallTransparencyStyleApplyReason
+{
+    None = 0,
+    StateChanged = 1,
+    StateUnknown = 2,
+    StateUnchanged = 3
+}
+
+internal readonly record struct RollCallTransparencyStyleApplyDecision(
+    bool ShouldApplyStyle,
+    RollCallTransparencyStyleApplyReason Reason);
+
+internal enum RollCallHoverTimerReason
+{
+    None = 0,
+    StartWhenTransparent = 1,
+    StopWhenOpaque = 2,
+    NoChange = 3
+}
+
+internal readonly record struct RollCallHoverTimerDecision(
+    bool ShouldStart,
+    bool ShouldStop,
+    RollCallHoverTimerReason Reason);
+
+internal static class RollCallWindowingPolicies
+{
+    internal static RollCallVisibilityTransitionPlan ResolveRollCallVisibilityTransition(RollCallVisibilityTransitionContext context)
     {
-        return Resolve(
+        return ResolveRollCallVisibilityTransition(
             rollCallVisible: context.RollCallVisible,
             rollCallActive: context.RollCallActive,
             overlayVisible: context.OverlayVisible);
     }
 
-    internal static RollCallVisibilityTransitionPlan Resolve(
+    internal static RollCallVisibilityTransitionPlan ResolveRollCallVisibilityTransition(
         bool rollCallVisible,
         bool rollCallActive,
         bool overlayVisible)
@@ -39,7 +82,7 @@ internal static class RollCallVisibilityTransitionPolicy
                 RequestZOrderApply: true,
                 ForceEnforceZOrder: overlayVisible);
         }
-        var activateWindowDecision = UserInitiatedWindowActivationPolicy.Resolve(
+        var activateWindowDecision = WindowExecutionPolicies.ResolveUserInitiatedWindowActivation(
             windowVisible: true,
             windowActive: rollCallActive);
 
@@ -51,17 +94,8 @@ internal static class RollCallVisibilityTransitionPolicy
             RequestZOrderApply: true,
             ForceEnforceZOrder: overlayVisible);
     }
-}
 
-internal readonly record struct RollCallAuxOverlayTopmostPlan(
-    bool PhotoOverlayTopmost,
-    bool PhotoOverlayEnforceZOrder,
-    bool GroupOverlayTopmost,
-    bool GroupOverlayEnforceZOrder);
-
-internal static class RollCallAuxOverlayTopmostPolicy
-{
-    internal static RollCallAuxOverlayTopmostPlan Resolve(
+    internal static RollCallAuxOverlayTopmostPlan ResolveRollCallAuxOverlayTopmost(
         bool photoOverlayVisible,
         bool groupOverlayVisible,
         bool enforceZOrder)
@@ -74,10 +108,7 @@ internal static class RollCallAuxOverlayTopmostPolicy
             GroupOverlayTopmost: groupOverlayVisible,
             GroupOverlayEnforceZOrder: enforceZOrder);
     }
-}
 
-internal static class RollCallWindowDiagnosticsPolicy
-{
     internal static string FormatInitializationFailureMessage(string exceptionType, string message)
     {
         return $"[RollCallWindow] initialization-failed ex={exceptionType} msg={message}";
@@ -122,47 +153,7 @@ internal static class RollCallWindowDiagnosticsPolicy
     {
         return $"[RollCallWindow] remote-hook-dispatch-skipped op={operation} reason={reason}";
     }
-}
 
-internal enum RollCallTransparencyReason
-{
-    None = 0,
-    Enabled = 1,
-    Hovering = 2,
-    PaintModeDisallow = 3
-}
-
-internal readonly record struct RollCallTransparencyDecision(
-    bool TransparentEnabled,
-    RollCallTransparencyReason Reason);
-
-internal enum RollCallTransparencyStyleApplyReason
-{
-    None = 0,
-    StateChanged = 1,
-    StateUnknown = 2,
-    StateUnchanged = 3
-}
-
-internal readonly record struct RollCallTransparencyStyleApplyDecision(
-    bool ShouldApplyStyle,
-    RollCallTransparencyStyleApplyReason Reason);
-
-internal enum RollCallHoverTimerReason
-{
-    None = 0,
-    StartWhenTransparent = 1,
-    StopWhenOpaque = 2,
-    NoChange = 3
-}
-
-internal readonly record struct RollCallHoverTimerDecision(
-    bool ShouldStart,
-    bool ShouldStop,
-    RollCallHoverTimerReason Reason);
-
-internal static class RollCallTransparencyPolicy
-{
     internal static RollCallTransparencyDecision ResolveTransparency(
         bool hovering,
         bool paintAllowsTransparency)

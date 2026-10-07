@@ -29,7 +29,7 @@ internal static class PhotoOverlayDiagnostics
         {
             Directory.CreateDirectory(logsDirectory);
             var logFilePath = Path.Combine(logsDirectory, LatestLogFileName);
-            var sessionHeader = PhotoOverlayDiagnosticsPolicy.FormatSessionStartMessage();
+            var sessionHeader = PhotoOverlayPolicies.FormatSessionStartMessage();
             lock (FileWriteLock)
             {
                 File.WriteAllText(logFilePath, sessionHeader + Environment.NewLine);
@@ -51,7 +51,7 @@ internal static class PhotoOverlayDiagnostics
             return;
         }
 
-        var formattedMessage = PhotoOverlayDiagnosticsPolicy.FormatMessage(eventName, message);
+        var formattedMessage = PhotoOverlayPolicies.FormatMessage(eventName, message);
         Debug.WriteLine(formattedMessage);
         var logFilePath = _logFilePath;
         if (string.IsNullOrWhiteSpace(logFilePath))

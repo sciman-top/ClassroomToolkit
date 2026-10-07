@@ -16,7 +16,7 @@ public sealed class PaintOverlayPreviewSchedulingContractTests
         var previous = BrushInputSample.CreatePointer(new Point(10, 20), start);
         var current = BrushInputSample.CreatePointer(new Point(30, 24), start + step);
 
-        var velocity = BrushPredictionVelocityPolicy.Resolve(new Vector(), previous, current);
+        var velocity = PresetSchemePolicies.ResolveBrushPredictionVelocity(new Vector(), previous, current);
 
         velocity.X.Should().BeGreaterThan(0);
         velocity.Y.Should().BeGreaterThan(0);
@@ -30,6 +30,6 @@ public sealed class PaintOverlayPreviewSchedulingContractTests
         var current = BrushInputSample.CreatePointer(new Point(30, 24), timestamp);
         var existing = new Vector(12, 4);
 
-        BrushPredictionVelocityPolicy.Resolve(existing, previous, current).Should().Be(existing);
+        PresetSchemePolicies.ResolveBrushPredictionVelocity(existing, previous, current).Should().Be(existing);
     }
 }

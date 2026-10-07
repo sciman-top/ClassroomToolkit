@@ -134,7 +134,7 @@ public partial class ImageManagerWindow
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {
             Debug.WriteLine(
-                ImageManagerDiagnosticsPolicy.FormatUpNavigationFailureMessage(
+                ImageManagerPolicies.FormatUpNavigationFailureMessage(
                     ViewModel.CurrentFolder,
                     ex.Message));
         }

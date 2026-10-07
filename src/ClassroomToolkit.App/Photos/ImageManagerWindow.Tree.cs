@@ -123,7 +123,7 @@ public partial class ImageManagerWindow
             }
 
             Debug.WriteLine(
-                ImageManagerDiagnosticsPolicy.FormatFolderExpandFailureMessage(
+                ImageManagerPolicies.FormatFolderExpandFailureMessage(
                     path,
                     ex.Message));
         }

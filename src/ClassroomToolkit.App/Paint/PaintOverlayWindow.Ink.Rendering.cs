@@ -72,7 +72,7 @@ public partial class PaintOverlayWindow
         }
 
         if (photoInkModeActive
-            && !PhotoInkViewportIntersectionPolicy.ShouldRender(
+            && !PhotoInkInteropPolicies.ShouldRender(
                 photoInkModeActive,
                 usePhotoTransform,
                 renderGeometry.Bounds,
@@ -305,7 +305,7 @@ public partial class PaintOverlayWindow
         }
 
         clipBoundsDip = raw;
-        if (!InkRedrawClipPolicy.TryResolvePixelClip(
+        if (!InkPersistencePolicies.TryResolvePixelClip(
                 raw,
                 _surfacePixelWidth,
                 _surfacePixelHeight,
@@ -371,7 +371,7 @@ public partial class PaintOverlayWindow
 
         var usePartialClear = false;
         if (TryResolveInkRedrawClip(out var clipPixelRect, out var clipBoundsDip)
-            && InkRedrawClipPolicy.ShouldUsePartialClear(
+            && InkPersistencePolicies.ShouldUsePartialClear(
                 clipAvailable: true,
                 clipPixelRect: clipPixelRect,
                 lastClipPixelRect: _lastInkRedrawClipPixelRect))
@@ -427,17 +427,17 @@ public partial class PaintOverlayWindow
             _inkRedrawTelemetryPartialSamples++;
         }
 
-        InkRedrawTelemetryPolicy.AppendSample(
+        InkPersistencePolicies.AppendSample(
             _inkRedrawTelemetryAllWindow,
             elapsedMs,
             InkRedrawTelemetryWindowSize);
-        InkRedrawTelemetryPolicy.AppendSample(
+        InkPersistencePolicies.AppendSample(
             partialClear ? _inkRedrawTelemetryPartialWindow : _inkRedrawTelemetryFullWindow,
             elapsedMs,
             InkRedrawTelemetryWindowSize);
 
         var nowUtc = GetCurrentUtcTimestamp();
-        if (!InkRedrawTelemetryPolicy.ShouldEmitLog(
+        if (!InkPersistencePolicies.ShouldEmitLog(
                 _inkRedrawTelemetryTotalSamples,
                 nowUtc,
                 _lastInkRedrawTelemetryLogUtc,
@@ -450,10 +450,10 @@ public partial class PaintOverlayWindow
         var hitRate = _inkRedrawTelemetryTotalSamples <= 0
             ? 0
             : (double)_inkRedrawTelemetryPartialSamples / _inkRedrawTelemetryTotalSamples * 100.0;
-        var allP50 = InkRedrawTelemetryPolicy.Percentile(_inkRedrawTelemetryAllWindow, 0.5);
-        var allP95 = InkRedrawTelemetryPolicy.Percentile(_inkRedrawTelemetryAllWindow, 0.95);
-        var partialP95 = InkRedrawTelemetryPolicy.Percentile(_inkRedrawTelemetryPartialWindow, 0.95);
-        var fullP95 = InkRedrawTelemetryPolicy.Percentile(_inkRedrawTelemetryFullWindow, 0.95);
+        var allP50 = InkPersistencePolicies.Percentile(_inkRedrawTelemetryAllWindow, 0.5);
+        var allP95 = InkPersistencePolicies.Percentile(_inkRedrawTelemetryAllWindow, 0.95);
+        var partialP95 = InkPersistencePolicies.Percentile(_inkRedrawTelemetryPartialWindow, 0.95);
+        var fullP95 = InkPersistencePolicies.Percentile(_inkRedrawTelemetryFullWindow, 0.95);
         _inkDiagnostics?.OnInkRedrawTelemetry(
             _inkRedrawTelemetryTotalSamples,
             hitRate,

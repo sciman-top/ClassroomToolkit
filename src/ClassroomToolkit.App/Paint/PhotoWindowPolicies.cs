@@ -37,7 +37,7 @@ internal static class AuxWindowKeyRoutingHandler
             return true;
         }
 
-        if (!canRoutePresentationInput || !PresentationKeyCommandPolicy.TryMap(key, out _))
+        if (!canRoutePresentationInput || !PresentationPipelinePolicies.TryMap(key, out _))
         {
             return false;
         }
@@ -69,9 +69,81 @@ internal static class AuxWindowWheelRoutingHandler
     }
 }
 
-internal static class PhotoBackgroundVisibilityPolicy
+internal static class PhotoDocumentRuntimeDefaults
 {
-    internal static Visibility Resolve(
+    internal const double PdfDefaultDpi = 96;
+    internal const int PdfCacheLimit = 6;
+    internal const long PdfCacheMaxBytes = 100L * 1024L * 1024L;
+    internal const int PdfCacheTryEnterTimeoutMs = 50;
+    internal const int PdfPrefetchTryEnterTimeoutMs = 100;
+    internal const int PdfPrefetchDelayMs = 120;
+    internal const int NeighborPageCacheLimit = 5;
+}
+
+internal readonly record struct PhotoRightButtonDownExecutionPlan(
+    bool ShouldArmPending,
+    bool ShouldTryBeginPan);
+
+internal enum PhotoRightButtonUpAction
+{
+    PassThrough,
+    ShowContextMenu
+}
+
+internal readonly record struct PhotoRightButtonUpExecutionPlan(
+    PhotoRightButtonUpAction Action,
+    bool ShouldMarkHandled,
+    bool ShouldClearPending);
+
+internal static class PhotoRightClickContextMenuDefaults
+{
+    internal const double MinThresholdDip = 0.0;
+    internal const double CancelMoveThresholdDip = 6.0;
+}
+
+internal static class PhotoRightClickPendingStateUpdater
+{
+    internal static void Arm(
+        ref bool pending,
+        ref WpfPoint start,
+        WpfPoint point)
+    {
+        pending = true;
+        start = point;
+    }
+
+    internal static void Clear(ref bool pending)
+    {
+        pending = false;
+    }
+
+    internal static void UpdateByMove(
+        ref bool pending,
+        WpfPoint start,
+        WpfPoint current)
+    {
+        if (!pending)
+        {
+            return;
+        }
+
+        var delta = current - start;
+        if (PhotoWindowPolicies.ShouldCancelPendingByMove(delta))
+        {
+            pending = false;
+        }
+    }
+}
+
+internal readonly record struct PhotoTitleBarDragZOrderPlan(
+    bool CanDrag,
+    bool RequestZOrderBeforeDrag,
+    bool RequestZOrderAfterDrag,
+    bool ForceAfterDrag);
+
+internal static class PhotoWindowPolicies
+{
+    internal static Visibility ResolvePhotoBackgroundVisibility(
         bool photoModeActive,
         bool boardActive,
         bool hasBackgroundSource)
@@ -80,10 +152,7 @@ internal static class PhotoBackgroundVisibilityPolicy
             ? Visibility.Visible
             : Visibility.Collapsed;
     }
-}
 
-internal static class PhotoContentTransformPolicy
-{
     internal static bool ShouldApplyPhotoTransform(
         bool enabledRequested,
         bool photoModeActive,
@@ -95,10 +164,7 @@ internal static class PhotoContentTransformPolicy
         // when the page is panned back into view.
         return false;
     }
-}
 
-internal static class PhotoCrossPageSequencePolicy
-{
     internal static (IReadOnlyList<string> Sequence, int CurrentIndex) Normalize(
         IReadOnlyList<string>? sequence,
         int currentIndex)
@@ -135,21 +201,7 @@ internal static class PhotoCrossPageSequencePolicy
 
         return (imageOnly, normalizedIndex);
     }
-}
 
-internal static class PhotoDocumentRuntimeDefaults
-{
-    internal const double PdfDefaultDpi = 96;
-    internal const int PdfCacheLimit = 6;
-    internal const long PdfCacheMaxBytes = 100L * 1024L * 1024L;
-    internal const int PdfCacheTryEnterTimeoutMs = 50;
-    internal const int PdfPrefetchTryEnterTimeoutMs = 100;
-    internal const int PdfPrefetchDelayMs = 120;
-    internal const int NeighborPageCacheLimit = 5;
-}
-
-internal static class PhotoInteractionModePolicy
-{
     internal static bool IsPhotoNavigationEnabled(bool photoModeActive, bool boardActive)
     {
         return photoModeActive && !boardActive;
@@ -173,15 +225,8 @@ internal static class PhotoInteractionModePolicy
         return crossPageDisplayEnabled
             && IsPhotoTransformEnabled(photoModeActive, boardActive);
     }
-}
 
-internal readonly record struct PhotoRightButtonDownExecutionPlan(
-    bool ShouldArmPending,
-    bool ShouldTryBeginPan);
-
-internal static class PhotoRightButtonDownExecutionPolicy
-{
-    internal static PhotoRightButtonDownExecutionPlan Resolve(
+    internal static PhotoRightButtonDownExecutionPlan ResolvePhotoRightButtonDownExecution(
         bool shouldArmPending,
         bool shouldAllowPan)
     {
@@ -189,22 +234,8 @@ internal static class PhotoRightButtonDownExecutionPolicy
             ShouldArmPending: shouldArmPending,
             ShouldTryBeginPan: shouldAllowPan);
     }
-}
 
-internal enum PhotoRightButtonUpAction
-{
-    PassThrough,
-    ShowContextMenu
-}
-
-internal readonly record struct PhotoRightButtonUpExecutionPlan(
-    PhotoRightButtonUpAction Action,
-    bool ShouldMarkHandled,
-    bool ShouldClearPending);
-
-internal static class PhotoRightButtonUpExecutionPolicy
-{
-    internal static PhotoRightButtonUpExecutionPlan Resolve(bool shouldShowContextMenuOnUp)
+    internal static PhotoRightButtonUpExecutionPlan ResolvePhotoRightButtonUpExecution(bool shouldShowContextMenuOnUp)
     {
         if (!shouldShowContextMenuOnUp)
         {
@@ -219,16 +250,7 @@ internal static class PhotoRightButtonUpExecutionPolicy
             ShouldMarkHandled: true,
             ShouldClearPending: true);
     }
-}
 
-internal static class PhotoRightClickContextMenuDefaults
-{
-    internal const double MinThresholdDip = 0.0;
-    internal const double CancelMoveThresholdDip = 6.0;
-}
-
-internal static class PhotoRightClickContextMenuPolicy
-{
     internal static bool ShouldArmPending(
         bool photoModeActive,
         bool photoFullscreen,
@@ -253,51 +275,8 @@ internal static class PhotoRightClickContextMenuPolicy
     {
         return rightClickPending && ShouldArmPending(photoModeActive, photoFullscreen, mode);
     }
-}
 
-internal static class PhotoRightClickPendingStateUpdater
-{
-    internal static void Arm(
-        ref bool pending,
-        ref WpfPoint start,
-        WpfPoint point)
-    {
-        pending = true;
-        start = point;
-    }
-
-    internal static void Clear(ref bool pending)
-    {
-        pending = false;
-    }
-
-    internal static void UpdateByMove(
-        ref bool pending,
-        WpfPoint start,
-        WpfPoint current)
-    {
-        if (!pending)
-        {
-            return;
-        }
-
-        var delta = current - start;
-        if (PhotoRightClickContextMenuPolicy.ShouldCancelPendingByMove(delta))
-        {
-            pending = false;
-        }
-    }
-}
-
-internal readonly record struct PhotoTitleBarDragZOrderPlan(
-    bool CanDrag,
-    bool RequestZOrderBeforeDrag,
-    bool RequestZOrderAfterDrag,
-    bool ForceAfterDrag);
-
-internal static class PhotoTitleBarDragZOrderPolicy
-{
-    internal static PhotoTitleBarDragZOrderPlan Resolve(
+    internal static PhotoTitleBarDragZOrderPlan ResolvePhotoTitleBarDragZOrder(
         bool photoModeActive,
         bool photoFullscreen,
         MouseButton changedButton)
@@ -320,10 +299,7 @@ internal static class PhotoTitleBarDragZOrderPolicy
             RequestZOrderAfterDrag: true,
             ForceAfterDrag: false);
     }
-}
 
-internal static class PhotoTouchInteractionPolicy
-{
     internal static bool ShouldUseManipulation(int activeTouchCount)
     {
         // WPF only starts a manipulation when the originating TouchDown is
@@ -341,10 +317,7 @@ internal static class PhotoTouchInteractionPolicy
     {
         return tabletDeviceType == TabletDeviceType.Touch;
     }
-}
 
-internal static class PhotoWindowModeZOrderRetouchPolicy
-{
     internal static bool ShouldRequest(bool photoModeActive, bool fullscreenChanged)
     {
         return photoModeActive && fullscreenChanged;
@@ -354,10 +327,7 @@ internal static class PhotoWindowModeZOrderRetouchPolicy
     {
         return fullscreen;
     }
-}
 
-internal static class PhotoWindowStateRestorePolicy
-{
     internal static bool ShouldArmFullscreenRestore(bool photoFullscreen)
     {
         return photoFullscreen;
