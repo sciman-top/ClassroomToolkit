@@ -1,6 +1,8 @@
 # ClassroomToolkit 当前架构
 
-最后更新：2026-08-17
+架构事实最后复核：2026-08-17
+
+验证入口更新：2026-10-07
 
 ## 终态判断
 
@@ -35,9 +37,18 @@
 
 ## 验证
 
+### 定向反馈
+
 ```powershell
 dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --filter "FullyQualifiedName~ArchitectureDependencyTests"
+```
+
+### 阶段收口
+
+```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile standard -Configuration Debug
 ```
+
+标准门禁已包含 `ArchitectureDependencyTests`。若已运行标准门禁，不要再补跑这条定向测试；小切片可先用定向反馈，阶段收口时再按需选择标准门禁。
 
 `repo_verified` 只证明仓库层依赖与自动化契约，不替代多显示器、DPI、投影、PPT/WPS 和触控设备的课堂现场验收。

@@ -6,7 +6,7 @@
 
 ## Basic Workflow
 1. Fork and create branch
-2. Run local gates
+2. Use focused checks while iterating; at closeout choose the smallest suitable path in [README: Build and validation](./README.md#构建与验证). An aggregate gate already covers its documented component checks
 3. Open PR with context and test evidence
 
 ## What to include in a good PR

@@ -1,11 +1,13 @@
 # 依赖与还原基线
 
-最后更新：2026-08-17
+依赖事实最后复核：2026-08-17
+
+验证入口更新：2026-10-07
 
 ## 当前事实
 
 - 目标框架：生产核心 `net10.0`，Interop/Services `net10.0-windows`，WPF App 与测试为 `net10.0-windows10.0.19041.0`，以编译期访问 Windows PDF API。
-- `global.json` 禁止 prerelease，但未固定 feature band；本轮实际 SDK 为 `10.0.303`。
+- `global.json` 禁止 prerelease，但未固定 feature band；2026-08-17 记录的 SDK 为 `10.0.303`。
 - 所有解决方案项目都有 `packages.lock.json`；CI 使用 `dotnet restore ClassroomToolkit.sln --locked-mode`。
 - 本地开发可更新 lockfile，但依赖变化必须提交对应 lockfile，并运行 full profile。
 - 标准发布包通过 `aka.ms/dotnet/10.0` 下载当前 x64 Desktop Runtime，使用补丁中性文件名并校验微软 Authenticode 签名；当前实测版本为 `10.0.11.50000`。
@@ -23,10 +25,10 @@
 
 ```powershell
 dotnet restore ClassroomToolkit.sln --locked-mode -m:1
-pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-dependency-vulnerabilities.ps1
-pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-dependency-upgrade-feasibility.ps1
 pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile full -Configuration Debug
 ```
+
+`full` 已包含漏洞扫描、依赖更新审计和 `latest-all` analyzer 检查。需要单独诊断某项时可直接运行对应脚本；若随后运行 `full`，不要再重复单项扫描。
 
 跨 major 升级遵循 `scripts/quality/dependency-outdated-waivers.json` 的有效 waiver；不得为清空版本提示直接升级会改变字体度量、工作簿、PDF、WPF 或测试平台行为的依赖。
 

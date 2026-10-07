@@ -88,16 +88,27 @@ docs/                            架构、验收、少量高风险证据与运�
 
 ## 构建与验证
 
-固定交付门禁顺序为 `build -> test -> contract/invariant -> hotspot`：
+按改动风险选择验证路径；同一收口点不要把单项命令和聚合门禁都跑一遍。
 
-```powershell
-dotnet build ClassroomToolkit.sln -c Debug
-dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --no-build --filter "Gate!=CoreContract&Gate!=Performance"
-dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug --no-build --filter "Gate=CoreContract"
-powershell -File scripts/quality/check-hotspot-line-budgets.ps1
-```
+- 文档-only：运行 `git diff --check`。
+- 小切片：只构建受影响项目并运行受影响测试。
+- 共享 seam、高风险改动或阶段收口：运行一次标准聚合门禁：
 
-也可使用聚合门禁 `scripts/quality/run-local-quality-gates.ps1 -Profile standard -Configuration Debug`。`quick` 只做快速反馈；`standard` 用于共享或高风险 seam 的阶段收口；发布前或依赖变化使用 `-Profile full`（含性能预算、漏洞与 `latest-all` analyzer 审计）。文档改动至少运行 `git diff --check`。
+  ```powershell
+  pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile standard -Configuration Debug
+  ```
+
+  该入口已包含构建、非性能测试（含 CoreContract）和热点检查，不要再单独运行这些组成步骤。
+- 依赖变更：运行一次完整门禁：
+
+  ```powershell
+  pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/run-local-quality-gates.ps1 -Profile full -Configuration Debug
+  ```
+
+  它已包含性能预算、漏洞、依赖更新和 `latest-all` analyzer 审计，不要再单独重复这些审计。
+- 发布：遵循[发布检查清单](./docs/runbooks/release-checklist.md)选择本地或 CI 发布路径。发布工作流会自行运行 Release full 预检。
+
+`quick` 只缩小测试集合，聚合入口仍会构建整个解决方案、运行 CoreContract 并扫描热点；单文件或单模块的迭代优先使用小切片路径。
 
 如果你是基于当前主分支继续开发，请先查看 [docs/project-status.md](./docs/project-status.md)；本地门禁通过不代表完成课堂现场验收。
 

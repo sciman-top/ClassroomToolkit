@@ -27,12 +27,18 @@
 - 生成 `SHA256SUMS.txt` 和 `release-manifest.json`
 - 产物中保留 `bootstrap-runtime.ps1` / `启动.bat`，减少课堂现场手工配置成本
 
-## 4. 发布入口（推荐）
+## 4. 发布入口
 
-1. 预检：
-   - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile full`
-2. 打包：
-   - `pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-release-artifacts.ps1 -Version <版本号> -PackageMode all -Configuration Release -EnsureRuntimeInstaller`
+公开 GitHub Release 推荐走 CI 路径：冻结提交后触发 `release-package.yml`（推送 `v<版本号>` tag，或手动运行并保留默认 `run_preflight=true`）。工作流会运行一次 Release full 预检、聚合打包并上传产物。直接检查 CI 产物，不要把本地 full 预检和 `prepare-distribution.ps1` 列为必做前置；它们会由 CI 重复执行。
+
+只在本地核验打包结果且暂不发布时，才单独运行以下两步：
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile full
+pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/release/prepare-release-artifacts.ps1 -Version <版本号> -PackageMode all -Configuration Release -EnsureRuntimeInstaller
+```
+
+`prepare-release-artifacts.ps1` 会在内部调用 `prepare-distribution.ps1`；不要再单独运行底层分发脚本。若之后仍触发 CI 发布，CI 会在干净环境中重新验证和构建；只有需要比较本地产物与 CI 产物时才额外做这次本地核验。
 
 ## 5. 产物要求
 
@@ -68,13 +74,9 @@
   - `prepare-release-artifacts.ps1`
   - 上传产物并在 tag 事件创建 Release 附件
 
-## 7. 推荐顺序
+## 7. 发布结果核对
 
-1. 清理工作区
-2. 跑 `preflight-check.ps1`
-3. 跑 `prepare-distribution.ps1`
-4. 核查 `SHA256SUMS.txt`、四个发布 manifest、标准/离线更新 channel、绿色版元数据及源码 SHA
-5. 触发 `release-package.yml` 或创建 tag 发布
+对所选发布路径的最终产物核查 `SHA256SUMS.txt`、四个发布 manifest、标准/离线更新 channel、绿色版元数据及源码 SHA。CI 路径以工作流生成并上传的产物为准；本地路径以 `prepare-release-artifacts.ps1` 生成的聚合目录为准。不要在结果核对阶段再次运行预检或底层分发脚本。
 
 ## 8. 私用开发迁移包
 

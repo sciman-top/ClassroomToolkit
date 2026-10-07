@@ -1,6 +1,6 @@
 # Compatibility SLA (sciman Classroom Toolkit)
 
-Last updated: 2026-04-02
+Last updated: 2026-10-07
 
 ## 1. Scope
 This document defines compatibility support boundaries for ClassroomToolkit runtime behavior and release validation.
@@ -41,11 +41,15 @@ Expectation:
 - Info: diagnostics-only signal; no user-impacting degradation expected.
 
 ## 4. Release Gate Contract
-Mandatory order:
-1. `dotnet build ClassroomToolkit.sln -c Debug`
-2. `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Debug`
-3. contract/invariant filtered test command (project AGENTS.md)
-4. `powershell -File scripts/quality/check-hotspot-line-budgets.ps1`
+For a public release, let `release-package.yml` run the Release full preflight once. For local early feedback before tagging, use the same preflight command below; CI will repeat it for the actual release:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile full
+```
+
+The full preflight already builds the solution, runs stable and performance tests plus CoreContract, checks hotspot budgets, and runs the vulnerability, dependency-update, and `latest-all` analyzer audits. Do not follow it with an unfiltered `dotnet test`, a separate CoreContract run, or another full quality gate for the same candidate.
+
+This repository gate does not establish Tier A device compatibility. Keep the required OS, PowerPoint/WPS, DPI, display, and classroom evidence separate from automated test results.
 
 ## 5. Compatibility Operations
 - Every compatibility change must include:
