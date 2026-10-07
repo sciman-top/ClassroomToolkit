@@ -64,7 +64,7 @@ public partial class StartupCompatibilityWarningDialog : Window
         {
             Process.Start(new ProcessStartInfo(_reportPath) { UseShellExecute = true });
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             TopmostMessageBox.Show(
                 this,
@@ -86,7 +86,7 @@ public partial class StartupCompatibilityWarningDialog : Window
         {
             System.Windows.Clipboard.SetText(_diagnosticsPayload);
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             TopmostMessageBox.Show(
                 this,

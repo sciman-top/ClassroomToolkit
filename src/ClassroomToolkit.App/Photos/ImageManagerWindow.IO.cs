@@ -138,7 +138,7 @@ public partial class ImageManagerWindow
         {
             action();
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             onFailure(ex);
         }
@@ -156,7 +156,7 @@ public partial class ImageManagerWindow
         {
             return action();
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             onFailure(ex);
             return fallback;

@@ -64,7 +64,7 @@ internal sealed class PaintOverlaySessionEffectRunner : IUiSessionEffectRunner
             {
                 _onTransition(transition);
             }
-            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
             {
                 System.Diagnostics.Debug.WriteLine($"PaintOverlaySessionEffectRunner: transition callback failed: {ex.Message}");
             }

@@ -4,12 +4,12 @@ using Xunit;
 
 namespace ClassroomToolkit.Tests.App;
 
-public sealed class AppGlobalExceptionHandlingPolicyTests
+public sealed class AppGlobalExceptionHandlingTests
 {
     [Fact]
     public void ResolveForDispatcher_ShouldNotifyAndMarkHandled_ForRecoverableException()
     {
-        var decision = AppGlobalExceptionHandlingPolicy.ResolveForDispatcher(
+        var decision = AppGlobalExceptionHandling.ResolveForDispatcher(
             new InvalidOperationException("recoverable"));
 
         decision.IsFatal.Should().BeFalse();
@@ -20,7 +20,7 @@ public sealed class AppGlobalExceptionHandlingPolicyTests
     [Fact]
     public void ResolveForDispatcher_ShouldLogOnlyAndNotHandle_ForFatalException()
     {
-        var decision = AppGlobalExceptionHandlingPolicy.ResolveForDispatcher(
+        var decision = AppGlobalExceptionHandling.ResolveForDispatcher(
             new BadImageFormatException("fatal"));
 
         decision.IsFatal.Should().BeTrue();
@@ -31,7 +31,7 @@ public sealed class AppGlobalExceptionHandlingPolicyTests
     [Fact]
     public void ResolveForBackground_ShouldLogOnly_ForRecoverableException()
     {
-        var decision = AppGlobalExceptionHandlingPolicy.ResolveForBackground(
+        var decision = AppGlobalExceptionHandling.ResolveForBackground(
             new InvalidOperationException("background"));
 
         decision.IsFatal.Should().BeFalse();
@@ -42,7 +42,7 @@ public sealed class AppGlobalExceptionHandlingPolicyTests
     [Fact]
     public void IsNonFatal_ShouldReturnFalse_ForFatalException()
     {
-        var result = AppGlobalExceptionHandlingPolicy.IsNonFatal(
+        var result = AppGlobalExceptionHandling.IsNonFatal(
             new BadImageFormatException("fatal"));
 
         result.Should().BeFalse();

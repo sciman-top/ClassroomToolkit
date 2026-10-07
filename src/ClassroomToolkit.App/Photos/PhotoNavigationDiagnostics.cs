@@ -50,7 +50,7 @@ internal static class PhotoNavigationDiagnostics
             {
                 callback();
             }
-            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
             {
                 Debug.WriteLine($"[PhotoNav] scope dispose callback failed: {ex.GetType().Name} - {ex.Message}");
             }

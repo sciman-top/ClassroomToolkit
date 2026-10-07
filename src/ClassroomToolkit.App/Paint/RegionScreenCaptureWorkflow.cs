@@ -216,7 +216,7 @@ internal static class RegionScreenCaptureWorkflow
 
             return fullPath.StartsWith(captureRoot, StringComparison.OrdinalIgnoreCase);
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine(
                 $"RegionScreenCaptureWorkflow: invalid session capture path ignored. reason={ex.GetType().Name}:{ex.Message}");

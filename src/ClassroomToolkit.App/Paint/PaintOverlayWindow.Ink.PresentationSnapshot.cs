@@ -29,7 +29,7 @@ public partial class PaintOverlayWindow
             encoder.Save(stream);
             pngBytes = stream.ToArray();
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[PresentationSnapshot] encode failed: {ex.GetType().Name} - {ex.Message}");
             return;

@@ -55,7 +55,7 @@ internal static class SingleInstanceGate
             mutex = null;
             return SingleInstanceAcquireOutcome.AccessDenied;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[SingleInstanceGate] acquire failed name={name}: {ex.GetType().Name} - {ex.Message}");
             mutex = null;

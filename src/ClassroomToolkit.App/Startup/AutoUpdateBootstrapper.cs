@@ -60,7 +60,7 @@ internal static class AutoUpdateBootstrapper
                 await updateManager.DownloadUpdatesAsync(update).ConfigureAwait(false);
             }
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[AutoUpdate] check skipped: {ex.Message}");
         }

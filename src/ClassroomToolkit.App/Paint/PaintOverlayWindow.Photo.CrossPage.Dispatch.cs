@@ -221,7 +221,7 @@ public partial class PaintOverlayWindow
         {
             return (ShouldContinue: false, FailureDetail: null);
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             return (
                 ShouldContinue: false,

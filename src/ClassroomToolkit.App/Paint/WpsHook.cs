@@ -118,7 +118,7 @@ internal sealed class WpsHookOrchestrator
                 hookClient.SetSuppressedKeyboardKeys(_reservedPresentationKeys);
             }
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[PaintOverlay] Failed to configure WPS hook: {ex.Message}");
             var disabledState = ApplyDisabled(hookClient);
@@ -178,7 +178,7 @@ internal sealed class WpsHookOrchestrator
         {
             return await hookClient.StartAsync();
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[PaintOverlay] Failed to start WPS hook: {ex.Message}");
             _ = ApplyDisabled(hookClient);
@@ -193,7 +193,7 @@ internal sealed class WpsHookOrchestrator
             operation();
             return true;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[PaintOverlay] Failed to {operationName} WPS hook: {ex.Message}");
             return false;

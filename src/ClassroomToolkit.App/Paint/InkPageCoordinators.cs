@@ -257,7 +257,7 @@ internal sealed class InkDirtyPageCoordinator
         {
             return Path.GetFullPath(sourcePath);
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             return sourcePath;
         }
@@ -476,7 +476,7 @@ internal static class InkPageLoadCoordinator
         {
             markTraceStage(stage, detail);
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkPageLoadCoordinator] trace callback failed: {ex.GetType().Name} - {ex.Message}");
         }
@@ -655,7 +655,7 @@ internal static class InkStrokeApplyCoordinator
         {
             markTraceStage(stage, detail);
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkStrokeApplyCoordinator] trace callback failed: {ex.GetType().Name} - {ex.Message}");
         }

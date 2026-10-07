@@ -11,7 +11,7 @@ internal readonly record struct AppGlobalExceptionHandlingDecision(
     bool ShouldMarkDispatcherHandled,
     AppGlobalExceptionAction Action);
 
-internal static class AppGlobalExceptionHandlingPolicy
+internal static class AppGlobalExceptionHandling
 {
     internal static bool IsFatal(Exception exception)
     {

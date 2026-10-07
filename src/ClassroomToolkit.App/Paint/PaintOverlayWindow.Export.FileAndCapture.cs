@@ -41,7 +41,7 @@ public partial class PaintOverlayWindow
                     return fullPath;
                 }
             }
-            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
             {
                 System.Diagnostics.Debug.WriteLine($"[InkExport] preferred capture export root invalid: {ex.Message}");
             }

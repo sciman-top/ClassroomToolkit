@@ -39,7 +39,7 @@ public partial class ImageManagerWindow
                 ? dialog.ShowDialog()
                 : dialog.ShowDialog(owner);
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine(
                 ImageManagerPolicies.FormatFavoriteFolderDialogFailureMessage(

@@ -45,7 +45,7 @@ internal static class InkGeometrySerializer
         {
             return Geometry.Parse(data);
         }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(caughtEx))
         {
             return null;
         }
@@ -144,7 +144,7 @@ internal static class InkAtomicFileWriter
             tempPath => File.WriteAllText(tempPath, content),
             onTempCleanupFailure: (tempPath, ex) =>
             {
-                if (!AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+                if (!AppGlobalExceptionHandling.IsNonFatal(ex))
                 {
                     return;
                 }
@@ -163,7 +163,7 @@ internal static class InkAtomicFileWriter
             tempPath => File.WriteAllBytes(tempPath, content),
             onTempCleanupFailure: (tempPath, ex) =>
             {
-                if (!AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+                if (!AppGlobalExceptionHandling.IsNonFatal(ex))
                 {
                     return;
                 }

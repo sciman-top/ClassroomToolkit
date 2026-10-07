@@ -63,7 +63,7 @@ internal static class SafeTaskRunner
             {
                 Debug.WriteLine($"[SafeTaskRunner][{normalizedSource}] canceled.");
             }
-            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
             {
                 Debug.WriteLine($"[SafeTaskRunner][{normalizedSource}] failed: {ex.GetType().Name} - {ex.Message}");
                 if (onError != null)
@@ -72,7 +72,7 @@ internal static class SafeTaskRunner
                     {
                         onError(ex);
                     }
-                    catch (Exception callbackEx) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(callbackEx))
+                    catch (Exception callbackEx) when (AppGlobalExceptionHandling.IsNonFatal(callbackEx))
                     {
                         Debug.WriteLine(
                             $"[SafeTaskRunner][{normalizedSource}] onError failed: {callbackEx.GetType().Name} - {callbackEx.Message}");

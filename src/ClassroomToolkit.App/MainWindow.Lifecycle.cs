@@ -250,7 +250,7 @@ public partial class MainWindow
                 {
                     BorderFixHelper.FixAllBorders(window);
                 }
-                catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+                catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
                 {
                     System.Diagnostics.Debug.WriteLine(
                         $"[BorderFix] failed phase={phase} target={target} ex={ex.GetType().Name} msg={ex.Message}");
@@ -307,7 +307,7 @@ public partial class MainWindow
             SettingsSaveFailureNotificationStateUpdater.MarkSaveSucceeded(ref _settingsSaveFailedNotified);
             return true;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             var notificationPlan = NotificationAndExitPolicies.Resolve(_settingsSaveFailedNotified);
             SettingsSaveFailureNotificationStateUpdater.ApplyNotificationPlan(
@@ -361,7 +361,7 @@ public partial class MainWindow
                 System.Diagnostics.Debug.WriteLine(NotificationAndExitPolicies.FormatDeletionSummary(summary));
             }
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine(NotificationAndExitPolicies.FormatFailureMessage(ex.Message));
         }

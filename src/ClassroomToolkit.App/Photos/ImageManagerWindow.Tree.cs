@@ -114,7 +114,7 @@ public partial class ImageManagerWindow
         {
             // Tree view/window disposed during async expansion.
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             if (!_isClosing && !cancellationToken.IsCancellationRequested)
             {

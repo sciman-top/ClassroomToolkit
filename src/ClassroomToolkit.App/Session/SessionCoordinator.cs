@@ -57,7 +57,7 @@ internal sealed class SessionCoordinator
                 current = UiSessionReducer.Reduce(previous, sessionEvent);
                 _lastViolations = UiSessionInvariants.Validate(current);
             }
-            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
             {
                 current = previous;
                 _lastViolations =

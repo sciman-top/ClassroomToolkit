@@ -36,7 +36,7 @@ internal static class PhotoOverlayDiagnostics
                 _logFilePath = logFilePath;
             }
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             // 诊断目录不可写时自禁用文件落盘，保留 Debug 输出，不影响启动与照片热路径。
             _logFilePath = null;
@@ -66,7 +66,7 @@ internal static class PhotoOverlayDiagnostics
                 File.AppendAllText(logFilePath, formattedMessage + Environment.NewLine);
             }
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             // 日志文件被占用（如用户用编辑器打开）时自禁用，避免错误打断照片叠加层热路径。
             _logFilePath = null;

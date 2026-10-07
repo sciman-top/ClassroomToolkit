@@ -59,7 +59,7 @@ public partial class ImageManagerWindow
                 DispatcherPriority.Background);
             scheduled = true;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"ImageManager: deferred splitter update dispatch failed: {ex.GetType().Name} - {ex.Message}");
         }
@@ -329,7 +329,7 @@ public partial class ImageManagerWindow
                 DispatcherPriority.Loaded);
             scheduled = true;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"ImageManager: restore bounds dispatch failed: {ex.GetType().Name} - {ex.Message}");
         }

@@ -28,7 +28,7 @@ internal static class DpiSuggestedBoundsInterop
         {
             nativeRect = Marshal.PtrToStructure<NativeMethods.NativeRect>(lParam);
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[PaintOverlay] WM_DPICHANGED RECT read failed: {ex.GetType().Name} - {ex.Message}");
             return false;

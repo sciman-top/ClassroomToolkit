@@ -131,7 +131,7 @@ public partial class ImageManagerWindow
                 OpenFolder(parentDir.FullName, addToRecents: true);
             }
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine(
                 ImageManagerPolicies.FormatUpNavigationFailureMessage(
@@ -278,7 +278,7 @@ public partial class ImageManagerWindow
             _inkPersistence?.DeleteInkForFile(path);
             return true;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"ImageManager: delete-file failed path={path} ex={ex.GetType().Name} msg={ex.Message}");
             return false;

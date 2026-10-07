@@ -220,7 +220,7 @@ public partial class PaintOverlayWindow
             await Task.Delay(delayMs).ConfigureAwait(false);
             return true;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine(
                 $"[InkPersist] Auto-save retry delay interrupted: {ex.GetType().Name} - {ex.Message}");

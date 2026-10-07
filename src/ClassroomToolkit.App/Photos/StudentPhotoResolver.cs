@@ -351,7 +351,7 @@ internal sealed class StudentPhotoResolver : IDisposable
                     }
                 }
             }
-            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
             {
                 return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             }
@@ -434,7 +434,7 @@ internal sealed class StudentPhotoResolver : IDisposable
             writeTimeUtc = Directory.GetLastWriteTimeUtc(directory);
             return true;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine(
                 $"StudentPhotoResolver: 读取目录修改时间失败，directory='{directory}', reason={ex.GetType().Name}:{ex.Message}");

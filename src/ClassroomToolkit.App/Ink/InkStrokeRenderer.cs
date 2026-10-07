@@ -77,7 +77,7 @@ internal sealed class InkStrokeRenderer
 
             color = parsed;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             return DefaultStrokeColor;
         }

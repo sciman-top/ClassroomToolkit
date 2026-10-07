@@ -58,7 +58,7 @@ internal static class DiagnosticsBundleExportService
             AddTextEntry(archive, "diagnostics/diagnostics-summary.txt", BuildSummaryText(result));
             return new DiagnosticsBundleExportResult(true, bundlePath, string.Empty);
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             return new DiagnosticsBundleExportResult(false, string.Empty, ex.Message);
         }
@@ -144,7 +144,7 @@ internal static class DiagnosticsBundleExportService
                 .Select(candidate => candidate.Path)
                 .ToArray();
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine(
                 $"[DiagnosticsBundleExport] SelectRecentErrorLogs failed. directory='{logsDirectory}', reason={ex.GetType().Name}:{ex.Message}");
@@ -197,7 +197,7 @@ internal static class DiagnosticsBundleExportService
         {
             archive.CreateEntryFromFile(sourcePath!, entryName, CompressionLevel.Optimal);
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine(
                 $"[DiagnosticsBundleExport] Skip file '{sourcePath}' while creating entry '{entryName}': {ex.GetType().Name} - {ex.Message}");
@@ -220,7 +220,7 @@ internal static class DiagnosticsBundleExportService
             writeTimeUtc = File.GetLastWriteTimeUtc(path);
             return true;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine(
                 $"[DiagnosticsBundleExport] Skip log timestamp read. path='{path}', reason={ex.GetType().Name}:{ex.Message}");
@@ -260,7 +260,7 @@ internal static class DiagnosticsBundleExportService
             length = new FileInfo(path).Length;
             return true;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine(
                 $"[DiagnosticsBundleExport] Skip file length read. path='{path}', reason={ex.GetType().Name}:{ex.Message}");

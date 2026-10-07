@@ -30,7 +30,7 @@ public partial class ImageManagerWindow
                     path = drive.RootDirectory.FullName;
                     header = drive.Name;
                 }
-                catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
+                catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(caughtEx))
                 {
                     continue;
                 }
@@ -59,7 +59,7 @@ public partial class ImageManagerWindow
         {
             // Window is closing; suppress cancellation noise from background init.
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"ImageManager: InitializeTree Error: {ex}");
             FolderTree.Items.Clear();

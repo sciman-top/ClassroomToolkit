@@ -47,7 +47,7 @@ public sealed class GroupButtonItem : INotifyPropertyChanged
             {
                 ((PropertyChangedEventHandler)handler)(this, new PropertyChangedEventArgs(propertyName));
             }
-            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
             {
                 System.Diagnostics.Debug.WriteLine($"GroupButtonItem: PropertyChanged callback failed: {ex.Message}");
             }

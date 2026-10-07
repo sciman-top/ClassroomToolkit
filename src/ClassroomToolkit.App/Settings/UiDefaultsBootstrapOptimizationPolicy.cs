@@ -89,7 +89,7 @@ internal static class UiDefaultsBootstrapOptimizationPolicy
         {
             return !Directory.Exists(normalized);
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             return true;
         }

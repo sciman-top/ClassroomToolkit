@@ -57,7 +57,7 @@ internal static class PhotoFileFingerprintReader
                 fingerprint = new PhotoFileFingerprint(length, afterWriteTimeUtcTicks, contentHash);
                 return true;
             }
-            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
             {
                 Debug.WriteLine(
                     $"PhotoFileFingerprintReader: failed to read '{path}', attempt={attempt + 1}, reason={ex.GetType().Name}:{ex.Message}");

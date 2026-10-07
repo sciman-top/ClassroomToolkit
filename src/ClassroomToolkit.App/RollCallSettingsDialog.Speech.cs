@@ -106,7 +106,7 @@ public partial class RollCallSettingsDialog
         {
             BuildSapiVoices(voices);
         }
-        catch (Exception caughtEx) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
+        catch (Exception caughtEx) when (AppGlobalExceptionHandling.IsNonFatal(caughtEx))
         {
             voices.Clear();
         }

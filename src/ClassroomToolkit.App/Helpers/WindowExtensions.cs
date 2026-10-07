@@ -20,7 +20,7 @@ internal static class WindowExtensions
             window.DragMove();
             return true;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             if (onFailure != null)
             {
@@ -28,7 +28,7 @@ internal static class WindowExtensions
                 {
                     onFailure(ex);
                 }
-                catch (Exception callbackEx) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(callbackEx))
+                catch (Exception callbackEx) when (AppGlobalExceptionHandling.IsNonFatal(callbackEx))
                 {
                     System.Diagnostics.Debug.WriteLine(
                         $"WindowExtensions.SafeDragMove failure callback failed: {callbackEx.GetType().Name} - {callbackEx.Message}");
@@ -53,7 +53,7 @@ internal static class WindowExtensions
             dialog.Show();
             return dialog.DialogResult;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine(
                 $"WindowExtensions.SafeShowDialog failed: {ex.GetType().Name} - {ex.Message}");

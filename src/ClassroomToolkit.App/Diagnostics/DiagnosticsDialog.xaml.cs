@@ -31,7 +31,7 @@ public partial class DiagnosticsDialog : Window
             BorderFixHelper.FixAllBorders(this);
             System.Diagnostics.Debug.WriteLine("DiagnosticsDialog: 构造函数中修复完成");
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"DiagnosticsDialog 构造函数修复失败: {ex.Message}");
         }
@@ -63,7 +63,7 @@ public partial class DiagnosticsDialog : Window
         {
             System.Windows.Clipboard.SetText(text);
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             // 剪贴板常被远控/输入法/剪贴板工具占用，降级提示而不是抛进全局错误弹窗。
             TopmostMessageBox.Show(
@@ -122,7 +122,7 @@ public partial class DiagnosticsDialog : Window
         {
             _settingsService.Save(_settings);
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             TopmostMessageBox.Show(
                 this,

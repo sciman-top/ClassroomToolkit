@@ -277,7 +277,7 @@ public partial class LauncherBubbleWindow : Window
             Left = newX;
             Top = newY;
         }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(caughtEx))
         {
             // Ignore transient bubble drag/snap failures.
         }
@@ -313,7 +313,7 @@ public partial class LauncherBubbleWindow : Window
                     var center = new System.Windows.Point(Left + Width / 2, Top + Height / 2);
                     PlaceNear(center);
                 }
-                catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
+                catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(caughtEx))
                 {
                     // Ignore transient bubble drag/snap failures.
                 }
@@ -354,7 +354,7 @@ public partial class LauncherBubbleWindow : Window
         {
             action();
         }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(caughtEx))
         {
             // Ignore transient bubble drag/snap failures.
         }

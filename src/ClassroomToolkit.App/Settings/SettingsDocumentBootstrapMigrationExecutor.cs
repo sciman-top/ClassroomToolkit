@@ -26,7 +26,7 @@ internal static class SettingsDocumentBootstrapMigrationExecutor
                 $"[SettingsMigration] migrated={migrated}; source={iniPath}; target={jsonPath}");
             return migrated;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             TryLog(log, $"[SettingsMigration] bootstrap migration failed: {ex.GetType().Name} - {ex.Message}");
             return false;
@@ -44,7 +44,7 @@ internal static class SettingsDocumentBootstrapMigrationExecutor
         {
             log(message);
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"SettingsDocumentBootstrapMigrationExecutor log callback failed: {ex.Message}");
         }

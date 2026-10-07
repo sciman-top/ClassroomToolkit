@@ -62,7 +62,7 @@ public sealed partial class InkExportService
             SaveImage(composite, outputPath, options);
             return outputPath;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"[InkExport] Failed to export page {pageIndex} of {sourcePath}: {ex.Message}");
             return null;
@@ -113,7 +113,7 @@ public sealed partial class InkExportService
                 ExportImageFile(sourcePath, inkDoc, options, result);
             }
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             result.FailedCount++;
             System.Diagnostics.Debug.WriteLine($"[InkExport] Failed to export file {sourcePath}: {ex.Message}");
