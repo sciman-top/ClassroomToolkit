@@ -1,6 +1,29 @@
-using System.Diagnostics.CodeAnalysis;
+using
+System.Diagnostics.CodeAnalysis;
 
 namespace ClassroomToolkit.Interop.Presentation;
+
+public interface IInputSender
+{
+    bool SendKey(IntPtr hwnd, VirtualKey key, KeyModifiers modifiers, InputStrategy strategy, bool keyDownOnly);
+    bool SendWheel(IntPtr hwnd, int delta, InputStrategy strategy);
+}
+
+public enum InputStrategy
+{
+    Auto = 0,
+    Raw,
+    Message
+}
+
+[Flags]
+public enum KeyModifiers
+{
+    None = 0,
+    Shift = 1 << 0,
+    Control = 1 << 1,
+    Alt = 1 << 2
+}
 
 public sealed record KeyBinding(VirtualKey Key, KeyModifiers Modifiers)
 {
