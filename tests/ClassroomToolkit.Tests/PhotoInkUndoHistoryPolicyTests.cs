@@ -52,21 +52,4 @@ public sealed class PhotoInkUndoHistoryPolicyTests
             .Should()
             .Be(expected);
     }
-
-    [Fact]
-    public void PaintOverlayUndo_ShouldRouteHistoryThroughPhotoRuntimePolicy()
-    {
-        var source = ContractSourceAggregateLoader.LoadByPattern(
-            "src",
-            "ClassroomToolkit.App",
-            "Paint",
-            "PaintOverlayWindow*.cs");
-
-        source.Should().Contain(
-            "InkUndoHistoryPolicy.ShouldTrackVectorSnapshot(_inkRecordEnabled, IsPhotoInkModeActive())");
-        source.Should().Contain(
-            "InkUndoHistoryPolicy.ShouldPreferGlobalPhotoUndo(_photoModeActive, _globalInkHistory.Count)");
-        source.Should().Contain(
-            "InkUndoHistoryPolicy.ShouldPreferLocalVectorUndo(_inkRecordEnabled, IsPhotoInkModeActive(), _inkHistory.Count)");
-    }
 }

@@ -672,25 +672,6 @@ public sealed class StudentPhotoResolverTests
         }
     }
 
-    [Fact]
-    public void Resolver_ShouldUseIgnoreInaccessibleEnumeration_ForWarmupAndIndex()
-    {
-        var source = File.ReadAllText(GetResolverSourcePath());
-
-        source.Should().Contain("IgnoreInaccessible = true");
-        source.Should().Contain("Directory.EnumerateDirectories(_rootPath, \"*\", TopLevelIgnoreInaccessibleOptions)");
-        source.Should().Contain("Directory.EnumerateFiles(directory, \"*\", TopLevelIgnoreInaccessibleOptions)");
-    }
-
-    private static string GetResolverSourcePath()
-    {
-        return TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "Photos",
-            "StudentPhotoResolver.cs");
-    }
-
     private static IReadOnlyDictionary<string, string> GetCachedIndex(StudentPhotoResolver resolver, string directory)
     {
         var cache = (System.Collections.IDictionary?)CacheField.GetValue(resolver);

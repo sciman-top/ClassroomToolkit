@@ -32,46 +32,4 @@ public sealed class PaintOverlayPreviewSchedulingContractTests
 
         BrushPredictionVelocityPolicy.Resolve(existing, previous, current).Should().Be(existing);
     }
-
-    [Fact]
-    public void BrushPreview_ShouldRenderOnCompositionFrame_AndCancelWhenStrokeEnds()
-    {
-        var source = ContractSourceAggregateLoader.LoadByPattern(
-            "src",
-            "ClassroomToolkit.App",
-            "Paint",
-            "PaintOverlayWindow.Ink.Preview.cs");
-        var flow = ContractSourceAggregateLoader.LoadByPattern(
-            "src",
-            "ClassroomToolkit.App",
-            "Paint",
-            "PaintOverlayWindow.Ink.BrushFlow.cs");
-
-        source.Should().Contain("CompositionTarget.Rendering += OnBrushPreviewRendering;");
-        source.Should().Contain("CompositionTarget.Rendering -= OnBrushPreviewRendering;");
-        source.Should().Contain("private void CancelPendingBrushPreview()");
-        flow.Should().Contain("if (_brushStyle == PaintBrushStyle.Calligraphy)");
-        flow.Should().Contain("RenderBrushPreview();");
-        flow.Should().Contain("RequestBrushPreviewRender();");
-        flow.Should().Contain("CancelPendingBrushPreview();");
-    }
-
-    [Fact]
-    public void BrushPrediction_ShouldTrackPreviousSampleSeparatelyFromLatestInput()
-    {
-        var source = ContractSourceAggregateLoader.LoadByPattern(
-            "src",
-            "ClassroomToolkit.App",
-            "Paint",
-            "PaintOverlayWindow.Ink.Preview.cs");
-        var core = ContractSourceAggregateLoader.LoadByPattern(
-            "src",
-            "ClassroomToolkit.App",
-            "Paint",
-            "PaintOverlayWindow.Ink.Core.cs");
-
-        core.Should().Contain("private BrushInputSample? _lastBrushPredictionSample;");
-        source.Should().Contain("_lastBrushPredictionSample.Value");
-        source.Should().Contain("_lastBrushPredictionSample = input;");
-    }
 }

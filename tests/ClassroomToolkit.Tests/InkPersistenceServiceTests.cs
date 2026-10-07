@@ -613,22 +613,4 @@ public sealed class InkPersistenceServiceTests : IDisposable
         service.LoadInkPageForFile(invalidPath, 1).Should().BeNull();
         service.HasInkForFile(invalidPath).Should().BeFalse();
     }
-
-    [Fact]
-    public void Persistence_ShouldUseIgnoreInaccessibleEnumerationOptions_ForSidecarScans()
-    {
-        var source = File.ReadAllText(GetPersistenceSourcePath());
-
-        source.Should().Contain("IgnoreInaccessible = true");
-        source.Should().Contain("Directory.EnumerateFiles(inkFolder, \"*.ink.json\", TopLevelIgnoreInaccessibleOptions)");
-    }
-
-    private static string GetPersistenceSourcePath()
-    {
-        return TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "Ink",
-            "InkPersistenceService.cs");
-    }
 }

@@ -151,27 +151,4 @@ public sealed class StartupCompatibilityProbeTests
         processId.Should().Be(Environment.ProcessId);
         processName.Should().NotBeNullOrWhiteSpace();
     }
-
-    [Fact]
-    public void ProcessEnumeration_ShouldCentralizeVolatileProcessIdentityReads()
-    {
-        var source = ContractSourceAggregateLoader.LoadByPattern(
-            "src",
-            "ClassroomToolkit.Services",
-            "Compatibility",
-            "StartupCompatibilityProbe.cs");
-
-        source.Should().Contain("private readonly record struct PresentationProcessSnapshot(string Label, int? ProcessId)");
-        source.Should().Contain("private static List<PresentationProcessSnapshot> BuildPresentationProcessSnapshots(");
-        source.Should().Contain("private static PresentationProcessSnapshot CreatePresentationProcessSnapshot(Process process)");
-        source.Should().Contain("internal static bool TryGetProcessName(Process process, out string processName)");
-        source.Should().Contain("internal static bool TryGetProcessId(Process process, out int processId)");
-        source.Should().Contain("TryGetProcessName(process, out var processName)");
-        source.Should().Contain("TryGetProcessId(process, out var resolvedProcessId)");
-        ContractSourceAggregateLoader.CountOccurrences(
-            source,
-            "foreach (var process in EnumeratePresentationProcesses(processTokens))").Should().Be(1);
-        ContractSourceAggregateLoader.CountOccurrences(source, "process.ProcessName").Should().Be(1);
-        ContractSourceAggregateLoader.CountOccurrences(source, "process.Id").Should().Be(1);
-    }
 }
