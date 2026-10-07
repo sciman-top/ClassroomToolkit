@@ -1,13 +1,13 @@
 # ClassroomToolkit 当前技术债
 
-最后更新：2026-09-05
+最后更新：2026-10-08
 
 这里只记录仍未关闭、收益明确的问题；已完成任务从 Git 历史查询，不在当前 backlog 重复保留。验证层级与命令见根 [AGENTS.md](../AGENTS.md) 与 [README](../README.md)，此处不再复述。
 
 ## P2
 
-- App 的 Paint/Windowing 仍有较多单调用者短 policy；只在触及对应路径时按 deletion test 局部内联，不启动全仓批量合并，也不删除有生产 adapter + 测试 adapter 的真实 Interop seam。
-- xUnit 4、测试平台传递链和 SixLabors.Fonts 3.x 属于 major 迁移，当前 waiver 到期日为 2026-10-15；到期前需分别完成测试发现/CI 与字体/工作簿视觉兼容切片。
+- Paint/Windowing 已完成一轮按职责合并微策略的减负；后续仅在实际触及处按删除测试评估，不再启动全仓批量合并，也不删除有生产 adapter + 测试 adapter 的真实 Interop seam。
+- xUnit 4、测试平台传递链和 SixLabors.Fonts 3.x 属于 major 迁移，当前 waiver 到期日为 2027-01-15；到期前需分别完成测试发现/CI 与字体/工作簿视觉兼容切片。
 - Sqlite 业务存储实验链（adapter/bridge/capability 反射探测，约 600 行）默认双环境变量门关闭；组合根重构收口后按 ADR-004“不允许长期双跑”裁决：转正或整体裁剪。
 
 ## P3

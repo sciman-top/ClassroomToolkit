@@ -10,6 +10,8 @@ namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintOverlayWindow
 {
+    private readonly Action<DrawingContext> _renderBrushPreviewContentHandler;
+
     private void UpdateBrushPrediction(BrushInputSample input)
     {
         if (!_lastBrushPredictionSample.HasValue)
@@ -75,9 +77,8 @@ public partial class PaintOverlayWindow
             return;
         }
 
-        // 书写期间每帧调用：传方法组（编译器缓存委托）而非捕获 this 的 lambda，
-        // 避免逐帧闭包+委托堆分配。
-        _visualHost.UpdateVisual(RenderPreviewContent);
+        // 实例方法组不会由编译器跨调用缓存；复用构造期创建的委托，避免预览逐帧分配。
+        _visualHost.UpdateVisual(_renderBrushPreviewContentHandler);
     }
 
     private void RenderPreviewContent(DrawingContext dc)
