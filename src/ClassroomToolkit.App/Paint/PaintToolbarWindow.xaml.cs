@@ -258,8 +258,6 @@ public partial class PaintToolbarWindow : Window
         control.MinHeight = Math.Max(visualSize, minimumHitTarget);
     }
 
-
-
     private void OnModeButtonClick(object sender, RoutedEventArgs e)
     {
         if (sender is not ToggleButton || _initializing)
@@ -284,7 +282,6 @@ public partial class PaintToolbarWindow : Window
             return;
         }
     }
-
 
     private void OnClearClick(object sender, RoutedEventArgs e)
     {
@@ -314,7 +311,6 @@ public partial class PaintToolbarWindow : Window
             ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: undo callback failed: {ex.Message}"));
     }
 
-
     private void OnShapeMenuItemClick(object sender, RoutedEventArgs e)
     {
         ResetPendingSecondTapState();
@@ -331,7 +327,6 @@ public partial class PaintToolbarWindow : Window
         ApplyShapeType(type);
         SelectToolMode(PaintToolMode.Shape, allowToggleOffCurrent: false);
     }
-
 
     private void ShowBoardHint(string message)
     {
@@ -872,7 +867,6 @@ public partial class PaintToolbarWindow : Window
             () => SettingsRequested?.Invoke(),
             ex => System.Diagnostics.Debug.WriteLine($"PaintToolbar: settings callback failed: {ex.Message}"));
     }
-
 
     private void PrepareForNonBoardToolbarAction()
     {

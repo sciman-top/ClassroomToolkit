@@ -120,5 +120,4 @@ public partial class PaintSettingsDialog : Window
         UpdateCalligraphyOptionState();
     }
 
-
 }

@@ -43,9 +43,6 @@ public partial class PaintOverlayWindow : Window
 {
     private static DateTime GetCurrentUtcTimestamp() => DateTime.UtcNow;
 
-
-
-
     public PaintOverlayWindow()
         : this(null)
     {

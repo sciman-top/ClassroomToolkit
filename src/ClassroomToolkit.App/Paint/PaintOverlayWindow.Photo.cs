@@ -393,8 +393,6 @@ public partial class PaintOverlayWindow
 
     private readonly record struct InkBitmapCacheEntry(int PageIndex, List<InkStrokeData> Strokes, BitmapSource Bitmap, double HorizontalOffsetDip = 0);
 
-
-
     public bool IsWhiteboardActive => IsBoardActive();
     public bool IsPresentationFullscreenActive => _presentationFullscreenActive;
 }

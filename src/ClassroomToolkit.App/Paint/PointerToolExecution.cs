@@ -1,0 +1,149 @@
+
+namespace ClassroomToolkit.App.Paint;
+
+internal readonly record struct InputInteractionState(
+    bool PhotoModeActive,
+    bool BoardActive,
+    bool CrossPageDisplayEnabled)
+{
+    internal bool PhotoOrBoardActive => PhotoInteractionModePolicy.IsPhotoOrBoardActive(PhotoModeActive, BoardActive);
+    internal bool PhotoNavigationEnabled => PhotoInteractionModePolicy.IsPhotoNavigationEnabled(PhotoModeActive, BoardActive);
+    internal bool CrossPageDisplayActive => CrossPageInputDisplayPolicy.IsActive(
+        PhotoModeActive,
+        BoardActive,
+        CrossPageDisplayEnabled);
+    internal bool CrossPageInputDisplayActive => CrossPageDisplayActive;
+}
+
+internal static class InputInteractionStatePolicy
+{
+    internal static InputInteractionState Resolve(
+        bool photoModeActive,
+        bool boardActive,
+        bool crossPageDisplayEnabled)
+    {
+        return new InputInteractionState(
+            PhotoModeActive: photoModeActive,
+            BoardActive: boardActive,
+            CrossPageDisplayEnabled: crossPageDisplayEnabled);
+    }
+}
+
+internal static class PointerCaptureCleanupPolicy
+{
+    internal static bool ShouldDeferCleanup(
+        string reason,
+        bool mouseCaptured,
+        bool stylusCaptured)
+    {
+        if (!string.Equals(reason, "mouse-capture-lost", StringComparison.Ordinal)
+            && !string.Equals(reason, "stylus-capture-lost", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return mouseCaptured || stylusCaptured;
+    }
+}
+
+internal enum PointerDownToolAction
+{
+    None = 0,
+    BeginRegionSelection = 1,
+    BeginEraser = 2,
+    BeginShape = 3,
+    BeginBrushStroke = 4
+}
+
+internal readonly record struct PointerDownToolExecutionPlan(
+    PointerDownToolAction Action,
+    bool ShouldCapturePointer);
+
+internal static class PointerDownToolExecutionPolicy
+{
+    internal static PointerDownToolExecutionPlan Resolve(PaintToolMode mode)
+    {
+        return mode switch
+        {
+            PaintToolMode.RegionErase => new PointerDownToolExecutionPlan(
+                PointerDownToolAction.BeginRegionSelection,
+                ShouldCapturePointer: true),
+            PaintToolMode.Eraser => new PointerDownToolExecutionPlan(
+                PointerDownToolAction.BeginEraser,
+                ShouldCapturePointer: true),
+            PaintToolMode.Shape => new PointerDownToolExecutionPlan(
+                PointerDownToolAction.BeginShape,
+                ShouldCapturePointer: true),
+            PaintToolMode.Brush => new PointerDownToolExecutionPlan(
+                PointerDownToolAction.BeginBrushStroke,
+                ShouldCapturePointer: true),
+            _ => new PointerDownToolExecutionPlan(
+                PointerDownToolAction.None,
+                ShouldCapturePointer: false)
+        };
+    }
+}
+
+internal enum PointerMoveToolAction
+{
+    None = 0,
+    UpdateBrushStroke = 1,
+    UpdateEraser = 2,
+    UpdateRegionSelection = 3,
+    UpdateShapePreview = 4
+}
+
+internal static class PointerMoveToolExecutionPolicy
+{
+    internal static PointerMoveToolAction Resolve(PaintToolMode mode)
+    {
+        return mode switch
+        {
+            PaintToolMode.Brush => PointerMoveToolAction.UpdateBrushStroke,
+            PaintToolMode.Eraser => PointerMoveToolAction.UpdateEraser,
+            PaintToolMode.RegionErase => PointerMoveToolAction.UpdateRegionSelection,
+            PaintToolMode.Shape => PointerMoveToolAction.UpdateShapePreview,
+            _ => PointerMoveToolAction.None
+        };
+    }
+}
+
+internal enum PointerUpToolAction
+{
+    None = 0,
+    EndBrushStroke = 1,
+    EndEraser = 2,
+    EndRegionSelection = 3,
+    EndShape = 4
+}
+
+internal readonly record struct PointerUpToolExecutionPlan(
+    PointerUpToolAction Action,
+    bool ShouldRefreshAdaptiveRenderer);
+
+internal static class PointerUpToolExecutionPolicy
+{
+    internal static PointerUpToolExecutionPlan Resolve(
+        PaintToolMode mode,
+        bool pendingAdaptiveRendererRefresh)
+    {
+        return mode switch
+        {
+            PaintToolMode.Brush => new PointerUpToolExecutionPlan(
+                PointerUpToolAction.EndBrushStroke,
+                ShouldRefreshAdaptiveRenderer: pendingAdaptiveRendererRefresh),
+            PaintToolMode.Eraser => new PointerUpToolExecutionPlan(
+                PointerUpToolAction.EndEraser,
+                ShouldRefreshAdaptiveRenderer: false),
+            PaintToolMode.RegionErase => new PointerUpToolExecutionPlan(
+                PointerUpToolAction.EndRegionSelection,
+                ShouldRefreshAdaptiveRenderer: false),
+            PaintToolMode.Shape => new PointerUpToolExecutionPlan(
+                PointerUpToolAction.EndShape,
+                ShouldRefreshAdaptiveRenderer: false),
+            _ => new PointerUpToolExecutionPlan(
+                PointerUpToolAction.None,
+                ShouldRefreshAdaptiveRenderer: false)
+        };
+    }
+}

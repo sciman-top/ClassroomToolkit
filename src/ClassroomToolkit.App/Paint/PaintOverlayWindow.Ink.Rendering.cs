@@ -318,9 +318,6 @@ public partial class PaintOverlayWindow
         return true;
     }
 
-
-
-
     private void RedrawInkSurface()
     {
         var redrawSw = Stopwatch.StartNew();
