@@ -15,7 +15,7 @@ public sealed class PhotoInkUndoHistoryPolicyTests
         bool photoInkModeActive,
         bool expected)
     {
-        InkPersistencePolicies.ShouldTrackVectorSnapshot(inkRecordEnabled, photoInkModeActive)
+        InkUndoPolicies.ShouldTrackVectorSnapshot(inkRecordEnabled, photoInkModeActive)
             .Should()
             .Be(expected);
     }
@@ -29,7 +29,7 @@ public sealed class PhotoInkUndoHistoryPolicyTests
         int globalHistoryCount,
         bool expected)
     {
-        InkPersistencePolicies.ShouldPreferGlobalPhotoUndo(photoModeActive, globalHistoryCount)
+        InkUndoPolicies.ShouldPreferGlobalPhotoUndo(photoModeActive, globalHistoryCount)
             .Should()
             .Be(expected);
     }
@@ -45,7 +45,7 @@ public sealed class PhotoInkUndoHistoryPolicyTests
         int localHistoryCount,
         bool expected)
     {
-        InkPersistencePolicies.ShouldPreferLocalVectorUndo(
+        InkUndoPolicies.ShouldPreferLocalVectorUndo(
                 inkRecordEnabled,
                 photoInkModeActive,
                 localHistoryCount)

@@ -261,7 +261,7 @@ internal sealed class InkRuntimeDiagnostics
 
     internal static InkRuntimeDiagnostics? CreateFromEnvironment()
     {
-        var inkRedrawTelemetryEnabled = InkPersistencePolicies.ResolveEnabledFromEnvironment();
+        var inkRedrawTelemetryEnabled = InkRedrawTelemetryPolicies.ResolveEnabledFromEnvironment();
         if (!inkRedrawTelemetryEnabled)
         {
             return null;
@@ -423,7 +423,7 @@ internal static class InkStrokeEraseUpdater
     }
 }
 
-internal static class InkPersistencePolicies
+internal static partial class InkPersistencePolicies
 {
     internal static bool ShouldPersistSnapshot(
         bool runtimeStateKnown,
@@ -446,7 +446,10 @@ internal static class InkPersistencePolicies
             ShouldClearCache: !enabled,
             ShouldRequestRefresh: true);
     }
+}
 
+internal static class InkRedrawPolicies
+{
     internal static bool ShouldUsePartialClear(
         bool clipAvailable,
         Int32Rect clipPixelRect,
@@ -492,7 +495,10 @@ internal static class InkPersistencePolicies
         clipPixelRect = new Int32Rect(left, top, width, height);
         return true;
     }
+}
 
+internal static class InkRedrawTelemetryPolicies
+{
     internal const string EnvironmentFlagName = "CTK_INK_REDRAW_TELEMETRY";
 
     internal static bool ResolveEnabledFromEnvironment()
@@ -569,7 +575,10 @@ internal static class InkPersistencePolicies
 
         return true;
     }
+}
 
+internal static partial class InkPersistencePolicies
+{
     internal static InkSaveUpdateTransitionPlan ResolveInkSaveUpdateTransition(bool enabled)
     {
         return enabled
@@ -654,7 +663,10 @@ internal static class InkPersistencePolicies
 
         return !string.Equals(runtimeHash, "empty", StringComparison.Ordinal);
     }
+}
 
+internal static class InkUndoPolicies
+{
     internal static bool ShouldTrackVectorSnapshot(bool inkRecordEnabled, bool photoInkModeActive)
     {
         return inkRecordEnabled || photoInkModeActive;

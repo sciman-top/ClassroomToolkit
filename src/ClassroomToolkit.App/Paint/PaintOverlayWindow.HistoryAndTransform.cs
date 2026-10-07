@@ -7,14 +7,14 @@ public partial class PaintOverlayWindow
 {
     public void Undo()
     {
-        if (InkPersistencePolicies.ShouldPreferGlobalPhotoUndo(_photoModeActive, _globalInkHistory.Count))
+        if (InkUndoPolicies.ShouldPreferGlobalPhotoUndo(_photoModeActive, _globalInkHistory.Count))
         {
             if (TryUndoAcrossPages())
             {
                 return;
             }
         }
-        if (InkPersistencePolicies.ShouldPreferLocalVectorUndo(_inkRecordEnabled, IsPhotoInkModeActive(), _inkHistory.Count))
+        if (InkUndoPolicies.ShouldPreferLocalVectorUndo(_inkRecordEnabled, IsPhotoInkModeActive(), _inkHistory.Count))
         {
             var snapshot = _inkHistory[^1];
             _inkHistory.RemoveAt(_inkHistory.Count - 1);

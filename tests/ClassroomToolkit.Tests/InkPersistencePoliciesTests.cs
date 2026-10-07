@@ -77,7 +77,7 @@ public sealed class InkRedrawClipPolicyTests
     {
         var clip = new Int32Rect(10, 20, 300, 200);
 
-        var result = InkPersistencePolicies.ShouldUsePartialClear(
+        var result = InkRedrawPolicies.ShouldUsePartialClear(
             clipAvailable: true,
             clipPixelRect: clip,
             lastClipPixelRect: clip);
@@ -88,7 +88,7 @@ public sealed class InkRedrawClipPolicyTests
     [Fact]
     public void ShouldUsePartialClear_ShouldReturnFalse_WhenClipChanged()
     {
-        var result = InkPersistencePolicies.ShouldUsePartialClear(
+        var result = InkRedrawPolicies.ShouldUsePartialClear(
             clipAvailable: true,
             clipPixelRect: new Int32Rect(10, 20, 300, 200),
             lastClipPixelRect: new Int32Rect(10, 20, 301, 200));
@@ -99,7 +99,7 @@ public sealed class InkRedrawClipPolicyTests
     [Fact]
     public void TryResolvePixelClip_ShouldClampToSurfaceBounds()
     {
-        var ok = InkPersistencePolicies.TryResolvePixelClip(
+        var ok = InkRedrawPolicies.TryResolvePixelClip(
             clipBoundsDip: new Rect(-10, -20, 250, 180),
             surfacePixelWidth: 200,
             surfacePixelHeight: 120,
@@ -124,7 +124,7 @@ public sealed class InkRedrawTelemetryPolicyTests
     [InlineData(" enabled ")]
     public void IsEnabledValue_ShouldReturnTrue_ForTruthyValues(string raw)
     {
-        InkPersistencePolicies.IsEnabledValue(raw).Should().BeTrue();
+        InkRedrawTelemetryPolicies.IsEnabledValue(raw).Should().BeTrue();
     }
 
     [Theory]
@@ -137,17 +137,17 @@ public sealed class InkRedrawTelemetryPolicyTests
     [InlineData("disabled")]
     public void IsEnabledValue_ShouldReturnFalse_ForFalsyValues(string? raw)
     {
-        InkPersistencePolicies.IsEnabledValue(raw).Should().BeFalse();
+        InkRedrawTelemetryPolicies.IsEnabledValue(raw).Should().BeFalse();
     }
 
     [Fact]
     public void AppendSample_ShouldTrimWindowToConfiguredSize()
     {
         var samples = new Queue<double>();
-        InkPersistencePolicies.AppendSample(samples, 1, windowSize: 3);
-        InkPersistencePolicies.AppendSample(samples, 2, windowSize: 3);
-        InkPersistencePolicies.AppendSample(samples, 3, windowSize: 3);
-        InkPersistencePolicies.AppendSample(samples, 4, windowSize: 3);
+        InkRedrawTelemetryPolicies.AppendSample(samples, 1, windowSize: 3);
+        InkRedrawTelemetryPolicies.AppendSample(samples, 2, windowSize: 3);
+        InkRedrawTelemetryPolicies.AppendSample(samples, 3, windowSize: 3);
+        InkRedrawTelemetryPolicies.AppendSample(samples, 4, windowSize: 3);
 
         samples.Should().Equal(new[] { 2.0, 3.0, 4.0 });
     }
@@ -157,8 +157,8 @@ public sealed class InkRedrawTelemetryPolicyTests
     {
         var samples = new[] { 5.0, 1.0, 3.0, 2.0, 4.0 };
 
-        var p50 = InkPersistencePolicies.Percentile(samples, 0.5);
-        var p95 = InkPersistencePolicies.Percentile(samples, 0.95);
+        var p50 = InkRedrawTelemetryPolicies.Percentile(samples, 0.5);
+        var p95 = InkRedrawTelemetryPolicies.Percentile(samples, 0.95);
 
         p50.Should().Be(3.0);
         p95.Should().Be(4.0);
@@ -170,7 +170,7 @@ public sealed class InkRedrawTelemetryPolicyTests
         var now = DateTime.UtcNow;
         var recent = now.AddSeconds(-5);
 
-        var blocked = InkPersistencePolicies.ShouldEmitLog(
+        var blocked = InkRedrawTelemetryPolicies.ShouldEmitLog(
             sampleCount: 5,
             nowUtc: now,
             lastLogUtc: recent,
@@ -178,7 +178,7 @@ public sealed class InkRedrawTelemetryPolicyTests
             minIntervalSeconds: 30);
         blocked.Should().BeFalse();
 
-        var strideHit = InkPersistencePolicies.ShouldEmitLog(
+        var strideHit = InkRedrawTelemetryPolicies.ShouldEmitLog(
             sampleCount: 40,
             nowUtc: now,
             lastLogUtc: recent,
@@ -186,7 +186,7 @@ public sealed class InkRedrawTelemetryPolicyTests
             minIntervalSeconds: 30);
         strideHit.Should().BeTrue();
 
-        var intervalHit = InkPersistencePolicies.ShouldEmitLog(
+        var intervalHit = InkRedrawTelemetryPolicies.ShouldEmitLog(
             sampleCount: 5,
             nowUtc: now,
             lastLogUtc: now.AddSeconds(-31),
