@@ -229,7 +229,7 @@ internal static class OverlayActivationRetouchPolicy
                 Reason: OverlayActivationRetouchReason.Forced);
         }
 
-        var shouldApply = ForegroundExplicitRetouchThrottlePolicy.ShouldAllowRetouch(
+        var shouldApply = WindowingDedupPolicies.ShouldAllowRetouch(
             lastRetouchUtc,
             nowUtc,
             minimumIntervalMs);

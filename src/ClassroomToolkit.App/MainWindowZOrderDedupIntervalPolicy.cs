@@ -14,7 +14,7 @@ internal static class MainWindowZOrderDedupIntervalPolicy
 
     internal static int ResolveRequestIntervalMs(MainWindowOverlayInteractionState interactionState)
     {
-        return InteractiveSceneIntervalPolicy.ResolveMs(
+        return WindowingDedupPolicies.ResolveMs(
             interactionState.OverlayVisible,
             interactionState.PhotoModeActive,
             interactionState.WhiteboardActive,

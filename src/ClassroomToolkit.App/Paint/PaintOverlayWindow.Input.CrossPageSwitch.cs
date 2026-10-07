@@ -219,10 +219,7 @@ public partial class PaintOverlayWindow
         var hasCurrentRect = hasCurrentBitmap
             && TryBuildImageScreenRect(currentBitmap!, _photoContentTransform, out var currentRect);
         var pointerInsideCurrentRect = hasCurrentRect && currentRect.Contains(pointer);
-        if (CrossPageCurrentPagePointerHitPolicy.ShouldUseCurrentPage(
-                hasCurrentBitmap,
-                hasCurrentRect,
-                pointerInsideCurrentRect))
+        if (pointerInsideCurrentRect)
         {
             pageIndex = currentPage;
             resolvedBitmap = currentBitmap;

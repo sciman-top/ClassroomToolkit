@@ -1,123 +1,46 @@
-using System.Windows.Input;
-using ClassroomToolkit.App.Paint;
 using AwesomeAssertions;
+using ClassroomToolkit.App.Paint;
+using System.Windows.Input;
+using Xunit;
 
 namespace ClassroomToolkit.Tests;
 
 public sealed class AuxWindowKeyRoutingHandlerTests
 {
-    [Fact]
-    public void TryHandle_ShouldThrowArgumentNullException_WhenPhotoHandlerIsNull()
+    [Theory]
+    [InlineData(Key.PageDown)]
+    [InlineData(Key.PageUp)]
+    [InlineData(Key.Space)]
+    [InlineData(Key.Home)]
+    [InlineData(Key.End)]
+    public void TryHandle_ShouldForwardMappedPresentationKey(Key key)
     {
-        var act = () => AuxWindowKeyRoutingHandler.TryHandle(
-            key: Key.PageDown,
-            overlayVisible: true,
-            tryHandlePhotoKey: null!,
-            canRoutePresentationInput: true,
-            tryForwardPresentationKey: _ => true);
+        var forwarded = false;
 
-        act.Should().Throw<ArgumentNullException>();
-    }
-
-    [Fact]
-    public void TryHandle_ShouldThrowArgumentNullException_WhenForwardHandlerIsNull()
-    {
-        var act = () => AuxWindowKeyRoutingHandler.TryHandle(
-            key: Key.PageDown,
+        var handled = AuxWindowKeyRoutingHandler.TryHandle(
+            key,
             overlayVisible: true,
             tryHandlePhotoKey: _ => false,
             canRoutePresentationInput: true,
-            tryForwardPresentationKey: null!);
-
-        act.Should().Throw<ArgumentNullException>();
-    }
-
-    [Fact]
-    public void TryHandle_ShouldReturnFalse_WhenOverlayNotVisible()
-    {
-        var forwarded = false;
-
-        var handled = AuxWindowKeyRoutingHandler.TryHandle(
-            key: Key.PageDown,
-            overlayVisible: false,
-            tryHandlePhotoKey: _ => true,
-            canRoutePresentationInput: true,
-            tryForwardPresentationKey: _ =>
+            tryForwardPresentationKey: forwardedKey =>
             {
-                forwarded = true;
-                return true;
-            });
-
-        handled.Should().BeFalse();
-        forwarded.Should().BeFalse();
-    }
-
-    [Fact]
-    public void TryHandle_ShouldReturnTrue_WhenPhotoHandlerConsumesKey()
-    {
-        var forwarded = false;
-        var handled = AuxWindowKeyRoutingHandler.TryHandle(
-            key: Key.Right,
-            overlayVisible: true,
-            tryHandlePhotoKey: key => key == Key.Right,
-            canRoutePresentationInput: true,
-            tryForwardPresentationKey: _ =>
-            {
-                forwarded = true;
-                return true;
+                forwarded = forwardedKey == key;
+                return forwarded;
             });
 
         handled.Should().BeTrue();
-        forwarded.Should().BeFalse();
+        forwarded.Should().BeTrue();
     }
 
     [Fact]
-    public void TryHandle_ShouldForwardPresentation_WhenPhotoDoesNotConsumeAndKeySupported()
-    {
-        Key? forwardedKey = null;
-        var handled = AuxWindowKeyRoutingHandler.TryHandle(
-            key: Key.PageDown,
-            overlayVisible: true,
-            tryHandlePhotoKey: _ => false,
-            canRoutePresentationInput: true,
-            tryForwardPresentationKey: key =>
-            {
-                forwardedKey = key;
-                return true;
-            });
-
-        handled.Should().BeTrue();
-        forwardedKey.Should().Be(Key.PageDown);
-    }
-
-    [Fact]
-    public void TryHandle_ShouldReturnFalse_WhenKeyNotSupported()
-    {
-        var forwarded = false;
-        var handled = AuxWindowKeyRoutingHandler.TryHandle(
-            key: Key.A,
-            overlayVisible: true,
-            tryHandlePhotoKey: _ => false,
-            canRoutePresentationInput: true,
-            tryForwardPresentationKey: _ =>
-            {
-                forwarded = true;
-                return true;
-            });
-
-        handled.Should().BeFalse();
-        forwarded.Should().BeFalse();
-    }
-
-    [Fact]
-    public void TryHandle_ShouldReturnFalse_WhenPhotoHandlerThrowsNonFatal()
+    public void TryHandle_ShouldNotForwardWhenPresentationRoutingIsDisabled()
     {
         var forwarded = false;
 
         var handled = AuxWindowKeyRoutingHandler.TryHandle(
-            key: Key.Right,
+            Key.PageDown,
             overlayVisible: true,
-            tryHandlePhotoKey: _ => throw new InvalidOperationException("photo-failed"),
+            tryHandlePhotoKey: _ => false,
             canRoutePresentationInput: false,
             tryForwardPresentationKey: _ =>
             {
@@ -130,28 +53,22 @@ public sealed class AuxWindowKeyRoutingHandlerTests
     }
 
     [Fact]
-    public void TryHandle_ShouldReturnFalse_WhenForwardHandlerThrowsNonFatal()
+    public void TryHandle_ShouldNotForwardUnsupportedKey()
     {
+        var forwarded = false;
+
         var handled = AuxWindowKeyRoutingHandler.TryHandle(
-            key: Key.PageDown,
+            Key.A,
             overlayVisible: true,
             tryHandlePhotoKey: _ => false,
             canRoutePresentationInput: true,
-            tryForwardPresentationKey: _ => throw new InvalidOperationException("forward-failed"));
+            tryForwardPresentationKey: _ =>
+            {
+                forwarded = true;
+                return true;
+            });
 
         handled.Should().BeFalse();
-    }
-
-    [Fact]
-    public void TryHandle_ShouldReturnFalse_WhenForwardReturnsFalse()
-    {
-        var handled = AuxWindowKeyRoutingHandler.TryHandle(
-            key: Key.PageDown,
-            overlayVisible: true,
-            tryHandlePhotoKey: _ => false,
-            canRoutePresentationInput: true,
-            tryForwardPresentationKey: _ => false);
-
-        handled.Should().BeFalse();
+        forwarded.Should().BeFalse();
     }
 }

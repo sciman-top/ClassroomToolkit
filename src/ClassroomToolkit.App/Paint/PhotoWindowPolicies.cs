@@ -37,7 +37,7 @@ internal static class AuxWindowKeyRoutingHandler
             return true;
         }
 
-        if (!AuxWindowNavigationRoutingPolicy.ShouldForwardPresentation(canRoutePresentationInput, key))
+        if (!canRoutePresentationInput || !PresentationKeyCommandPolicy.TryMap(key, out _))
         {
             return false;
         }
@@ -45,19 +45,6 @@ internal static class AuxWindowKeyRoutingHandler
         return SafeActionExecutionExecutor.TryExecute(
             () => tryForwardPresentationKey(key),
             fallback: false);
-    }
-}
-
-internal static class AuxWindowNavigationRoutingPolicy
-{
-    internal static bool ShouldForwardPresentation(bool canRoutePresentationInput, Key key)
-    {
-        if (!canRoutePresentationInput)
-        {
-            return false;
-        }
-
-        return PresentationKeyCommandPolicy.TryMap(key, out _);
     }
 }
 

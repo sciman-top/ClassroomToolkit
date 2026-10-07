@@ -214,7 +214,7 @@ public partial class PaintOverlayWindow
                     // For brush cross-page input, keep the target page's previous neighbor slot
                     // visible until the next formal cross-page refresh. This avoids a one-switch
                     // blank current page when the current raster has not yet been rehydrated.
-                    if (CrossPageCurrentPageSeedSlotHidePolicy.ShouldHide(_mode))
+                    if (_mode != PaintToolMode.Brush)
                     {
                         HideNeighborSlotForPage(GetCurrentPageIndexForCrossPage());
                     }

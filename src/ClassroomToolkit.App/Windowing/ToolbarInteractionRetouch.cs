@@ -33,7 +33,7 @@ internal static class ToolbarInteractionRetouchIntervalPolicy
             return defaultMs;
         }
 
-        return InteractiveSceneIntervalPolicy.ResolveMs(
+        return WindowingDedupPolicies.ResolveMs(
             snapshot.OverlayVisible,
             snapshot.PhotoModeActive,
             snapshot.WhiteboardActive,
@@ -113,7 +113,7 @@ internal static class ToolbarInteractionRetouchDecisionPolicy
         ToolbarInteractionRetouchSnapshot snapshot,
         ToolbarInteractionRetouchTrigger trigger)
     {
-        var interactiveScene = InteractiveSceneIntervalPolicy.IsInteractiveScene(
+        var interactiveScene = WindowingDedupPolicies.IsInteractiveScene(
             snapshot.OverlayVisible,
             snapshot.PhotoModeActive,
             snapshot.WhiteboardActive);
@@ -188,7 +188,7 @@ internal static class ToolbarInteractionRetouchDispatchPolicy
             return ToolbarInteractionRetouchDispatchMode.Immediate;
         }
 
-        var interactiveScene = InteractiveSceneIntervalPolicy.IsInteractiveScene(
+        var interactiveScene = WindowingDedupPolicies.IsInteractiveScene(
             snapshot.OverlayVisible,
             snapshot.PhotoModeActive,
             snapshot.WhiteboardActive);

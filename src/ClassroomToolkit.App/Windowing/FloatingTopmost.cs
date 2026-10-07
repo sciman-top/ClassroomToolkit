@@ -223,7 +223,7 @@ internal static class FloatingTopmostDriftRepairEnforcePolicy
             return false;
         }
 
-        if (!InteractiveSceneIntervalPolicy.IsInteractiveScene(
+        if (!WindowingDedupPolicies.IsInteractiveScene(
                 snapshot.OverlayVisible,
                 snapshot.PhotoModeActive,
                 snapshot.WhiteboardActive))

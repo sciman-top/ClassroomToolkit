@@ -2,121 +2,6 @@ using System;
 
 namespace ClassroomToolkit.App.Paint;
 
-internal static class CrossPageBackgroundDuplicateWindowIntervalPolicy
-{
-    internal static int ResolveMs(
-        string baseSource,
-        int defaultMs = CrossPageDuplicateWindowThresholds.BackgroundRefreshMs)
-    {
-        if (baseSource.StartsWith(CrossPageUpdateSources.NeighborMissing, StringComparison.Ordinal)
-            || baseSource.StartsWith(CrossPageUpdateSources.NeighborMissingDelayed, StringComparison.Ordinal))
-        {
-            return CrossPageDuplicateWindowIntervalPolicy.Resolve(defaultMs, CrossPageBackgroundDuplicateWindowIntervalThresholds.NeighborMissingMs);
-        }
-
-        if (baseSource.StartsWith(CrossPageUpdateSources.NeighborSidecar, StringComparison.Ordinal))
-        {
-            return CrossPageDuplicateWindowIntervalPolicy.Resolve(defaultMs, CrossPageBackgroundDuplicateWindowIntervalThresholds.NeighborSidecarMs);
-        }
-
-        if (baseSource.StartsWith(CrossPageUpdateSources.NeighborRender, StringComparison.Ordinal))
-        {
-            return CrossPageDuplicateWindowIntervalPolicy.Resolve(defaultMs, CrossPageBackgroundDuplicateWindowIntervalThresholds.NeighborRenderMs);
-        }
-
-        return CrossPageDuplicateWindowIntervalPolicy.Resolve(defaultMs, CrossPageDuplicateWindowThresholds.MinWindowMs);
-    }
-}
-
-internal static class CrossPageBackgroundDuplicateWindowIntervalThresholds
-{
-    internal const int NeighborMissingMs = 36;
-    internal const int NeighborSidecarMs = 32;
-    internal const int NeighborRenderMs = 28;
-}
-
-internal static class CrossPageBackgroundDuplicateWindowPolicy
-{
-    internal static bool ShouldSkip(
-        CrossPageUpdateRequestContext currentRequest,
-        CrossPageUpdateRequestContext? lastRequest,
-        DateTime nowUtc,
-        DateTime lastRequestedUtc,
-        int duplicateWindowMs = CrossPageDuplicateWindowThresholds.BackgroundRefreshMs)
-    {
-        if (!CrossPageDuplicateWindowCorePolicy.TryGetLastRequest(
-                lastRequest,
-                lastRequestedUtc,
-                out var previousRequest))
-        {
-            return false;
-        }
-
-        if (currentRequest.Kind != CrossPageUpdateSourceKind.BackgroundRefresh
-            || previousRequest.Kind != CrossPageUpdateSourceKind.BackgroundRefresh)
-        {
-            return false;
-        }
-
-        if (!CrossPageDuplicateWindowCorePolicy.HasSameBaseSource(currentRequest, previousRequest))
-        {
-            return false;
-        }
-
-        var intervalMs = CrossPageBackgroundDuplicateWindowIntervalPolicy.ResolveMs(
-            currentRequest.BaseSource,
-            duplicateWindowMs);
-        return CrossPageDuplicateWindowCorePolicy.IsWithinWindow(nowUtc, lastRequestedUtc, intervalMs);
-    }
-}
-
-internal static class CrossPageDuplicateWindowCorePolicy
-{
-    internal static bool TryGetLastRequest(
-        CrossPageUpdateRequestContext? lastRequest,
-        DateTime lastRequestedUtc,
-        out CrossPageUpdateRequestContext value)
-    {
-        if (lastRequestedUtc != CrossPageRuntimeDefaults.UnsetTimestampUtc
-            && lastRequest.HasValue)
-        {
-            value = lastRequest.Value;
-            return true;
-        }
-
-        value = default;
-        return false;
-    }
-
-    internal static bool HasSameBaseSource(
-        CrossPageUpdateRequestContext currentRequest,
-        CrossPageUpdateRequestContext lastRequest)
-    {
-        return string.Equals(currentRequest.BaseSource, lastRequest.BaseSource, StringComparison.Ordinal);
-    }
-
-    internal static bool IsWithinWindow(
-        DateTime nowUtc,
-        DateTime lastRequestedUtc,
-        int intervalMs)
-    {
-        return (nowUtc - lastRequestedUtc).TotalMilliseconds < intervalMs;
-    }
-}
-
-internal static class CrossPageDuplicateWindowIntervalPolicy
-{
-    internal static int Resolve(
-        int configuredWindowMs,
-        int minimumWindowMs)
-    {
-        var normalizedConfigured = Math.Max(CrossPageDuplicateWindowThresholds.MinWindowMs, configuredWindowMs);
-        return Math.Max(
-            normalizedConfigured,
-            Math.Max(CrossPageDuplicateWindowThresholds.MinWindowMs, minimumWindowMs));
-    }
-}
-
 internal enum CrossPageDuplicateWindowSkipReason
 {
     None = 0,
@@ -129,8 +14,36 @@ internal readonly record struct CrossPageDuplicateWindowDecision(
     bool ShouldSkip,
     CrossPageDuplicateWindowSkipReason Reason);
 
+internal static class CrossPageInteractionActivityPolicy
+{
+    internal static bool IsActive(
+        bool photoPanning,
+        bool crossPageDragging,
+        bool inkOperationActive)
+    {
+        return photoPanning || crossPageDragging || inkOperationActive;
+    }
+}
+
 internal static class CrossPageDuplicateWindowPolicy
 {
+    private const int MinimumWindowMs = 1;
+    private const int VisualSyncWindowMs = 12;
+    private const int BackgroundRefreshWindowMs = 24;
+    private const int InteractionWindowMs = 8;
+
+    private const int UndoSnapshotWindowMs = 24;
+    private const int RegionEraseWindowMs = 20;
+    private const int InkRedrawCompletedWindowMs = 18;
+    private const int InkStateChangedWindowMs = 14;
+
+    private const int NeighborMissingWindowMs = 36;
+    private const int NeighborSidecarWindowMs = 32;
+    private const int NeighborRenderWindowMs = 28;
+
+    private const int PhotoPanLikeWindowMs = 24;
+    private const int PointerUpFastWindowMs = 18;
+
     internal static CrossPageDuplicateWindowDecision Resolve(
         CrossPageUpdateRequestContext currentRequest,
         CrossPageUpdateRequestRuntimeState state,
@@ -149,237 +62,131 @@ internal static class CrossPageDuplicateWindowPolicy
         DateTime nowUtc,
         DateTime lastRequestedUtc)
     {
-        if (CrossPageVisualSyncDuplicateWindowPolicy.ShouldSkip(
-                currentRequest,
-                lastRequest,
-                nowUtc,
-                lastRequestedUtc))
+        if (lastRequestedUtc == CrossPageRuntimeDefaults.UnsetTimestampUtc
+            || !lastRequest.HasValue)
         {
-            return new CrossPageDuplicateWindowDecision(
-                ShouldSkip: true,
-                Reason: CrossPageDuplicateWindowSkipReason.VisualSync);
+            return None();
         }
 
-        if (CrossPageBackgroundDuplicateWindowPolicy.ShouldSkip(
-                currentRequest,
-                lastRequest,
-                nowUtc,
-                lastRequestedUtc))
+        var previousRequest = lastRequest.Value;
+        if (currentRequest.Kind != previousRequest.Kind)
         {
-            return new CrossPageDuplicateWindowDecision(
-                ShouldSkip: true,
-                Reason: CrossPageDuplicateWindowSkipReason.BackgroundRefresh);
+            return None();
         }
 
-        if (CrossPageInteractionDuplicateWindowPolicy.ShouldSkip(
-                currentRequest,
-                lastRequest,
-                nowUtc,
-                lastRequestedUtc))
+        if (currentRequest.Kind == CrossPageUpdateSourceKind.VisualSync
+            && CrossPageUpdateReplayPolicy.IsReplayBaseSource(currentRequest.BaseSource)
+            && CrossPageUpdateReplayPolicy.IsReplayBaseSource(previousRequest.BaseSource))
         {
-            return new CrossPageDuplicateWindowDecision(
-                ShouldSkip: true,
-                Reason: CrossPageDuplicateWindowSkipReason.Interaction);
+            // Replay is the recovery path for skipped updates; do not deduplicate it.
+            return None();
         }
 
-        return new CrossPageDuplicateWindowDecision(
-            ShouldSkip: false,
-            Reason: CrossPageDuplicateWindowSkipReason.None);
+        if (!string.Equals(currentRequest.BaseSource, previousRequest.BaseSource, StringComparison.Ordinal))
+        {
+            return None();
+        }
+
+        var reason = ToSkipReason(currentRequest.Kind);
+        if (reason == CrossPageDuplicateWindowSkipReason.None)
+        {
+            return None();
+        }
+
+        var intervalMs = ResolveWindowMs(currentRequest.Kind, currentRequest.BaseSource);
+        if ((nowUtc - lastRequestedUtc).TotalMilliseconds >= intervalMs)
+        {
+            return None();
+        }
+
+        return new CrossPageDuplicateWindowDecision(true, reason);
     }
-}
 
-internal static class CrossPageDuplicateWindowThresholds
-{
-    internal const int MinWindowMs = 1;
-    internal const int VisualSyncMs = 12;
-    internal const int BackgroundRefreshMs = 24;
-    internal const int InteractionMs = 8;
-}
-
-internal static class CrossPageInteractionActivityPolicy
-{
-    internal static bool IsActive(
-        bool photoPanning,
-        bool crossPageDragging,
-        bool inkOperationActive)
+    private static int ResolveWindowMs(CrossPageUpdateSourceKind kind, string baseSource)
     {
-        return photoPanning || crossPageDragging || inkOperationActive;
+        return kind switch
+        {
+            CrossPageUpdateSourceKind.VisualSync => ResolveVisualSyncWindowMs(baseSource),
+            CrossPageUpdateSourceKind.BackgroundRefresh => ResolveBackgroundRefreshWindowMs(baseSource),
+            CrossPageUpdateSourceKind.Interaction => ResolveInteractionWindowMs(baseSource),
+            _ => MinimumWindowMs
+        };
     }
-}
 
-internal static class CrossPageInteractionDuplicateWindowIntervalPolicy
-{
-    internal static int ResolveMs(
-        string baseSource,
-        int defaultMs = CrossPageDuplicateWindowThresholds.InteractionMs)
+    private static int ResolveVisualSyncWindowMs(string baseSource)
     {
+        var minimumWindowMs = MinimumWindowMs;
+        if (baseSource.StartsWith(CrossPageUpdateSources.UndoSnapshot, StringComparison.Ordinal))
+        {
+            minimumWindowMs = UndoSnapshotWindowMs;
+        }
+        else if (baseSource.StartsWith(CrossPageUpdateSources.RegionEraseCrossPage, StringComparison.Ordinal))
+        {
+            minimumWindowMs = RegionEraseWindowMs;
+        }
+        else if (baseSource.StartsWith(CrossPageUpdateSources.InkRedrawCompleted, StringComparison.Ordinal))
+        {
+            minimumWindowMs = InkRedrawCompletedWindowMs;
+        }
+        else if (baseSource.StartsWith(CrossPageUpdateSources.InkStateChanged, StringComparison.Ordinal)
+            || baseSource.StartsWith(CrossPageUpdateSources.InkShowPrefix, StringComparison.Ordinal))
+        {
+            minimumWindowMs = InkStateChangedWindowMs;
+        }
+
+        return Math.Max(VisualSyncWindowMs, minimumWindowMs);
+    }
+
+    private static int ResolveBackgroundRefreshWindowMs(string baseSource)
+    {
+        var minimumWindowMs = MinimumWindowMs;
+        if (baseSource.StartsWith(CrossPageUpdateSources.NeighborMissing, StringComparison.Ordinal))
+        {
+            minimumWindowMs = NeighborMissingWindowMs;
+        }
+        else if (baseSource.StartsWith(CrossPageUpdateSources.NeighborSidecar, StringComparison.Ordinal))
+        {
+            minimumWindowMs = NeighborSidecarWindowMs;
+        }
+        else if (baseSource.StartsWith(CrossPageUpdateSources.NeighborRender, StringComparison.Ordinal))
+        {
+            minimumWindowMs = NeighborRenderWindowMs;
+        }
+
+        return Math.Max(BackgroundRefreshWindowMs, minimumWindowMs);
+    }
+
+    private static int ResolveInteractionWindowMs(string baseSource)
+    {
+        var minimumWindowMs = MinimumWindowMs;
         if (baseSource.StartsWith(CrossPageUpdateSources.PhotoPan, StringComparison.Ordinal)
             || baseSource.StartsWith(CrossPageUpdateSources.ManipulationDelta, StringComparison.Ordinal)
             || baseSource.StartsWith(CrossPageUpdateSources.StepViewport, StringComparison.Ordinal)
             || baseSource.StartsWith(CrossPageUpdateSources.ApplyScale, StringComparison.Ordinal))
         {
-            return CrossPageDuplicateWindowIntervalPolicy.Resolve(
-                defaultMs,
-                CrossPageInteractionDuplicateWindowIntervalThresholds.PhotoPanLikeMs);
+            minimumWindowMs = PhotoPanLikeWindowMs;
         }
-
-        if (baseSource.StartsWith(CrossPageUpdateSources.PointerUpFast, StringComparison.Ordinal))
+        else if (baseSource.StartsWith(CrossPageUpdateSources.PointerUpFast, StringComparison.Ordinal))
         {
-            return CrossPageDuplicateWindowIntervalPolicy.Resolve(
-                defaultMs,
-                CrossPageInteractionDuplicateWindowIntervalThresholds.PointerUpFastMs);
+            minimumWindowMs = PointerUpFastWindowMs;
         }
 
-        return CrossPageDuplicateWindowIntervalPolicy.Resolve(defaultMs, CrossPageDuplicateWindowThresholds.MinWindowMs);
-    }
-}
-
-internal static class CrossPageInteractionDuplicateWindowIntervalThresholds
-{
-    internal const int PhotoPanLikeMs = 24;
-    internal const int PointerUpFastMs = 18;
-}
-
-internal static class CrossPageInteractionDuplicateWindowPolicy
-{
-    internal static bool ShouldSkip(
-        CrossPageUpdateRequestContext currentRequest,
-        CrossPageUpdateRequestContext? lastRequest,
-        DateTime nowUtc,
-        DateTime lastRequestedUtc,
-        int duplicateWindowMs = CrossPageDuplicateWindowThresholds.InteractionMs)
-    {
-        if (!CrossPageDuplicateWindowCorePolicy.TryGetLastRequest(
-                lastRequest,
-                lastRequestedUtc,
-                out var previousRequest))
-        {
-            return false;
-        }
-
-        if (currentRequest.Kind != CrossPageUpdateSourceKind.Interaction
-            || previousRequest.Kind != CrossPageUpdateSourceKind.Interaction)
-        {
-            return false;
-        }
-
-        if (!CrossPageDuplicateWindowCorePolicy.HasSameBaseSource(currentRequest, previousRequest))
-        {
-            return false;
-        }
-
-        var intervalMs = CrossPageInteractionDuplicateWindowIntervalPolicy.ResolveMs(
-            currentRequest.BaseSource,
-            duplicateWindowMs);
-        return CrossPageDuplicateWindowCorePolicy.IsWithinWindow(nowUtc, lastRequestedUtc, intervalMs);
-    }
-}
-
-internal static class CrossPageVisualSyncDuplicateWindowIntervalPolicy
-{
-    internal static int ResolveMs(
-        string baseSource,
-        int defaultMs = CrossPageDuplicateWindowThresholds.VisualSyncMs)
-    {
-        if (baseSource.StartsWith(CrossPageUpdateSources.UndoSnapshot, StringComparison.Ordinal))
-        {
-            return CrossPageDuplicateWindowIntervalPolicy.Resolve(defaultMs, CrossPageVisualSyncDuplicateWindowIntervalThresholds.UndoMs);
-        }
-
-        if (baseSource.StartsWith(CrossPageUpdateSources.RegionEraseCrossPage, StringComparison.Ordinal))
-        {
-            return CrossPageDuplicateWindowIntervalPolicy.Resolve(defaultMs, CrossPageVisualSyncDuplicateWindowIntervalThresholds.RegionEraseMs);
-        }
-
-        if (baseSource.StartsWith(CrossPageUpdateSources.InkRedrawCompleted, StringComparison.Ordinal))
-        {
-            return CrossPageDuplicateWindowIntervalPolicy.Resolve(defaultMs, CrossPageVisualSyncDuplicateWindowIntervalThresholds.InkRedrawCompletedMs);
-        }
-
-        if (baseSource.StartsWith(CrossPageUpdateSources.InkStateChanged, StringComparison.Ordinal)
-            || baseSource.StartsWith(CrossPageUpdateSources.InkShowPrefix, StringComparison.Ordinal))
-        {
-            return CrossPageDuplicateWindowIntervalPolicy.Resolve(defaultMs, CrossPageVisualSyncDuplicateWindowIntervalThresholds.InkStateChangedMs);
-        }
-
-        if (CrossPageUpdateReplayPolicy.IsReplayBaseSource(baseSource))
-        {
-            return CrossPageDuplicateWindowIntervalPolicy.Resolve(defaultMs, CrossPageVisualSyncDuplicateWindowIntervalThresholds.ReplayMs);
-        }
-
-        return CrossPageDuplicateWindowIntervalPolicy.Resolve(defaultMs, CrossPageDuplicateWindowThresholds.MinWindowMs);
-    }
-}
-
-internal static class CrossPageVisualSyncDuplicateWindowIntervalThresholds
-{
-    internal const int UndoMs = 24;
-    internal const int RegionEraseMs = 20;
-    internal const int InkRedrawCompletedMs = 18;
-    internal const int InkStateChangedMs = 14;
-    internal const int ReplayMs = 22;
-}
-
-internal static class CrossPageVisualSyncDuplicateWindowPolicy
-{
-    internal static bool ShouldSkip(
-        CrossPageUpdateRequestContext currentRequest,
-        CrossPageUpdateRequestContext? lastRequest,
-        DateTime nowUtc,
-        DateTime lastRequestedUtc,
-        int duplicateWindowMs = CrossPageDuplicateWindowThresholds.VisualSyncMs)
-    {
-        if (!CrossPageDuplicateWindowCorePolicy.TryGetLastRequest(
-                lastRequest,
-                lastRequestedUtc,
-                out var previousRequest))
-        {
-            return false;
-        }
-
-        var bothVisualSync = currentRequest.Kind == CrossPageUpdateSourceKind.VisualSync
-            && previousRequest.Kind == CrossPageUpdateSourceKind.VisualSync;
-        var bothReplaySource = CrossPageUpdateReplayPolicy.IsReplayBaseSource(currentRequest.BaseSource)
-            && CrossPageUpdateReplayPolicy.IsReplayBaseSource(previousRequest.BaseSource);
-        if (bothReplaySource)
-        {
-            // Replay is the recovery path for skipped/pending updates.
-            // Deduplicating replay requests can leave previous page visuals stale until next interaction.
-            return false;
-        }
-
-        if (!bothVisualSync)
-        {
-            return false;
-        }
-
-        if (!CrossPageDuplicateWindowCorePolicy.HasSameBaseSource(currentRequest, previousRequest))
-        {
-            return false;
-        }
-
-        var intervalMs = CrossPageVisualSyncDuplicateWindowIntervalPolicy.ResolveMs(
-            currentRequest.BaseSource,
-            duplicateWindowMs);
-        return CrossPageDuplicateWindowCorePolicy.IsWithinWindow(nowUtc, lastRequestedUtc, intervalMs);
+        return Math.Max(InteractionWindowMs, minimumWindowMs);
     }
 
-    internal static bool ShouldSkip(
-        string source,
-        string? lastSource,
-        DateTime nowUtc,
-        DateTime lastRequestedUtc,
-        int duplicateWindowMs = CrossPageDuplicateWindowThresholds.VisualSyncMs)
+    private static CrossPageDuplicateWindowSkipReason ToSkipReason(CrossPageUpdateSourceKind kind)
     {
-        var currentRequest = CrossPageUpdateRequestContextFactory.Create(source);
-        var previousRequest = string.IsNullOrWhiteSpace(lastSource)
-            ? (CrossPageUpdateRequestContext?)null
-            : CrossPageUpdateRequestContextFactory.Create(lastSource);
-        return ShouldSkip(
-            currentRequest,
-            previousRequest,
-            nowUtc,
-            lastRequestedUtc,
-            duplicateWindowMs);
+        return kind switch
+        {
+            CrossPageUpdateSourceKind.VisualSync => CrossPageDuplicateWindowSkipReason.VisualSync,
+            CrossPageUpdateSourceKind.BackgroundRefresh => CrossPageDuplicateWindowSkipReason.BackgroundRefresh,
+            CrossPageUpdateSourceKind.Interaction => CrossPageDuplicateWindowSkipReason.Interaction,
+            _ => CrossPageDuplicateWindowSkipReason.None
+        };
+    }
+
+    private static CrossPageDuplicateWindowDecision None()
+    {
+        return new CrossPageDuplicateWindowDecision(false, CrossPageDuplicateWindowSkipReason.None);
     }
 }

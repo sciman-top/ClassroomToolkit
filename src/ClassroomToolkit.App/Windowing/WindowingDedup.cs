@@ -19,25 +19,6 @@ internal static class FloatingInteractiveDedupIntervalDefaults
 /// 浮层交互场景（ Overlay 可见且处于图片/白板模式）判定与间隔选择的单一公式源。
 /// 各 retouch/dedup 策略此前各自内联同一份三元表达式，现统一委托到此。
 /// </summary>
-internal static class InteractiveSceneIntervalPolicy
-{
-    internal static bool IsInteractiveScene(bool overlayVisible, bool photoModeActive, bool whiteboardActive)
-    {
-        return overlayVisible && (photoModeActive || whiteboardActive);
-    }
-
-    internal static int ResolveMs(
-        bool overlayVisible,
-        bool photoModeActive,
-        bool whiteboardActive,
-        int defaultMs,
-        int interactiveMs)
-    {
-        return IsInteractiveScene(overlayVisible, photoModeActive, whiteboardActive)
-            ? interactiveMs
-            : defaultMs;
-    }
-}
 
 internal enum RetouchThrottleReason
 {
@@ -51,48 +32,6 @@ internal enum RetouchThrottleReason
 internal readonly record struct RetouchThrottleDecision(
     bool ShouldAllow,
     RetouchThrottleReason Reason);
-
-internal static class RetouchThrottlePolicy
-{
-    internal static RetouchThrottleDecision Resolve(
-        DateTime lastRetouchUtc,
-        DateTime nowUtc,
-        int minimumIntervalMs)
-    {
-        if (minimumIntervalMs <= 0)
-        {
-            return new RetouchThrottleDecision(
-                ShouldAllow: true,
-                Reason: RetouchThrottleReason.IntervalDisabled);
-        }
-        if (lastRetouchUtc == WindowDedupDefaults.UnsetTimestampUtc)
-        {
-            return new RetouchThrottleDecision(
-                ShouldAllow: true,
-                Reason: RetouchThrottleReason.FirstRetouch);
-        }
-
-        var allow = (nowUtc - lastRetouchUtc).TotalMilliseconds >= minimumIntervalMs;
-        return allow
-            ? new RetouchThrottleDecision(
-                ShouldAllow: true,
-                Reason: RetouchThrottleReason.OutsideThrottleWindow)
-            : new RetouchThrottleDecision(
-                ShouldAllow: false,
-                Reason: RetouchThrottleReason.WithinThrottleWindow);
-    }
-
-    internal static bool ShouldAllow(
-        DateTime lastRetouchUtc,
-        DateTime nowUtc,
-        int minimumIntervalMs)
-    {
-        return Resolve(
-            lastRetouchUtc,
-            nowUtc,
-            minimumIntervalMs).ShouldAllow;
-    }
-}
 
 internal readonly record struct ExplicitForegroundRetouchRuntimeState(
     DateTime LastRetouchUtc)
@@ -163,25 +102,81 @@ internal readonly record struct ForegroundExplicitRetouchThrottleDecision(
     bool ShouldAllowRetouch,
     ForegroundExplicitRetouchThrottleReason Reason);
 
-internal static class ForegroundExplicitRetouchThrottlePolicy
+internal static class WindowingDedupPolicies
 {
-    internal static ForegroundExplicitRetouchThrottleDecision Resolve(
+    internal static bool IsInteractiveScene(bool overlayVisible, bool photoModeActive, bool whiteboardActive)
+    {
+        return overlayVisible && (photoModeActive || whiteboardActive);
+    }
+
+    internal static int ResolveMs(
+        bool overlayVisible,
+        bool photoModeActive,
+        bool whiteboardActive,
+        int defaultMs,
+        int interactiveMs)
+    {
+        return IsInteractiveScene(overlayVisible, photoModeActive, whiteboardActive)
+            ? interactiveMs
+            : defaultMs;
+    }
+
+    internal static RetouchThrottleDecision ResolveRetouchThrottle(
+        DateTime lastRetouchUtc,
+        DateTime nowUtc,
+        int minimumIntervalMs)
+    {
+        if (minimumIntervalMs <= 0)
+        {
+            return new RetouchThrottleDecision(
+                ShouldAllow: true,
+                Reason: RetouchThrottleReason.IntervalDisabled);
+        }
+        if (lastRetouchUtc == WindowDedupDefaults.UnsetTimestampUtc)
+        {
+            return new RetouchThrottleDecision(
+                ShouldAllow: true,
+                Reason: RetouchThrottleReason.FirstRetouch);
+        }
+
+        var allow = (nowUtc - lastRetouchUtc).TotalMilliseconds >= minimumIntervalMs;
+        return allow
+            ? new RetouchThrottleDecision(
+                ShouldAllow: true,
+                Reason: RetouchThrottleReason.OutsideThrottleWindow)
+            : new RetouchThrottleDecision(
+                ShouldAllow: false,
+                Reason: RetouchThrottleReason.WithinThrottleWindow);
+    }
+
+    internal static bool ShouldAllow(
+        DateTime lastRetouchUtc,
+        DateTime nowUtc,
+        int minimumIntervalMs)
+    {
+        return ResolveRetouchThrottle(
+            lastRetouchUtc,
+            nowUtc,
+            minimumIntervalMs).ShouldAllow;
+    }
+
+    internal static ForegroundExplicitRetouchThrottleDecision ResolveForegroundExplicitRetouchThrottle(
         ExplicitForegroundRetouchRuntimeState state,
         DateTime nowUtc,
         int minimumIntervalMs)
     {
-        return Resolve(
+        return ResolveForegroundExplicitRetouchThrottle(
             state.LastRetouchUtc,
             nowUtc,
             minimumIntervalMs);
     }
 
-    internal static ForegroundExplicitRetouchThrottleDecision Resolve(
+    internal static ForegroundExplicitRetouchThrottleDecision ResolveForegroundExplicitRetouchThrottle(
         DateTime lastRetouchUtc,
         DateTime nowUtc,
         int minimumIntervalMs)
     {
-        var shouldAllow = RetouchThrottlePolicy.ShouldAllow(
+        var shouldAllow = WindowingDedupPolicies.ShouldAllow(
             lastRetouchUtc,
             nowUtc,
             minimumIntervalMs);
@@ -199,7 +194,7 @@ internal static class ForegroundExplicitRetouchThrottlePolicy
         DateTime nowUtc,
         int minimumIntervalMs)
     {
-        return Resolve(
+        return ResolveForegroundExplicitRetouchThrottle(
             state.LastRetouchUtc,
             nowUtc,
             minimumIntervalMs).ShouldAllowRetouch;
@@ -210,7 +205,7 @@ internal static class ForegroundExplicitRetouchThrottlePolicy
         DateTime nowUtc,
         int minimumIntervalMs)
     {
-        return Resolve(
+        return ResolveForegroundExplicitRetouchThrottle(
             lastRetouchUtc,
             nowUtc,
             minimumIntervalMs).ShouldAllowRetouch;

@@ -118,10 +118,10 @@ public partial class PaintOverlayWindow
         var elapsedMs = _crossPageInkVisualSyncState.LastSyncUtc == CrossPageRuntimeDefaults.UnsetTimestampUtc
             ? double.MaxValue
             : (nowUtc - _crossPageInkVisualSyncState.LastSyncUtc).TotalMilliseconds;
-        if (CrossPageInkVisualSyncDedupPolicy.ShouldSkip(
+        if (CrossPageInkVisualSyncPolicy.ShouldSkipDuplicateRedraw(
                 trigger,
                 _crossPageInkVisualSyncState.LastTrigger,
-                interactionActive: IsCrossPageInteractionActive(),
+                IsCrossPageInteractionActive(),
                 elapsedMs))
         {
             return;

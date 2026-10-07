@@ -111,7 +111,7 @@ internal static class ForegroundSurfaceRetouchCoordinator
         ArgumentNullException.ThrowIfNull(markRetouched);
         ArgumentNullException.ThrowIfNull(applySurfaceDecision);
 
-        var throttleDecision = ForegroundExplicitRetouchThrottlePolicy.Resolve(
+        var throttleDecision = WindowingDedupPolicies.ResolveForegroundExplicitRetouchThrottle(
             state,
             nowUtc,
             minimumIntervalMs);

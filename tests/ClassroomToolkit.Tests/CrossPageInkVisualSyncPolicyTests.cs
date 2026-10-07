@@ -46,4 +46,43 @@ public sealed class CrossPageInkVisualSyncPolicyTests
         decision.ShouldPrimeVisibleNeighborSlots.Should().BeFalse();
         decision.ShouldRequestCrossPageUpdate.Should().BeTrue();
     }
+
+    [Theory]
+    [InlineData(true, true, false, 20, true)]
+    [InlineData(true, true, false, 64, false)]
+    [InlineData(true, true, false, -1, false)]
+    [InlineData(true, true, true, 20, false)]
+    [InlineData(false, true, false, 20, false)]
+    [InlineData(true, false, false, 20, false)]
+    public void ShouldSkipDuplicateRedraw_ShouldRequireRecentStateChangeAndIdleInteraction(
+        bool redrawCompleted,
+        bool lastWasStateChanged,
+        bool interactionActive,
+        double elapsedSinceLastMs,
+        bool shouldSkip)
+    {
+        var trigger = redrawCompleted
+            ? CrossPageInkVisualSyncTrigger.InkRedrawCompleted
+            : CrossPageInkVisualSyncTrigger.InkStateChanged;
+        var lastTrigger = lastWasStateChanged
+            ? CrossPageInkVisualSyncTrigger.InkStateChanged
+            : CrossPageInkVisualSyncTrigger.InkRedrawCompleted;
+        var actual = CrossPageInkVisualSyncPolicy.ShouldSkipDuplicateRedraw(
+            trigger,
+            lastTrigger,
+            interactionActive,
+            elapsedSinceLastMs);
+
+        actual.Should().Be(shouldSkip);
+    }
+
+    [Fact]
+    public void ShouldSkipDuplicateRedraw_ShouldReturnFalseWithoutPreviousTrigger()
+    {
+        CrossPageInkVisualSyncPolicy.ShouldSkipDuplicateRedraw(
+            CrossPageInkVisualSyncTrigger.InkRedrawCompleted,
+            lastTrigger: null,
+            interactionActive: false,
+            elapsedSinceLastMs: 20).Should().BeFalse();
+    }
 }

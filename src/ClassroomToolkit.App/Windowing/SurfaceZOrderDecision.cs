@@ -64,7 +64,7 @@ internal static class SurfaceZOrderDecisionDedupIntervalPolicy
         int defaultMs = FloatingInteractiveDedupIntervalDefaults.DefaultMs,
         int interactiveMs = FloatingInteractiveDedupIntervalDefaults.InteractiveMs)
     {
-        return InteractiveSceneIntervalPolicy.ResolveMs(
+        return WindowingDedupPolicies.ResolveMs(
             overlayVisible,
             photoModeActive,
             whiteboardActive,

@@ -1,44 +1,6 @@
 
 namespace ClassroomToolkit.App.Paint;
 
-internal static class CrossPageInkVisualSyncDedupDefaults
-{
-    internal const int DuplicateWindowMs = 64;
-}
-
-internal static class CrossPageInkVisualSyncDedupPolicy
-{
-    internal static bool ShouldSkip(
-        CrossPageInkVisualSyncTrigger trigger,
-        CrossPageInkVisualSyncTrigger? lastTrigger,
-        bool interactionActive,
-        double elapsedSinceLastMs,
-        int duplicateWindowMs = CrossPageInkVisualSyncDedupDefaults.DuplicateWindowMs)
-    {
-        if (interactionActive)
-        {
-            return false;
-        }
-
-        if (trigger != CrossPageInkVisualSyncTrigger.InkRedrawCompleted)
-        {
-            return false;
-        }
-
-        if (lastTrigger != CrossPageInkVisualSyncTrigger.InkStateChanged)
-        {
-            return false;
-        }
-
-        if (duplicateWindowMs <= 0)
-        {
-            return false;
-        }
-
-        return elapsedSinceLastMs >= 0 && elapsedSinceLastMs < duplicateWindowMs;
-    }
-}
-
 internal enum CrossPageInkVisualSyncTrigger
 {
     InkStateChanged = 0,
@@ -51,6 +13,21 @@ internal readonly record struct CrossPageInkVisualSyncDecision(
 
 internal static class CrossPageInkVisualSyncPolicy
 {
+    private const int DuplicateWindowMs = 64;
+
+    internal static bool ShouldSkipDuplicateRedraw(
+        CrossPageInkVisualSyncTrigger trigger,
+        CrossPageInkVisualSyncTrigger? lastTrigger,
+        bool interactionActive,
+        double elapsedSinceLastMs)
+    {
+        return !interactionActive
+            && trigger == CrossPageInkVisualSyncTrigger.InkRedrawCompleted
+            && lastTrigger == CrossPageInkVisualSyncTrigger.InkStateChanged
+            && elapsedSinceLastMs >= 0
+            && elapsedSinceLastMs < DuplicateWindowMs;
+    }
+
     internal static CrossPageInkVisualSyncDecision Resolve(
         bool photoModeActive,
         bool crossPageDisplayEnabled,

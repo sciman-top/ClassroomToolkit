@@ -229,7 +229,7 @@ internal static class LauncherBubbleVisibleChangedDedupIntervalPolicy
         int defaultMs = FloatingInteractiveDedupIntervalDefaults.DefaultMs,
         int interactiveMs = FloatingInteractiveDedupIntervalDefaults.InteractiveMs)
     {
-        return InteractiveSceneIntervalPolicy.ResolveMs(
+        return WindowingDedupPolicies.ResolveMs(
             overlayVisible,
             photoModeActive,
             whiteboardActive,
@@ -256,7 +256,7 @@ internal static class LauncherBubbleVisibleChangedSuppressionPolicy
         int defaultMs = LauncherBubbleVisibleChangedSuppressionDefaults.TransitionCooldownMs,
         int interactiveMs = LauncherBubbleVisibleChangedSuppressionDefaults.InteractiveTransitionCooldownMs)
     {
-        return InteractiveSceneIntervalPolicy.ResolveMs(
+        return WindowingDedupPolicies.ResolveMs(
             overlayVisible,
             photoModeActive,
             whiteboardActive,

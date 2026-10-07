@@ -235,7 +235,7 @@ public partial class MainWindow
         }
 
         var intervalMs = ToolbarInteractionRetouchIntervalPolicy.ResolveMs(snapshot, trigger);
-        var throttleDecision = RetouchThrottlePolicy.Resolve(
+        var throttleDecision = WindowingDedupPolicies.ResolveRetouchThrottle(
             _toolbarInteractionRetouchState.LastRetouchUtc,
             nowUtc,
             minimumIntervalMs: intervalMs);

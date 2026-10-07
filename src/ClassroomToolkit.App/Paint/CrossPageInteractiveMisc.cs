@@ -23,25 +23,6 @@ internal static class CrossPageBoundsCacheDefaults
     internal const double KeyEpsilon = 0.01;
 }
 
-internal static class CrossPageCurrentPagePointerHitPolicy
-{
-    internal static bool ShouldUseCurrentPage(
-        bool hasCurrentBitmap,
-        bool hasCurrentRect,
-        bool pointerInsideCurrentRect)
-    {
-        return hasCurrentBitmap && hasCurrentRect && pointerInsideCurrentRect;
-    }
-}
-
-internal static class CrossPageCurrentPageSeedSlotHidePolicy
-{
-    internal static bool ShouldHide(PaintToolMode mode)
-    {
-        return mode != PaintToolMode.Brush;
-    }
-}
-
 internal static class CrossPageFrameSourceAssignmentPolicy
 {
     internal static bool ShouldAssign(
