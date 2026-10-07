@@ -35,6 +35,9 @@ public sealed class SettingsRepository
     {
         ArgumentNullException.ThrowIfNull(data);
 
+        // 两道闸门不可合并:第一道拦截"上次 Load 已失败"——即便外部已修复文件,也必须
+        // 显式重新 Load 成功才放行,不得借 EnsureExistingFileStateValidated 的静默重载
+        // 隐式解除(与上层 AppSettingsService 的覆盖保护闩锁语义一致)。
         if (!LastLoadSucceeded && File.Exists(_store.Path))
         {
             throw new InvalidOperationException("设置文件读取失败，已阻止写入以避免覆盖原有配置。");
@@ -42,6 +45,7 @@ public sealed class SettingsRepository
 
         EnsureExistingFileStateValidated();
 
+        // 第二道拦截"上次 Load 成功、但文件被外部修改后 Ensure 重新校验仍失败"的场景。
         if (!LastLoadSucceeded && File.Exists(_store.Path))
         {
             throw new InvalidOperationException("设置文件读取失败，已阻止写入以避免覆盖原有配置。");

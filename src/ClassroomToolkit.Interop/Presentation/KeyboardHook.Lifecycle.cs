@@ -5,11 +5,6 @@ namespace ClassroomToolkit.Interop.Presentation;
 
 public sealed partial class KeyboardHook
 {
-    public void Start()
-    {
-        StartCoreSync();
-    }
-
     public Task StartAsync()
     {
         return StartCoreAsync();
@@ -47,42 +42,6 @@ public sealed partial class KeyboardHook
                 // 不用 ConfigureAwait(false)：WH_KEYBOARD_LL 要求安装线程持续泵消息，
                 // 回到调用方上下文（UI 线程）安装才能收到回调；线程池线程会静默失效。
                 await Task.Delay(delayMs);
-            }
-        }
-
-        Debug.WriteLine($"[KeyboardHook] Start failed with error={LastError}");
-    }
-
-    private void StartCoreSync()
-    {
-        if (_disposed || !OperatingSystem.IsWindows() || _hookId != IntPtr.Zero)
-        {
-            return;
-        }
-
-        const int maxRetries = 3;
-        for (var attempt = 0; attempt < maxRetries; attempt++)
-        {
-            if (_disposed)
-            {
-                Stop();
-                return;
-            }
-
-            _hookId = SetHook(_hookProc);
-            if (_hookId != IntPtr.Zero)
-            {
-                LastError = 0;
-                _acceptEvents = true;
-                RefreshModifierState();
-                return;
-            }
-
-            LastError = Marshal.GetLastWin32Error();
-            if (attempt < maxRetries - 1)
-            {
-                var delayMs = 50 * (1 << attempt); // Exponential backoff: 50, 100, 200 ms.
-                _ = SpinWait.SpinUntil(static () => false, delayMs);
             }
         }
 
