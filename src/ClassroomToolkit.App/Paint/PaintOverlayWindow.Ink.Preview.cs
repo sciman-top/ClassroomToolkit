@@ -11,6 +11,7 @@ namespace ClassroomToolkit.App.Paint;
 public partial class PaintOverlayWindow
 {
     private readonly Action<DrawingContext> _renderBrushPreviewContentHandler;
+    private readonly EventHandler _brushPreviewRenderingHandler;
 
     private void UpdateBrushPrediction(BrushInputSample input)
     {
@@ -43,12 +44,12 @@ public partial class PaintOverlayWindow
         }
 
         _brushPreviewRenderingAttached = true;
-        CompositionTarget.Rendering += OnBrushPreviewRendering;
+        CompositionTarget.Rendering += _brushPreviewRenderingHandler;
     }
 
     private void OnBrushPreviewRendering(object? sender, EventArgs e)
     {
-        CompositionTarget.Rendering -= OnBrushPreviewRendering;
+        CompositionTarget.Rendering -= _brushPreviewRenderingHandler;
         _brushPreviewRenderingAttached = false;
         if (!_strokeInProgress || _activeRenderer == null)
         {
@@ -65,7 +66,7 @@ public partial class PaintOverlayWindow
             return;
         }
 
-        CompositionTarget.Rendering -= OnBrushPreviewRendering;
+        CompositionTarget.Rendering -= _brushPreviewRenderingHandler;
         _brushPreviewRenderingAttached = false;
     }
 

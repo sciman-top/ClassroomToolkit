@@ -53,6 +53,7 @@ public partial class PaintOverlayWindow : Window
         _logger = logger;
         InitializeComponent();
         _renderBrushPreviewContentHandler = RenderPreviewContent;
+        _brushPreviewRenderingHandler = OnBrushPreviewRendering;
         _neighborPagesCanvas = FindName("NeighborPagesCanvas") as System.Windows.Controls.Canvas;
         _visualHost = new DrawingVisualHost();
         CustomDrawHost.Child = _visualHost;
