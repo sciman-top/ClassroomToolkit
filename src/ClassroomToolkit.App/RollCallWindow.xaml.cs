@@ -394,7 +394,7 @@ public partial class RollCallWindow : Window
         {
             _initialized = false;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             _initialized = false;
             System.Diagnostics.Debug.WriteLine(

@@ -93,7 +93,7 @@ public partial class PaintOverlayWindow
                 ? fullPath
                 : string.Empty;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             _sessionCaptureExportDirectory = string.Empty;
             System.Diagnostics.Debug.WriteLine($"[InkExport] invalid session capture export directory: {ex.Message}");

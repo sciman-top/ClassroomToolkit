@@ -44,7 +44,7 @@ internal static class InkExportManifestUtilities
                 ? new Dictionary<string, string>(map, StringComparer.OrdinalIgnoreCase)
                 : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         }
@@ -80,7 +80,7 @@ internal static class InkExportManifestUtilities
                 InkAtomicFileWriter.WriteAllText(path, json, "[InkExportManifestUtilities]");
             }
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             // Ignore manifest write failures; export output is still valid.
         }

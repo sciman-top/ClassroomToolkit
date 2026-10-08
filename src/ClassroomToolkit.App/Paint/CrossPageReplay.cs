@@ -17,7 +17,7 @@ internal static class CrossPageDelayExecutionHelper
             await delayAsync(delayMs).ConfigureAwait(false);
             return (Success: true, FailureDetail: null);
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             return (
                 Success: false,

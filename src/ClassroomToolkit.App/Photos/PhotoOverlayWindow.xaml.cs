@@ -262,7 +262,7 @@ public partial class PhotoOverlayWindow : Window
                 {
                     return;
                 }
-                catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+                catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
                 {
                     System.Diagnostics.Debug.WriteLine(
                         $"[PhotoOverlayWindow] async apply dispatch failed: {ex.GetType().Name} - {ex.Message}");
@@ -497,7 +497,7 @@ public partial class PhotoOverlayWindow : Window
                         DispatcherPriority.Normal,
                         cancellationToken);
                 }
-                catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+                catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
                 {
                     Debug.WriteLine(
                         $"[PhotoOverlayWindow] cached bitmap validation dispatch failed: {ex.GetType().Name} - {ex.Message}");
@@ -596,7 +596,7 @@ public partial class PhotoOverlayWindow : Window
                     DispatcherPriority.Background);
                 scheduled = true;
             }
-            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
             {
                 Debug.WriteLine(
                     $"[PhotoOverlayWindow] deferred layout dispatch failed: {ex.GetType().Name} - {ex.Message}");
@@ -722,7 +722,7 @@ public partial class PhotoOverlayWindow : Window
                 },
                 DispatcherPriority.Render);
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[PhotoOverlayWindow] deferred z-order retouch dispatch failed: {ex.GetType().Name} - {ex.Message}");
             if (reveal)
@@ -791,7 +791,7 @@ public partial class PhotoOverlayWindow : Window
 
             return bitmap;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"[PhotoOverlayWindow] Failed to load bitmap: {path}. Error: {ex.Message}");
             return null;
@@ -883,7 +883,7 @@ public partial class PhotoOverlayWindow : Window
             {
                 return System.Windows.Forms.Screen.FromHandle(handle).Bounds;
             }
-            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
             {
                 Debug.WriteLine(
                     $"[PhotoOverlayWindow] monitor bounds lookup failed: {ex.GetType().Name} - {ex.Message}");
@@ -941,7 +941,7 @@ public partial class PhotoOverlayWindow : Window
             _ = Dispatcher.BeginInvoke(new Action(HideMask), DispatcherPriority.Render);
             scheduled = true;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[PhotoOverlayWindow] defer-hide-mask dispatch failed: {ex.GetType().Name} - {ex.Message}");
         }

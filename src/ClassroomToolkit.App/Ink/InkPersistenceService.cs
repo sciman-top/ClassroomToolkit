@@ -349,7 +349,7 @@ public sealed class InkPersistenceService
             _ = Path.GetFullPath(jsonPath);
             return !string.IsNullOrWhiteSpace(jsonPath);
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkPersistence] invalid source path path={sourceFilePath} ex={ex.GetType().Name} msg={ex.Message}");
             return false;
@@ -371,7 +371,7 @@ public sealed class InkPersistenceService
 
             return true;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkPersistence] ensure ink folder failed path={sourceFilePath} ex={ex.GetType().Name} msg={ex.Message}");
             return false;
@@ -402,7 +402,7 @@ public sealed class InkPersistenceService
         {
             return true;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             InvalidateCache(jsonPath);
             Debug.WriteLine($"[InkPersistence] refusing overwrite after read failure path={jsonPath} error={ex.Message}");
@@ -469,7 +469,7 @@ public sealed class InkPersistenceService
             Debug.WriteLine($"[InkPersistence] failed to parse sidecar json path={jsonPath}");
             return null;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkPersistence] failed to read sidecar json path={jsonPath} ex={ex.GetType().Name} msg={ex.Message}");
             return null;
@@ -555,7 +555,7 @@ public sealed class InkPersistenceService
                 hash);
             return true;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkPersistence] file fingerprint failed path={path} ex={ex.GetType().Name} msg={ex.Message}");
             return false;
@@ -568,7 +568,7 @@ public sealed class InkPersistenceService
         {
             return Directory.EnumerateFiles(inkFolder, "*.ink.json", TopLevelIgnoreInaccessibleOptions);
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             return Array.Empty<string>();
         }
@@ -593,7 +593,7 @@ public sealed class InkPersistenceService
             File.Delete(path);
             return true;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkPersistence] delete file failed path={path} ex={ex.GetType().Name} msg={ex.Message}");
             return false;

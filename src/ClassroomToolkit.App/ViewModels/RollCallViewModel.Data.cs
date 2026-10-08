@@ -126,7 +126,7 @@ public sealed partial class RollCallViewModel
             {
                 throw;
             }
-            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
             {
                 System.Diagnostics.Debug.WriteLine(
                     RollCallDataLoadDiagnosticsPolicy.FormatPreloadConsumeFailure(
@@ -206,7 +206,7 @@ public sealed partial class RollCallViewModel
                 if (!string.IsNullOrWhiteSpace(result.ErrorMessage)) return null;
                 return result;
             }
-            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
             {
                 System.Diagnostics.Debug.WriteLine(
                     RollCallDataLoadDiagnosticsPolicy.FormatPreloadConsumeFailure(
@@ -245,7 +245,7 @@ public sealed partial class RollCallViewModel
                 if (preloadTask.IsFaulted)
                 {
                     var failure = preloadTask.Exception?.GetBaseException();
-                    if (failure != null && AppGlobalExceptionHandlingPolicy.IsNonFatal(failure))
+                    if (failure != null && AppGlobalExceptionHandling.IsNonFatal(failure))
                     {
                         System.Diagnostics.Debug.WriteLine(
                             RollCallDataLoadDiagnosticsPolicy.FormatPreloadTaskFaulted(
@@ -331,7 +331,7 @@ public sealed partial class RollCallViewModel
             fingerprint = new FileFingerprint(info.Length, info.LastWriteTimeUtc, contentHash);
             return true;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine(
                 RollCallDataLoadDiagnosticsPolicy.FormatFileWriteTimeReadFailure(

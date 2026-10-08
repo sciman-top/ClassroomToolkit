@@ -263,49 +263,49 @@ using System.Diagnostics.CodeAnalysis;
     "CA1515:Consider making public types internal",
     Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.AboutDialog")]
+    Target = "~T:ClassroomToolkit.App.Dialogs.AboutDialog")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
     Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.AutoExitDialog")]
+    Target = "~T:ClassroomToolkit.App.Dialogs.AutoExitDialog")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
     Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.ClassSelectDialog")]
+    Target = "~T:ClassroomToolkit.App.Dialogs.ClassSelectDialog")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
     Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.LauncherBubbleWindow")]
+    Target = "~T:ClassroomToolkit.App.Windowing.LauncherBubbleWindow")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
     Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.RemoteKeyDialog")]
+    Target = "~T:ClassroomToolkit.App.Dialogs.RemoteKeyDialog")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
     Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.RollCallSettingsDialog")]
+    Target = "~T:ClassroomToolkit.App.Dialogs.RollCallSettingsDialog")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
     Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.StudentListDialog")]
+    Target = "~T:ClassroomToolkit.App.Dialogs.StudentListDialog")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
     Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.TimerSetDialog")]
+    Target = "~T:ClassroomToolkit.App.Dialogs.TimerSetDialog")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",

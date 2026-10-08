@@ -64,7 +64,7 @@ internal sealed class StartupOrchestrator
                 Debug.WriteLine(
                     $"[StartupCompatibility] Auto remediation applied: {string.Join(" | ", autoRemediation.AppliedActions)}");
             }
-            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
             {
                 _logException(ex, "StartupCompatibilityAutoRemediationPersist");
             }
@@ -113,7 +113,7 @@ internal sealed class StartupOrchestrator
                 {
                     _settingsService.Save(_settings);
                 }
-                catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+                catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
                 {
                     _logException(ex, "StartupCompatibilitySuppressionPersist");
                 }
@@ -138,7 +138,7 @@ internal sealed class StartupOrchestrator
                 settingsPath,
                 _settings.PresentationClassifierOverridesJson);
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             _logException(ex, "StartupCompatibilityProbe");
             return new StartupCompatibilityReport(Array.Empty<StartupCompatibilityIssue>());
@@ -306,7 +306,7 @@ internal sealed class StartupOrchestrator
             File.WriteAllText(filePath, report.ToJson());
             return filePath;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             _logException(ex, "StartupCompatibilityReportPersist");
             return null;

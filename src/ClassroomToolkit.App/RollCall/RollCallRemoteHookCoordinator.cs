@@ -59,7 +59,7 @@ internal sealed class RollCallRemoteHookCoordinator
                 Started: started,
                 ShouldNotifyUnavailable: shouldNotifyUnavailable);
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             var shouldNotifyUnavailable = ResolveShouldNotifyUnavailable(request, started: false);
             return new RollCallRemoteHookStartResult(

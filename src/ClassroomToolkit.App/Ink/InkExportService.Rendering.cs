@@ -60,7 +60,7 @@ public sealed partial class InkExportService
             using var doc = PdfDocumentHost.Open(sourcePath);
             return doc.RenderPage(pageIndex, dpi);
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             return null;
         }
@@ -78,7 +78,7 @@ public sealed partial class InkExportService
             bitmap.Freeze();
             return bitmap;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             return null;
         }
@@ -91,7 +91,7 @@ public sealed partial class InkExportService
             using var doc = PdfDocumentHost.Open(sourcePath);
             return doc.PageCount;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             return 0;
         }

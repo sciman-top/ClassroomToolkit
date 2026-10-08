@@ -56,7 +56,7 @@ public partial class ImageManagerWindow
             {
                 // Token source may be disposed during rapid folder switching or shutdown.
             }
-            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
             {
                 Debug.WriteLine($"ImageManager: previous thumbnail cancellation failed: {ex.Message}");
             }
@@ -105,7 +105,7 @@ public partial class ImageManagerWindow
         {
             // Token/dispatcher resources may be disposed during rapid window shutdown.
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"ImageManager: LoadImages Error: {ex}");
             if (requestId == Volatile.Read(ref _loadImagesRequestId))
@@ -248,7 +248,7 @@ public partial class ImageManagerWindow
         {
             return;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             if (Dispatcher.CheckAccess()
                 && !_isClosing

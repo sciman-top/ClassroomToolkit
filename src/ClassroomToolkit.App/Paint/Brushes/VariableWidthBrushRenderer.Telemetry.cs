@@ -77,7 +77,7 @@ internal partial class VariableWidthBrushRenderer
             var fileName = $"brush-width-{DateTime.Now:yyyyMMdd-HHmmss-fff}-{_config.PresetName}.csv";
             File.WriteAllText(Path.Combine(directory, fileName), builder.ToString());
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             // 诊断输出失败绝不影响笔画收口。
         }

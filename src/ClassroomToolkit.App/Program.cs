@@ -26,7 +26,7 @@ internal static class Program
         {
             VelopackApp.Build().Run();
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             TryWriteStartupCrashLog("velopack-hook", ex);
         }
@@ -44,7 +44,7 @@ internal static class Program
             application.InitializeComponent();
             application.Run();
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             TryWriteStartupCrashLog("app-startup", ex);
             ShowTopmostNotice($"ClassroomToolkit 启动失败：{ex.Message}", isError: true);
@@ -92,7 +92,7 @@ internal static class Program
             var icon = isError ? mbIconError : mbIconInformation;
             _ = MessageBox(IntPtr.Zero, text, "ClassroomToolkit", icon | mbTopmost);
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             // 提示失败也不阻断退出
         }
@@ -107,7 +107,7 @@ internal static class Program
             var line = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{stage}] {ex}{Environment.NewLine}";
             File.AppendAllText(Path.Combine(directory, "startup-crash.log"), line);
         }
-        catch (Exception logEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(logEx))
+        catch (Exception logEx) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(logEx))
         {
             // 最后退路：连崩溃日志都无法落盘时只能放弃；致命异常直接终止进程。
         }

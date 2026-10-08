@@ -111,7 +111,7 @@ internal sealed class InkStorageService
             Debug.WriteLine($"[InkStorage] failed to parse page json path={jsonPath ?? "(unresolved)"} document={documentName} page={pageIndex}");
             return null;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkStorage] failed to read page json path={jsonPath ?? "(unresolved)"} document={documentName} page={pageIndex} ex={ex.GetType().Name} msg={ex.Message}");
             return null;
@@ -139,7 +139,7 @@ internal sealed class InkStorageService
             dates.Sort();
             return dates;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             return Array.Empty<DateTime>();
         }
@@ -160,7 +160,7 @@ internal sealed class InkStorageService
                 .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             return Array.Empty<string>();
         }
@@ -181,7 +181,7 @@ internal sealed class InkStorageService
         {
             files = Directory.EnumerateFiles(pagesFolder, "slide_*.json", TopLevelIgnoreInaccessibleOptions);
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             return Array.Empty<InkPageData>();
         }
@@ -200,7 +200,7 @@ internal sealed class InkStorageService
             {
                 // Ignore malformed page files and keep loading other pages.
             }
-            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
             {
                 Debug.WriteLine($"[InkStorage] failed to read list page json path={file} ex={ex.GetType().Name} msg={ex.Message}");
                 // Ignore transient IO failures on individual files.
@@ -327,7 +327,7 @@ internal sealed class InkStorageService
             {
                 Directory.Delete(folder, recursive: true);
             }
-            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
             {
                 Debug.WriteLine($"[InkStorage] cleanup folder failed path={folder} ex={ex.GetType().Name} msg={ex.Message}");
                 // Ignore cleanup failures.

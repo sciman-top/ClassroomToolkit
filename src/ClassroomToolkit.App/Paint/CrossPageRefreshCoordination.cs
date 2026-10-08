@@ -185,7 +185,7 @@ internal static class CrossPageDeferredRefreshCoordinator
                 diagnostics);
             return failureResult with { DelayMs = delay, ScheduledDelayedRefresh = true };
         }
-        catch (Exception ex) when (global::ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (global::ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             diagnostics("defer-abort", source, $"nonfatal:{ex.GetType().Name}");
             return new CrossPageDeferredRefreshExecutionResult(
@@ -417,7 +417,7 @@ internal static class CrossPageMissingNeighborRefreshCoordinator
                 delayMs: decision.DelayMs,
                 lastScheduledUtc: decision.LastScheduledUtc);
         }
-        catch (Exception ex) when (global::ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (global::ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             diagnostics("defer-abort", CrossPageUpdateSources.NeighborMissing, $"nonfatal:{ex.GetType().Name}");
             return new CrossPageMissingNeighborRefreshExecutionResult(

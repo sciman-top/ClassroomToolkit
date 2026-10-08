@@ -8,12 +8,12 @@ public sealed class AppearanceDialogConstructionTests
     [Fact]
     public void Constructor_ShouldNotThrow_WithDefaultTheme()
     {
-        ClassroomToolkit.App.AppearanceDialog? captured = null;
+        ClassroomToolkit.App.Dialogs.AppearanceDialog? captured = null;
 
         WpfStaTestRunner.Run(() =>
         {
             WpfStaTestRunner.EnsureApplication();
-            var dialog = new ClassroomToolkit.App.AppearanceDialog();
+            var dialog = new ClassroomToolkit.App.Dialogs.AppearanceDialog();
             dialog.Close();
             captured = dialog;
         });

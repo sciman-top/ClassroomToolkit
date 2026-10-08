@@ -151,7 +151,7 @@ public partial class ImageManagerWindow
         {
             _thumbnailSemaphore.Dispose();
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"ImageManager: thumbnail semaphore dispose failed: {ex.Message}");
         }
@@ -187,7 +187,7 @@ public partial class ImageManagerWindow
         {
             // Expected when cancellation races with folder switching/cleanup.
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"ImageManager: thumbnail cancellation failed: {ex.Message}");
         }
@@ -209,7 +209,7 @@ public partial class ImageManagerWindow
         {
             // Expected when cancellation races with folder switching/cleanup.
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"ImageManager: thumbnail cancellation failed: {ex.Message}");
         }
@@ -218,7 +218,7 @@ public partial class ImageManagerWindow
         {
             cts.Dispose();
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"ImageManager: thumbnail token dispose failed: {ex.Message}");
         }

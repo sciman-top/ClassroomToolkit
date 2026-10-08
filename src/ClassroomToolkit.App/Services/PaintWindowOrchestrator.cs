@@ -497,7 +497,7 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
             _appSettingsService.Save(_currentSettings);
             SettingsSaveFailureNotificationStateUpdater.MarkSaveSucceeded(ref _settingsSaveFailedNotified);
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             LogSettingsSaveFailed(_logger, ex, null);
             var notificationPlan = NotificationAndExitPolicies.Resolve(_settingsSaveFailedNotified);

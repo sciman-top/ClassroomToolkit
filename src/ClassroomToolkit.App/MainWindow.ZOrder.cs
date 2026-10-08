@@ -26,7 +26,7 @@ public partial class MainWindow
         {
             ApplyZOrderPolicy(forceEnforceZOrder: true);
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine(
                 $"RequestImmediateFloatingZOrderRetouch failed: {ex.GetType().Name} - {ex.Message}");
@@ -171,7 +171,7 @@ public partial class MainWindow
             Dispatcher.BeginInvoke(action, priority);
             return true;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine(
                 WindowingDiagnosticsPolicies.FormatFailureMessageDispatcherBeginInvokeDiagnostics(

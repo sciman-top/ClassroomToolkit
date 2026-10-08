@@ -45,7 +45,7 @@ public partial class App : WpfApplication
         {
             RunStartupSequence(e);
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             LogException(ex, "App.OnStartup");
             try
@@ -56,7 +56,7 @@ public partial class App : WpfApplication
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
-            catch (Exception showEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(showEx))
+            catch (Exception showEx) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(showEx))
             {
                 // 连错误弹窗都无法显示时，直接退出仍优于僵尸驻留
             }
@@ -168,7 +168,7 @@ public partial class App : WpfApplication
         HandleGlobalException(
             ex,
             "AppDomain.UnhandledException",
-            AppGlobalExceptionHandlingPolicy.ResolveForBackground(ex));
+            AppGlobalExceptionHandling.ResolveForBackground(ex));
     }
 
     private void OnTaskSchedulerUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
@@ -176,13 +176,13 @@ public partial class App : WpfApplication
         HandleGlobalException(
             e.Exception,
             "TaskScheduler.UnobservedTaskException",
-            AppGlobalExceptionHandlingPolicy.ResolveForBackground(e.Exception));
+            AppGlobalExceptionHandling.ResolveForBackground(e.Exception));
         e.SetObserved(); // 标记为已观察，防止进程退出（在某些 .NET 版本行为不同）
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        var decision = AppGlobalExceptionHandlingPolicy.ResolveForDispatcher(e.Exception);
+        var decision = AppGlobalExceptionHandling.ResolveForDispatcher(e.Exception);
         e.Handled = decision.ShouldMarkDispatcherHandled;
         HandleGlobalException(
             e.Exception,
@@ -233,7 +233,7 @@ public partial class App : WpfApplication
             _ = Dispatcher.InvokeAsync(ShowGlobalErrorDialog);
             scheduled = true;
         }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(caughtEx))
         {
             // Keep fallback path below; no-op here.
         }
@@ -262,7 +262,7 @@ public partial class App : WpfApplication
             }
             System.Diagnostics.Debug.WriteLine($"[Exception][{source}] {ex.Message}");
         }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(caughtEx))
         {
             // 如果写日志也失败了，最后退路只有 Debug
             System.Diagnostics.Debug.WriteLine($"致命错误记录失败: {ex.Message}");
@@ -302,7 +302,7 @@ public partial class App : WpfApplication
                 DefaultLogRetentionOptions);
             Volatile.Write(ref _errorLogRetentionSucceeded, 1);
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"日志保留清理失败: {ex.Message}");
             Interlocked.Increment(ref _errorLogRetentionFailures);

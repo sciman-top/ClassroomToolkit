@@ -205,7 +205,7 @@ internal static class SystemDiagnostics
             File.Delete(filePath);
             return true;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             return false;
         }
@@ -219,7 +219,7 @@ internal static class SystemDiagnostics
             using var synth = new SpeechSynthesizer();
             return synth.GetInstalledVoices(CultureInfo.CurrentUICulture).Count;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             error = ex.Message;
             return -1;

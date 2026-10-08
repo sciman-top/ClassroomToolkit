@@ -185,7 +185,7 @@ internal sealed class InkWriteAheadLogService : IDisposable
                         recovered++;
                     }
                 }
-                catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+                catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
                 {
                     // Keep WAL entry for next attempt.
                 }
@@ -364,7 +364,7 @@ internal sealed class InkWriteAheadLogService : IDisposable
                 }
             }
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkWAL] merge pending failed walPath={walPath} ex={ex.GetType().Name} msg={ex.Message}");
             merged = false;
@@ -436,7 +436,7 @@ internal sealed class InkWriteAheadLogService : IDisposable
                 : new Dictionary<string, InkWalEntry>(StringComparer.OrdinalIgnoreCase);
             return true;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkWAL] failed to load wal path={walPath} ex={ex.GetType().Name} msg={ex.Message}");
             map = new Dictionary<string, InkWalEntry>(StringComparer.OrdinalIgnoreCase);
@@ -461,7 +461,7 @@ internal sealed class InkWriteAheadLogService : IDisposable
             InkAtomicFileWriter.WriteAllText(walPath, json, "[InkWAL]");
             return true;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkWAL] save failed walPath={walPath} ex={ex.GetType().Name} msg={ex.Message}");
             return false;
@@ -496,7 +496,7 @@ internal sealed class InkWriteAheadLogService : IDisposable
             }
             return true;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkWAL] failed to load acknowledgement path={acknowledgementPath} ex={ex.GetType().Name} msg={ex.Message}");
             acknowledgements = new Dictionary<string, InkWalAcknowledgement>(StringComparer.OrdinalIgnoreCase);
@@ -524,7 +524,7 @@ internal sealed class InkWriteAheadLogService : IDisposable
             InkAtomicFileWriter.WriteAllText(acknowledgementPath, json, "[InkWAL]");
             return true;
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[InkWAL] failed to save acknowledgement path={acknowledgementPath} ex={ex.GetType().Name} msg={ex.Message}");
             return false;

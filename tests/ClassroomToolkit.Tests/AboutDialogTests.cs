@@ -1,5 +1,6 @@
 using ClassroomToolkit.App;
 using AwesomeAssertions;
+using ClassroomToolkit.App.Dialogs;
 
 namespace ClassroomToolkit.Tests;
 

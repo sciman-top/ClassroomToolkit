@@ -1,0 +1,31 @@
+using ClassroomToolkit.App;
+using AwesomeAssertions;
+using Xunit;
+
+namespace ClassroomToolkit.Tests.App;
+
+public sealed class SettingsSaveFailureNotificationStateUpdaterTests
+{
+    [Fact]
+    public void MarkSaveSucceeded_ShouldClearNotificationFlag()
+    {
+        var saveFailedNotified = true;
+
+        SettingsSaveFailureNotificationStateUpdater.MarkSaveSucceeded(ref saveFailedNotified);
+
+        saveFailedNotified.Should().BeFalse();
+    }
+
+    [Fact]
+    public void ApplyNotificationPlan_ShouldPersistNextNotificationState()
+    {
+        var saveFailedNotified = false;
+        var plan = NotificationAndExitPolicies.Resolve(alreadyNotified: saveFailedNotified);
+
+        SettingsSaveFailureNotificationStateUpdater.ApplyNotificationPlan(
+            ref saveFailedNotified,
+            plan);
+
+        saveFailedNotified.Should().BeTrue();
+    }
+}

@@ -12,6 +12,7 @@ using ClassroomToolkit.App.RollCall;
 using ClassroomToolkit.Domain.Utilities;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Windowing;
+using ClassroomToolkit.App.Dialogs;
 
 namespace ClassroomToolkit.App;
 
@@ -207,7 +208,7 @@ public partial class RollCallWindow
                 NotifyRemoteHookError();
             }
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"StartKeyboardHookCoreAsync failed: {ex}");
             if (isCurrent() && ShouldEnableRemotePresenterHook())
@@ -247,7 +248,7 @@ public partial class RollCallWindow
                 NotifyUnavailableOnFailure: false);
             await _remoteHookCoordinator.TryStartAsync(request);
         }
-        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             System.Diagnostics.Debug.WriteLine($"StartGroupSwitchHookCoreAsync failed: {ex}");
         }

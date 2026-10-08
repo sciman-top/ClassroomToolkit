@@ -58,7 +58,7 @@ internal static class PortableUpdateBootstrapper
                 await application.Dispatcher.InvokeAsync(() => NotifyNewRelease(configuration, release.TagName));
             }
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             Debug.WriteLine($"[PortableUpdate] check skipped: {ex.Message}");
         }

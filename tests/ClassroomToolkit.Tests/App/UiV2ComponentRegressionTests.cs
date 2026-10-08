@@ -9,7 +9,7 @@ public sealed class UiV2ComponentRegressionTests
     private static readonly string[] SegmentedTabViews =
     [
         "src/ClassroomToolkit.App/Paint/PaintSettingsDialog.xaml",
-        "src/ClassroomToolkit.App/RollCallSettingsDialog.xaml",
+        "src/ClassroomToolkit.App/Dialogs/RollCallSettingsDialog.xaml",
         "src/ClassroomToolkit.App/Diagnostics/DiagnosticsDialog.xaml",
         "src/ClassroomToolkit.App/Diagnostics/StartupCompatibilityWarningDialog.xaml"
     ];

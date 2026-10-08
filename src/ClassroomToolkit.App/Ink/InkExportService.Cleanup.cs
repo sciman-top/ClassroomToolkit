@@ -14,7 +14,7 @@ public sealed partial class InkExportService
             File.Delete(path);
             return true;
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             return false;
         }
@@ -151,7 +151,7 @@ public sealed partial class InkExportService
         {
             return Path.GetFullPath(path);
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             return path;
         }
@@ -163,7 +163,7 @@ public sealed partial class InkExportService
         {
             return Directory.GetFiles(directoryPath);
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             return Array.Empty<string>();
         }

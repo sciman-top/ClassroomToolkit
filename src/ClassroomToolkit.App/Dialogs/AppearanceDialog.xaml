@@ -1,0 +1,86 @@
+<Window x:Class="ClassroomToolkit.App.Dialogs.AppearanceDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="外观"
+        Height="Auto" Width="460"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="{x:Null}"
+        ShowInTaskbar="False"
+        Topmost="True">
+    <Border Style="{StaticResource Style_DialogShellWindowBorder}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Style="{StaticResource Style_DialogShellTitleBar}" MouseLeftButtonDown="OnTitleBarDrag">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="18,0,0,0">
+                    <Border Style="{StaticResource Style_TitleIconBadge}" Margin="0,0,8,0">
+                        <Path Data="{StaticResource Icon_Palette}" Fill="{DynamicResource Brush_Primary}" Stretch="Uniform"/>
+                    </Border>
+                    <TextBlock Text="外观" Style="{StaticResource Style_DialogShellTitleText}" Margin="0"/>
+                </StackPanel>
+                <Button Style="{StaticResource Style_DialogShellCloseButton}" Click="OnClose" ToolTip="关闭">
+                    <Path Data="{StaticResource Icon_Close}" Fill="{DynamicResource Brush_Text_Secondary}" Stretch="Uniform"
+                          Width="{StaticResource Size_Icon_Glyph_MD}" Height="{StaticResource Size_Icon_Glyph_MD}"/>
+                </Button>
+            </Grid>
+            <Border Grid.Row="0" Style="{StaticResource Style_DialogShellDivider}"/>
+
+            <Border Grid.Row="1" Margin="20,16,20,8" Style="{StaticResource Style_SettingCardBorder}" Padding="14">
+                <StackPanel>
+                    <TextBlock Text="主题" Style="{StaticResource Style_FieldLabelText}" Margin="0,0,0,8"/>
+                    <RadioButton x:Name="MidnightTealRadio" GroupName="Theme" Margin="0,0,0,8" MinHeight="36"
+                                 Checked="OnThemeChecked" Tag="MidnightTeal">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="课堂深色（推荐）" VerticalAlignment="Center"/>
+                            <Border x:Name="MidnightTealPreviewCanvas" Width="56" Height="20" CornerRadius="4"
+                                    BorderThickness="1" BorderBrush="{DynamicResource CTK.Brush.Border.Default}"
+                                    Margin="12,0,0,0">
+                                <Border x:Name="MidnightTealPreviewPrimary" Width="10" Height="10" CornerRadius="5"
+                                        HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            </Border>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton x:Name="BlackboardRadio" GroupName="Theme" Margin="0,0,0,8" MinHeight="36"
+                                 Checked="OnThemeChecked" Tag="Blackboard">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="黑板护眼" VerticalAlignment="Center"/>
+                            <Border x:Name="BlackboardPreviewCanvas" Width="56" Height="20" CornerRadius="4"
+                                    BorderThickness="1" BorderBrush="{DynamicResource CTK.Brush.Border.Default}"
+                                    Margin="12,0,0,0">
+                                <Border x:Name="BlackboardPreviewPrimary" Width="10" Height="10" CornerRadius="5"
+                                        HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            </Border>
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton x:Name="LightRadio" GroupName="Theme" MinHeight="36"
+                                 Checked="OnThemeChecked" Tag="Light">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="明亮" VerticalAlignment="Center"/>
+                            <Border x:Name="LightPreviewCanvas" Width="56" Height="20" CornerRadius="4"
+                                    BorderThickness="1" BorderBrush="{DynamicResource CTK.Brush.Border.Default}"
+                                    Margin="12,0,0,0">
+                                <Border x:Name="LightPreviewPrimary" Width="10" Height="10" CornerRadius="5"
+                                        HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            </Border>
+                        </StackPanel>
+                    </RadioButton>
+                    <TextBlock Text="选择后立即切换并保存，不会中断点名、计时或悬浮工具。"
+                               Style="{StaticResource Style_HelperText}" Margin="0,10,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <StackPanel Grid.Row="2" Style="{StaticResource Style_DialogShellActionBar}">
+                <Button x:Name="RestoreDefaultsButton" Content="恢复默认" Style="{StaticResource Style_DialogShellSecondaryActionButton_Wide}" Click="OnRestoreDefaultsClick"/>
+                <Button Content="完成" Style="{StaticResource Style_DialogShellPrimaryActionButton}" Click="OnClose"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

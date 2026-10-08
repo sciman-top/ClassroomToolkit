@@ -92,7 +92,7 @@ internal static class AppCompositionRoot
                     Debug.WriteLine(
                         $"[UiDefaultsInit] persisted inkPathOptimized={uiDefaultsInitialization.InkPathOptimized} launcherReset={uiDefaultsInitialization.LauncherPositionReset} toolbarReset={uiDefaultsInitialization.PaintToolbarPositionReset}");
                 }
-                catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+                catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
                 {
                     Debug.WriteLine(
                         $"[PresetInit] persist failed applied={presetInitialization.AppliedRecommendation} scheme={presetInitialization.FinalScheme} adaptiveSignal={presetInitialization.RecommendationHasAdaptiveSignal} reason={presetInitialization.RecommendationReason} error={ex.Message}");

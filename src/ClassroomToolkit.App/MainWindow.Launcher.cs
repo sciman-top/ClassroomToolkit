@@ -12,6 +12,7 @@ using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.App.UI.Themes;
+using ClassroomToolkit.App.Dialogs;
 
 namespace ClassroomToolkit.App;
 

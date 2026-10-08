@@ -76,7 +76,7 @@ internal static class CustomCursors
         {
             cursor.Dispose();
         }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(caughtEx))
         {
             // Ignore release failures.
         }
@@ -93,7 +93,7 @@ internal static class CustomCursors
                 File.Delete(tempPath);
             }
         }
-        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
+        catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(caughtEx))
         {
             // Ignore cleanup failures; process-exit sweep will retry.
         }
@@ -509,7 +509,7 @@ internal static class CustomCursors
                     File.Delete(path);
                 }
             }
-            catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandlingPolicy.IsNonFatal(caughtEx))
+            catch (Exception caughtEx) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(caughtEx))
             {
                 // Ignore cleanup failures.
             }

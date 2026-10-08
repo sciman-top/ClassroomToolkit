@@ -22,12 +22,6 @@ internal readonly record struct LauncherAutoExitTimerPlan(
     bool ShouldStart,
     TimeSpan Interval);
 
-internal static class RollCallRuntimeDefaults
-{
-    internal static readonly DateTime UnsetTimestampUtc = DateTime.MinValue;
-    internal const int ClassSwitchSuppressMs = 250;
-}
-
 internal static class LauncherRuntimePolicies
 {
     internal static bool ShouldLog(LauncherWindowRuntimeSelectionReason reason)

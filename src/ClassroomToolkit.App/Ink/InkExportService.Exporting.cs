@@ -42,7 +42,7 @@ public sealed partial class InkExportService
         {
             pdfDoc = PdfDocumentHost.Open(sourcePath);
         }
-        catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             if (manifestDirty)
             {

@@ -40,7 +40,7 @@ internal sealed class RelayCommand : ICommand
             {
                 ((EventHandler)handler)(this, EventArgs.Empty);
             }
-            catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
+            catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
             {
                 System.Diagnostics.Debug.WriteLine($"RelayCommand: CanExecuteChanged callback failed: {ex.Message}");
             }

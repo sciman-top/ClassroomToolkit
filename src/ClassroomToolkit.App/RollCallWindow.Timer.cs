@@ -2,6 +2,7 @@ using System;
 using System.Media;
 using System.Windows;
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.App.Dialogs;
 
 namespace ClassroomToolkit.App;
 
