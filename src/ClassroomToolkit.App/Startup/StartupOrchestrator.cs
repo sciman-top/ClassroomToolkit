@@ -8,32 +8,39 @@ using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.Services.Compatibility;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace ClassroomToolkit.App.Startup;
 
 internal sealed class StartupOrchestrator
 {
-    private readonly IServiceProvider _services;
+    private readonly AppSettings _settings;
+    private readonly AppSettingsService _settingsService;
+    private readonly IConfigurationService _configuration;
     private readonly string _appDataDirectory;
     private readonly IDictionary _appProperties;
     private readonly string _startupWarningShownPropertyKey;
     private readonly Action<Exception, string> _logException;
 
     internal StartupOrchestrator(
-        IServiceProvider services,
+        AppSettings settings,
+        AppSettingsService settingsService,
+        IConfigurationService configuration,
         string appDataDirectory,
         IDictionary appProperties,
         string startupWarningShownPropertyKey,
         Action<Exception, string> logException)
     {
-        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(settingsService);
+        ArgumentNullException.ThrowIfNull(configuration);
         ArgumentException.ThrowIfNullOrWhiteSpace(appDataDirectory);
         ArgumentNullException.ThrowIfNull(appProperties);
         ArgumentException.ThrowIfNullOrWhiteSpace(startupWarningShownPropertyKey);
         ArgumentNullException.ThrowIfNull(logException);
 
-        _services = services;
+        _settings = settings;
+        _settingsService = settingsService;
+        _configuration = configuration;
         _appDataDirectory = appDataDirectory;
         _appProperties = appProperties;
         _startupWarningShownPropertyKey = startupWarningShownPropertyKey;
@@ -45,16 +52,15 @@ internal sealed class StartupOrchestrator
         var settingsPath = ResolveStartupSettingsPath();
         var startupCompatibility = CollectStartupCompatibilityReport(settingsPath);
         var startupCompatibilityReportPath = PersistStartupCompatibilityReport(startupCompatibility);
-        var settings = _services.GetService<AppSettings>();
         var autoRemediation = StartupCompatibilityAutoRemediationPolicy.Apply(
             startupCompatibility,
-            settings,
+            _settings,
             settingsPath);
-        if (autoRemediation.HasSettingsChanges && settings != null)
+        if (autoRemediation.HasSettingsChanges)
         {
             try
             {
-                _services.GetService<AppSettingsService>()?.Save(settings);
+                _settingsService.Save(_settings);
                 Debug.WriteLine(
                     $"[StartupCompatibility] Auto remediation applied: {string.Join(" | ", autoRemediation.AppliedActions)}");
             }
@@ -76,7 +82,7 @@ internal sealed class StartupOrchestrator
 
         var visibleWarningReport = StartupDiagnosticsPolicies.FilterWarnings(
             startupCompatibility,
-            settings?.StartupCompatibilitySuppressedIssueCodes);
+            _settings.StartupCompatibilitySuppressedIssueCodes);
         if (visibleWarningReport.HasWarnings)
         {
             _appProperties[_startupWarningShownPropertyKey] = true;
@@ -97,15 +103,15 @@ internal sealed class StartupOrchestrator
                 startupCompatibilityReportPath,
                 diagnosticsPayload);
             _ = dialog.SafeShowDialog();
-            if (dialog.SuppressCurrentIssues && settings != null)
+            if (dialog.SuppressCurrentIssues)
             {
-                settings.StartupCompatibilitySuppressedIssueCodes =
+                _settings.StartupCompatibilitySuppressedIssueCodes =
                     StartupDiagnosticsPolicies.MergeSuppressedWarningCodes(
-                        settings.StartupCompatibilitySuppressedIssueCodes,
+                        _settings.StartupCompatibilitySuppressedIssueCodes,
                         visibleWarningReport);
                 try
                 {
-                    _services.GetService<AppSettingsService>()?.Save(settings);
+                    _settingsService.Save(_settings);
                 }
                 catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
                 {
@@ -119,9 +125,8 @@ internal sealed class StartupOrchestrator
 
     private string ResolveStartupSettingsPath()
     {
-        var configuration = _services.GetService<IConfigurationService>();
-        return configuration?.SettingsDocumentPath
-            ?? configuration?.SettingsIniPath
+        return _configuration.SettingsDocumentPath
+            ?? _configuration.SettingsIniPath
             ?? Path.Combine(_appDataDirectory, "settings.json");
     }
 
@@ -129,10 +134,9 @@ internal sealed class StartupOrchestrator
     {
         try
         {
-            var settings = _services.GetService<AppSettings>();
             return StartupCompatibilityProbe.Collect(
                 settingsPath,
-                settings?.PresentationClassifierOverridesJson);
+                _settings.PresentationClassifierOverridesJson);
         }
         catch (Exception ex) when (AppGlobalExceptionHandlingPolicy.IsNonFatal(ex))
         {

@@ -12,6 +12,7 @@ using ClassroomToolkit.App.Diagnostics;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Startup;
+using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.Infra.Logging;
 using ClassroomToolkit.App.UI.Themes;
 
@@ -76,9 +77,12 @@ public partial class App : WpfApplication
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         var services = _services ?? throw new InvalidOperationException("ServiceProvider is not configured.");
+        var settings = services.GetRequiredService<AppSettings>();
 
         var startupOrchestrator = new StartupOrchestrator(
-            services,
+            settings,
+            services.GetRequiredService<AppSettingsService>(),
+            services.GetRequiredService<IConfigurationService>(),
             AppDataDirectory,
             Properties,
             StartupCompatibilityWarningShownPropertyKey,
@@ -89,7 +93,6 @@ public partial class App : WpfApplication
             return;
         }
 
-        var settings = services.GetRequiredService<AppSettings>();
         var themeManager = services.GetRequiredService<ThemeManager>();
         themeManager.Apply(ThemePreferenceService.Parse(settings.UiTheme));
 
