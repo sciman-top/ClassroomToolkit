@@ -29,9 +29,6 @@ public class GlobalHookService : IDisposable
             SuppressWhenMatched = true
         };
 
-    [SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based event is part of the existing app contract.")]
-    public event Action? HookUnavailable;
-
     public int ResidualHookCount
     {
         get
@@ -70,7 +67,6 @@ public class GlobalHookService : IDisposable
 
         if (bindings.Length == 0)
         {
-            NotifyHookUnavailable();
             return Task.FromResult(false);
         }
 
@@ -119,7 +115,6 @@ public class GlobalHookService : IDisposable
                 {
                     Debug.WriteLine($"[GlobalHookService] Start hook failed: {ex.GetType().Name} - {ex.Message}");
                     CleanupHooks(startedHooks, callback);
-                    NotifyHookUnavailable();
                     return false;
                 }
 
@@ -132,7 +127,6 @@ public class GlobalHookService : IDisposable
                 if (!hook.IsActive)
                 {
                     CleanupHooks(startedHooks, callback);
-                    NotifyHookUnavailable();
                     return false;
                 }
             }
@@ -155,7 +149,6 @@ public class GlobalHookService : IDisposable
         {
             Debug.WriteLine($"[GlobalHookService] Register bindings failed: {ex.GetType().Name} - {ex.Message}");
             CleanupHooks(startedHooks, callback);
-            NotifyHookUnavailable();
             return false;
         }
     }
@@ -324,24 +317,4 @@ public class GlobalHookService : IDisposable
         }
     }
 
-    private void NotifyHookUnavailable()
-    {
-        var handlers = HookUnavailable?.GetInvocationList();
-        if (handlers == null)
-        {
-            return;
-        }
-
-        foreach (var callback in handlers)
-        {
-            try
-            {
-                ((Action)callback)();
-            }
-            catch (Exception ex) when (IsNonFatal(ex))
-            {
-                Debug.WriteLine($"[GlobalHookService] HookUnavailable callback failed: {ex.GetType().Name} - {ex.Message}");
-            }
-        }
-    }
 }

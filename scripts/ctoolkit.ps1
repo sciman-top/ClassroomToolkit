@@ -1,4 +1,4 @@
-﻿﻿param(
+﻿param(
     [switch]$SkipTests,
     [switch]$BrushBaseline,
     [ValidateSet("quick", "standard", "full")]
@@ -13,106 +13,40 @@ if (Test-Path -LiteralPath $environmentBootstrap) {
     . $environmentBootstrap
 }
 
-function Assert-Command {
-    param(
-        [string]$Name,
-        [string]$Hint
-    )
-    if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
-        throw "缺少命令: $Name。$Hint"
-    }
-}
-
 function Resolve-PowerShellExecutable {
+    $pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
+    if ($pwsh) { return [string]$pwsh.Source }
+
     if (-not [string]::IsNullOrWhiteSpace($env:CODEX_ALLOW_WINDOWS_POWERSHELL)) {
         $legacy = Get-Command powershell -ErrorAction SilentlyContinue
         if ($legacy) { return [string]$legacy.Source }
     }
 
-    $programFilesPwsh = if (-not [string]::IsNullOrWhiteSpace($env:ProgramFiles)) {
-        Join-Path $env:ProgramFiles "PowerShell\7\pwsh.exe"
-    } else {
-        $null
-    }
-    if (-not [string]::IsNullOrWhiteSpace($programFilesPwsh) -and (Test-Path -LiteralPath $programFilesPwsh)) {
-        return $programFilesPwsh
-    }
-
-    $pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
-    if ($pwsh) { return [string]$pwsh.Source }
-
-    $legacyFallback = Get-Command powershell -ErrorAction SilentlyContinue
-    if ($legacyFallback) { return [string]$legacyFallback.Source }
-
     throw "缺少命令: pwsh。请安装 PowerShell 7，或显式设置 CODEX_ALLOW_WINDOWS_POWERSHELL=1 后回退到 Windows PowerShell。"
 }
 
-function Invoke-DotnetWithRetry {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string[]]$Arguments,
-        [int]$MaxAttempts = 3,
-        [int]$RetryDelaySeconds = 2
-    )
-
-    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
-        & dotnet @Arguments
-        if ($LASTEXITCODE -eq 0) {
-            return
-        }
-
-        if ($attempt -ge $MaxAttempts) {
-            throw "dotnet $($Arguments -join ' ') failed after $MaxAttempts attempts (exit=$LASTEXITCODE)."
-        }
-
-        Write-Host "dotnet $($Arguments -join ' ') 失败，$RetryDelaySeconds 秒后重试 ($attempt/$MaxAttempts)..." -ForegroundColor Yellow
-        Start-Sleep -Seconds $RetryDelaySeconds
-    }
+if ($PSVersionTable.PSVersion.Major -lt 7 -and [string]::IsNullOrWhiteSpace($env:CODEX_ALLOW_WINDOWS_POWERSHELL)) {
+    throw "请使用 PowerShell 7；仅在维护明确的 Windows PowerShell 兼容场景时设置 CODEX_ALLOW_WINDOWS_POWERSHELL=1。"
 }
 
-Write-Host "==> 环境检测" -ForegroundColor Cyan
-Assert-Command -Name dotnet -Hint "请安装 .NET SDK。"
-Assert-Command -Name git -Hint "请安装 Git。"
-$powerShellExe = Resolve-PowerShellExecutable
-
-$hasSupportedSdk = $false
-$sdks = & dotnet --list-sdks 2>$null
-foreach ($sdk in $sdks) {
-    $line = "$sdk".Trim()
-    if ($line -match "^10\.0\." -or $line -match "^8\.0\.") {
-        $hasSupportedSdk = $true
-        break
-    }
-}
-if (-not $hasSupportedSdk) {
-    throw "未检测到受支持的 .NET SDK（需 10.0.x，兼容 8.0.x）。"
+$powerShellExe = $null
+if (-not $SkipTests -or $BrushBaseline) {
+    $powerShellExe = Resolve-PowerShellExecutable
 }
 
-Write-Host "==> 还原依赖" -ForegroundColor Cyan
-Invoke-DotnetWithRetry -Arguments @("restore")
-
-Write-Host "==> 构建" -ForegroundColor Cyan
-Invoke-DotnetWithRetry -Arguments @("build", ".\ClassroomToolkit.sln", "-c", "Debug", "-m:1")
-
-if (-not $SkipTests) {
-    Write-Host "==> 测试" -ForegroundColor Cyan
-    $stableTestsScript = Join-Path $PSScriptRoot "validation/run-stable-tests.ps1"
-    if (Test-Path -LiteralPath $stableTestsScript) {
-        & $powerShellExe -NoProfile -ExecutionPolicy Bypass -File $stableTestsScript -Configuration Debug -SkipBuild -Profile $StableTestProfile
-        if ($LASTEXITCODE -ne 0) {
-            throw "稳定测试脚本执行失败，退出码: $LASTEXITCODE"
-        }
+if ($SkipTests) {
+    Write-Host "==> 构建（跳过测试）" -ForegroundColor Cyan
+    & dotnet build ".\ClassroomToolkit.sln" -c Debug -m:1
+    if ($LASTEXITCODE -ne 0) {
+        throw "解决方案构建失败，退出码: $LASTEXITCODE"
     }
-    else {
-        Write-Host "未检测到稳定测试脚本，回退到 dotnet test。" -ForegroundColor Yellow
-        Invoke-DotnetWithRetry -Arguments @(
-            "test",
-            ".\tests\ClassroomToolkit.Tests\ClassroomToolkit.Tests.csproj",
-            "-c",
-            "Debug",
-            "--no-build",
-            "-m:1"
-        )
+}
+else {
+    Write-Host "==> 标准质量门禁" -ForegroundColor Cyan
+    $qualityGateScript = Join-Path $PSScriptRoot "quality/run-local-quality-gates.ps1"
+    & $powerShellExe -NoProfile -ExecutionPolicy Bypass -File $qualityGateScript -Profile $StableTestProfile -Configuration Debug
+    if ($LASTEXITCODE -ne 0) {
+        throw "标准质量门禁失败，退出码: $LASTEXITCODE"
     }
 }
 

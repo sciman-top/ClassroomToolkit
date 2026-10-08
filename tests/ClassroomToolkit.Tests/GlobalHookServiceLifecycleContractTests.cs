@@ -7,7 +7,7 @@ namespace ClassroomToolkit.Tests;
 /// <summary>
 /// GlobalHookService 注册-回滚生命周期契约的行为级验证：使用注入的假句柄
 /// 替代真实 WH_KEYBOARD_LL 安装，逐路径断言"已启动钩子必须被回滚、回调必须
-/// 被解除、降级通知必须按路径发出"。
+/// 被解除，释放失败时残留句柄必须可重试清理"。
 /// </summary>
 [Trait("Gate", "CoreContract")]
 public sealed class GlobalHookServiceLifecycleContractTests
@@ -24,9 +24,7 @@ public sealed class GlobalHookServiceLifecycleContractTests
         var fake = new FakeKeyboardHook { BoundBinding = binding, ThrowOnDispose = stopFails };
         service.HookFactory = _ => fake;
         var checks = 0;
-        var notifications = 0;
         var callbacks = 0;
-        service.HookUnavailable += () => notifications++;
 
         var started = await service.RegisterHookAsync(
             bindings: [binding],
@@ -38,7 +36,6 @@ public sealed class GlobalHookServiceLifecycleContractTests
         started.Should().BeFalse();
         fake.Raise(binding);
         callbacks.Should().Be(0);
-        notifications.Should().Be(1);
         fake.IsActive.Should().Be(stopFails);
         fake.Disposed.Should().Be(!stopFails);
         service.ResidualHookCount.Should().Be(stopFails ? 1 : 0);
@@ -49,7 +46,7 @@ public sealed class GlobalHookServiceLifecycleContractTests
     }
 
     [Fact]
-    public async Task RegisterHookAsync_ShouldRollbackStartedHooksAndNotify_WhenLaterHookStartThrows()
+    public async Task RegisterHookAsync_ShouldRollbackStartedHooks_WhenLaterHookStartThrows()
     {
         var service = new GlobalHookService();
         var fakes = new List<FakeKeyboardHook>();
@@ -64,8 +61,6 @@ public sealed class GlobalHookServiceLifecycleContractTests
             fakes.Add(fake);
             return fake;
         };
-        var unavailableCount = 0;
-        service.HookUnavailable += () => unavailableCount++;
         var callbackInvoked = false;
         try
         {
@@ -79,7 +74,6 @@ public sealed class GlobalHookServiceLifecycleContractTests
             fakes[0].Disposed.Should().BeTrue("已启动的钩子必须在后续钩子启动失败时被回滚释放");
             fakes[0].Raise(fakes[0].BoundBinding!);
             callbackInvoked.Should().BeFalse("回滚必须解除已启动钩子上的回调");
-            unavailableCount.Should().Be(1, "启动失败属于降级路径，必须通知 HookUnavailable");
         }
         finally
         {
@@ -88,7 +82,7 @@ public sealed class GlobalHookServiceLifecycleContractTests
     }
 
     [Fact]
-    public async Task RegisterHookAsync_ShouldRollbackStartedHooksAndNotify_WhenLaterHookIsInactive()
+    public async Task RegisterHookAsync_ShouldRollbackStartedHooks_WhenLaterHookIsInactive()
     {
         var service = new GlobalHookService();
         var fakes = new List<FakeKeyboardHook>();
@@ -103,8 +97,6 @@ public sealed class GlobalHookServiceLifecycleContractTests
             fakes.Add(fake);
             return fake;
         };
-        var unavailableCount = 0;
-        service.HookUnavailable += () => unavailableCount++;
         try
         {
             var started = await service.RegisterHookAsync(
@@ -114,7 +106,6 @@ public sealed class GlobalHookServiceLifecycleContractTests
 
             started.Should().BeFalse();
             fakes[0].Disposed.Should().BeTrue("StartAsync 完成但未激活的钩子必须触发整体回滚");
-            unavailableCount.Should().Be(1);
         }
         finally
         {
@@ -123,7 +114,7 @@ public sealed class GlobalHookServiceLifecycleContractTests
     }
 
     [Fact]
-    public async Task RegisterHookAsync_ShouldRollbackWithoutNotify_WhenKeepActiveTurnsFalseMidRegistration()
+    public async Task RegisterHookAsync_ShouldRollback_WhenKeepActiveTurnsFalseMidRegistration()
     {
         var service = new GlobalHookService();
         var fakes = new List<FakeKeyboardHook>();
@@ -134,8 +125,6 @@ public sealed class GlobalHookServiceLifecycleContractTests
             fakes.Add(fake);
             return fake;
         };
-        var unavailableCount = 0;
-        service.HookUnavailable += () => unavailableCount++;
         try
         {
             var started = await service.RegisterHookAsync(
@@ -146,7 +135,6 @@ public sealed class GlobalHookServiceLifecycleContractTests
             started.Should().BeFalse();
             fakes.Should().HaveCount(1);
             fakes[0].Disposed.Should().BeTrue("会话已失效时第一个钩子也必须被清理");
-            unavailableCount.Should().Be(0, "主动停止不是钩子故障，不应触发 HookUnavailable 降级");
         }
         finally
         {
@@ -155,7 +143,7 @@ public sealed class GlobalHookServiceLifecycleContractTests
     }
 
     [Fact]
-    public async Task RegisterHookAsync_ShouldCleanupAndNotify_WhenBindingEnumerationThrows()
+    public async Task RegisterHookAsync_ShouldCleanup_WhenBindingEnumerationThrows()
     {
         var service = new GlobalHookService();
         var fakes = new List<FakeKeyboardHook>();
@@ -165,9 +153,6 @@ public sealed class GlobalHookServiceLifecycleContractTests
             fakes.Add(fake);
             return fake;
         };
-        var unavailableCount = 0;
-        service.HookUnavailable += () => unavailableCount++;
-
         static async Task<bool> EnumerateThrowing(GlobalHookService target, List<FakeKeyboardHook> created)
         {
             return await target.RegisterHookAsync(
@@ -182,7 +167,6 @@ public sealed class GlobalHookServiceLifecycleContractTests
             started.Should().BeFalse();
             fakes.Should().HaveCount(1);
             fakes[0].Disposed.Should().BeTrue("枚举中断时已启动的钩子必须被清理");
-            unavailableCount.Should().Be(1);
         }
         finally
         {

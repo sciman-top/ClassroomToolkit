@@ -13,7 +13,6 @@
 ## P3
 
 - WPS 后台派发生命周期已有行为 seam，4 个字符串契约已退役；剩余源码形状契约主要保护 Win32 native unhook、阻塞等待和少量尚无可注入 seam 的安全分支，只在建立对应行为证据后局部退役。
-- `GlobalHookService.HookUnavailable` 事件无生产订阅者（仅测试订阅并断言隔离行为）；退役需连同 `GlobalHookServiceLifecycleContractTests`（Gate=CoreContract）一起评估，属 hook 生命周期高风险切片。
 
 ## 暂缓
 

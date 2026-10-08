@@ -1,7 +1,6 @@
 using ClassroomToolkit.Services.Input;
 using ClassroomToolkit.Interop.Presentation;
 using AwesomeAssertions;
-using System.Reflection;
 
 namespace ClassroomToolkit.Tests;
 
@@ -112,49 +111,4 @@ public sealed class GlobalHookServiceTests
         act.Should().NotThrow();
     }
 
-    [Fact]
-    public void NotifyHookUnavailable_ShouldNotBlockOtherSubscribers_WhenRecoverableCallbackThrows()
-    {
-        var service = new GlobalHookService();
-        var callbackCount = 0;
-        service.HookUnavailable += () => throw new InvalidOperationException("callback-boom");
-        service.HookUnavailable += () => callbackCount++;
-
-        try
-        {
-            InvokeNotifyHookUnavailable(service);
-            callbackCount.Should().Be(1);
-        }
-        finally
-        {
-            service.Dispose();
-        }
-    }
-
-    [Fact]
-    public void NotifyHookUnavailable_ShouldRethrowFatalCallbackException()
-    {
-        var service = new GlobalHookService();
-        service.HookUnavailable += () => throw new BadImageFormatException("fatal-callback");
-
-        try
-        {
-            var act = () => InvokeNotifyHookUnavailable(service);
-            act.Should().Throw<TargetInvocationException>()
-                .Where(ex => ex.InnerException is BadImageFormatException);
-        }
-        finally
-        {
-            service.Dispose();
-        }
-    }
-
-    private static void InvokeNotifyHookUnavailable(GlobalHookService service)
-    {
-        var method = typeof(GlobalHookService).GetMethod(
-            "NotifyHookUnavailable",
-            BindingFlags.Instance | BindingFlags.NonPublic);
-        method.Should().NotBeNull();
-        method!.Invoke(service, null);
-    }
 }
