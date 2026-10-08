@@ -25,27 +25,6 @@ internal static class WpsInputModeDefaults
     internal const string Message = "message";
 }
 
-internal static class AppFlags
-{
-    public static bool UseSqliteBusinessStore { get; } = ReadFlag("CTOOLKIT_USE_SQLITE_BUSINESS_STORE", false);
-    public static bool EnableExperimentalSqliteBackend { get; } = ReadFlag("CTOOLKIT_ENABLE_EXPERIMENTAL_SQLITE_BACKEND", false);
-
-    private static bool ReadFlag(string key, bool defaultValue)
-    {
-        var raw = Environment.GetEnvironmentVariable(key);
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            return defaultValue;
-        }
-
-        raw = raw.Trim();
-        return string.Equals(raw, "1", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(raw, "true", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(raw, "on", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(raw, "yes", StringComparison.OrdinalIgnoreCase);
-    }
-}
-
 internal readonly record struct RollCallSettingsPatch(
     bool RollCallShowId,
     bool RollCallShowName,

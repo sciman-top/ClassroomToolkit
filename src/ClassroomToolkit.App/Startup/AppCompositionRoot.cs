@@ -62,11 +62,11 @@ internal static class AppCompositionRoot
         services.AddSingleton<IRollCallWorkbookStore>(_ =>
         {
             var store = RollCallWorkbookStoreResolver.Create(
-                AppFlags.UseSqliteBusinessStore,
-                AppFlags.EnableExperimentalSqliteBackend,
+                StorageBackendFeatureFlags.PreferSqlite,
+                StorageBackendFeatureFlags.ExperimentalSqliteEnabled,
                 out var selectedBackend);
             Debug.WriteLine(
-                $"[Storage] StudentWorkbook backend selected={selectedBackend}, preferSqlite={AppFlags.UseSqliteBusinessStore}, experimentalSqlite={AppFlags.EnableExperimentalSqliteBackend}");
+                $"[Storage] StudentWorkbook backend selected={selectedBackend}, preferSqlite={StorageBackendFeatureFlags.PreferSqlite}, experimentalSqlite={StorageBackendFeatureFlags.ExperimentalSqliteEnabled}");
             return store;
         });
     }
@@ -120,10 +120,10 @@ internal static class AppCompositionRoot
         services.AddSingleton<ClassroomToolkit.Services.Speech.SpeechService>();
         services.AddSingleton<Ink.InkPersistenceService>();
 
-        var useInkHistorySqlite = AppFlags.UseSqliteBusinessStore
-            && BusinessStorageBackendCapabilityPolicy.IsSqliteAvailable(AppFlags.EnableExperimentalSqliteBackend);
+        var useInkHistorySqlite = StorageBackendFeatureFlags.PreferSqlite
+            && BusinessStorageBackendCapabilityPolicy.IsSqliteAvailable(StorageBackendFeatureFlags.ExperimentalSqliteEnabled);
         Debug.WriteLine(
-            $"[Storage] InkHistory backend selected={(useInkHistorySqlite ? "Sqlite" : "Sidecar")}, preferSqlite={AppFlags.UseSqliteBusinessStore}, experimentalSqlite={AppFlags.EnableExperimentalSqliteBackend}");
+            $"[Storage] InkHistory backend selected={(useInkHistorySqlite ? "Sqlite" : "Sidecar")}, preferSqlite={StorageBackendFeatureFlags.PreferSqlite}, experimentalSqlite={StorageBackendFeatureFlags.ExperimentalSqliteEnabled}");
         if (useInkHistorySqlite)
         {
             services.AddSingleton<IInkHistorySnapshotStore>(provider =>
