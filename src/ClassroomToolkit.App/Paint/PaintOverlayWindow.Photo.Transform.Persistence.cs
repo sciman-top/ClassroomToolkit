@@ -40,7 +40,7 @@ public partial class PaintOverlayWindow
             _photoFullscreen = true;
             SetPhotoWindowMode(fullscreen: true);
 
-            if (_photoDocumentIsPdf && _pdfDocument != null)
+            if (_photoDocumentIsPdf && _pdfDocumentSession.HasDocument)
             {
                 RenderPdfPage(_currentPageIndex);
             }

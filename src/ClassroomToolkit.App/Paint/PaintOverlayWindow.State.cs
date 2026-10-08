@@ -42,7 +42,6 @@ public partial class PaintOverlayWindow : Window
     private const int PhotoRenderQualityRestoreDelayMs = PhotoTransformTimingDefaults.RenderQualityRestoreDelayMs;
     private const int WpsNavDebounceMs = PresentationRuntimeDefaults.WpsNavDebounceMs;
     private const double PdfDefaultDpi = PhotoDocumentRuntimeDefaults.PdfDefaultDpi;
-    private const int PdfCacheLimit = PhotoDocumentRuntimeDefaults.PdfCacheLimit;
     private const int NeighborPageCacheLimit = PhotoDocumentRuntimeDefaults.NeighborPageCacheLimit;
 
     private IntPtr _hwnd;
@@ -166,14 +165,9 @@ public partial class PaintOverlayWindow : Window
     private bool _photoRestoreFullscreenPending;
     private int _photoFullscreenBoundsToken;
     private bool _photoDocumentIsPdf;
-    private IPdfDocumentHost? _pdfDocument;
-    private int _pdfPageCount;
+    private readonly PdfDocumentSession _pdfDocumentSession = new();
     private int _lastPdfNavigationDirection;
-    private readonly Dictionary<int, BitmapSource> _pdfPageCache = new();
-    private readonly LinkedList<int> _pdfPageOrder = new();
-    private readonly object _pdfRenderLock = new();
     private readonly LatestRequestCoordinator<PdfPrefetchRequest> _pdfPrefetchRequests = new();
-    private readonly HashSet<int> _pdfPinnedPages = new();
     private readonly LatestRequestCoordinator<int[]> _pdfVisiblePrefetchRequests = new();
     private int _photoLoadToken;
 

@@ -157,7 +157,7 @@ public partial class PaintOverlayWindow
     {
         if (_photoDocumentIsPdf)
         {
-            return _pdfPageCount;
+            return _pdfDocumentSession.PageCount;
         }
         return _photoSequencePaths.Count;
     }

@@ -126,14 +126,7 @@ public partial class PaintOverlayWindow
             {
                 SchedulePdfVisiblePrefetch(missingPages);
             }
-            lock (_pdfRenderLock)
-            {
-                _pdfPinnedPages.Clear();
-                foreach (var page in visiblePages.Select(p => p.PageIndex).Distinct())
-                {
-                    _pdfPinnedPages.Add(page);
-                }
-            }
+            _pdfDocumentSession.SetPinnedPages(visiblePages.Select(p => p.PageIndex).Distinct());
         }
         if (!_photoDocumentIsPdf)
         {

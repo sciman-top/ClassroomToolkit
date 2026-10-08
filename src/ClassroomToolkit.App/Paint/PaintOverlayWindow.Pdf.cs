@@ -17,8 +17,6 @@ public partial class PaintOverlayWindow
 {
     #region PDF Loading
 
-    private const long PdfCacheMaxBytes = PhotoDocumentRuntimeDefaults.PdfCacheMaxBytes;
-    private long _pdfCacheCurrentBytes;
     private long _pdfRenderRequestId;
 
     private bool IsPdfModeActive()
@@ -28,7 +26,7 @@ public partial class PaintOverlayWindow
 
     private bool HasPdfDocument()
     {
-        return _pdfDocument != null && _pdfPageCount > 0;
+        return _pdfDocumentSession.HasDocument;
     }
 
     private bool CanUsePdfDocument()
@@ -140,34 +138,17 @@ public partial class PaintOverlayWindow
 
     private void ApplyPdfDocument(IPdfDocumentHost document, int pageCount)
     {
-        lock (_pdfRenderLock)
-        {
-            _pdfDocument = document;
-            _pdfPageCount = pageCount;
-            _pdfPageCache.Clear();
-            _pdfCacheCurrentBytes = 0;
-            _pdfPageOrder.Clear();
-            _pdfPinnedPages.Clear();
-            _pdfPrefetchRequests.Invalidate();
-            _pdfVisiblePrefetchRequests.Invalidate();
-        }
+        _pdfPrefetchRequests.Invalidate();
+        _pdfVisiblePrefetchRequests.Invalidate();
+        _pdfDocumentSession.SetDocument(document, pageCount);
     }
 
     private void ClosePdfDocument()
     {
         Interlocked.Increment(ref _pdfRenderRequestId);
-        lock (_pdfRenderLock)
-        {
-            _pdfDocument?.Dispose();
-            _pdfDocument = null;
-            _pdfPageCount = 0;
-            _pdfPageCache.Clear();
-            _pdfCacheCurrentBytes = 0;
-            _pdfPageOrder.Clear();
-            _pdfPinnedPages.Clear();
-            _pdfPrefetchRequests.Invalidate();
-            _pdfVisiblePrefetchRequests.Invalidate();
-        }
+        _pdfPrefetchRequests.Invalidate();
+        _pdfVisiblePrefetchRequests.Invalidate();
+        _pdfDocumentSession.Close();
     }
 
     #endregion
@@ -296,45 +277,12 @@ public partial class PaintOverlayWindow
         out BitmapSource? bitmap,
         int tryEnterTimeoutMs = PhotoDocumentRuntimeDefaults.PdfCacheTryEnterTimeoutMs)
     {
-        bitmap = null;
-        if (!Monitor.TryEnter(_pdfRenderLock, Math.Max(0, tryEnterTimeoutMs)))
-        {
-            return false;
-        }
-        try
-        {
-            if (_pdfDocument == null || _pdfPageCount <= 0)
-            {
-                return false;
-            }
-            var safeIndex = Math.Clamp(pageIndex, 1, _pdfPageCount);
-            if (!_pdfPageCache.TryGetValue(safeIndex, out var cached))
-            {
-                return false;
-            }
-            TouchPdfCacheUnsafe(safeIndex);
-            bitmap = cached;
-            return true;
-        }
-        finally
-        {
-            Monitor.Exit(_pdfRenderLock);
-        }
+        return _pdfDocumentSession.TryGetCachedPageBitmap(pageIndex, out bitmap, tryEnterTimeoutMs);
     }
 
     private bool TryGetPdfPageSize(int pageIndex, out System.Windows.Size size)
     {
-        size = default;
-        if (_pdfDocument == null)
-        {
-            return false;
-        }
-        if (!_pdfDocument.TryGetPageSize(pageIndex, out var sizeF))
-        {
-            return false;
-        }
-        size = new System.Windows.Size(sizeF.Width * 96.0 / 72.0, sizeF.Height * 96.0 / 72.0);
-        return size.Width > 0 && size.Height > 0;
+        return _pdfDocumentSession.TryGetPageSize(pageIndex, out size);
     }
 
     private double GetScaledPdfPageHeight(int pageIndex)
@@ -356,74 +304,7 @@ public partial class PaintOverlayWindow
 
     private BitmapSource? GetPdfPageBitmap(int pageIndex)
     {
-        lock (_pdfRenderLock)
-        {
-            if (_pdfDocument == null || _pdfPageCount <= 0)
-            {
-                return null;
-            }
-            var safeIndex = Math.Clamp(pageIndex, 1, _pdfPageCount);
-            if (_pdfPageCache.TryGetValue(safeIndex, out var cached))
-            {
-                TouchPdfCacheUnsafe(safeIndex);
-                return cached;
-            }
-            var rendered = _pdfDocument.RenderPage(safeIndex, PdfDefaultDpi);
-            if (rendered == null)
-            {
-                return null;
-            }
-            _pdfPageCache[safeIndex] = rendered;
-            _pdfCacheCurrentBytes += EstimateBitmapBytes(rendered);
-            TouchPdfCacheUnsafe(safeIndex);
-            TrimPdfCacheUnsafe();
-            return rendered;
-        }
-    }
-
-    #endregion
-
-    #region PDF Cache Management
-
-    private void TouchPdfCacheUnsafe(int pageIndex)
-    {
-        var node = _pdfPageOrder.Find(pageIndex);
-        if (node != null)
-        {
-            _pdfPageOrder.Remove(node);
-        }
-        _pdfPageOrder.AddLast(pageIndex);
-    }
-
-    private void TrimPdfCacheUnsafe()
-    {
-        while (_pdfPageOrder.Count > PdfCacheLimit || _pdfCacheCurrentBytes > PdfCacheMaxBytes)
-        {
-            var node = _pdfPageOrder.First;
-            while (node != null && _pdfPinnedPages.Contains(node.Value))
-            {
-                node = node.Next;
-            }
-            if (node == null)
-            {
-                break;
-            }
-            if (_pdfPageCache.TryGetValue(node.Value, out var bitmap))
-            {
-                _pdfCacheCurrentBytes -= EstimateBitmapBytes(bitmap);
-            }
-            _pdfPageOrder.Remove(node);
-            _pdfPageCache.Remove(node.Value);
-        }
-
-        System.Diagnostics.Debug.WriteLine($"[PdfCache] Count: {_pdfPageOrder.Count}, Bytes: {_pdfCacheCurrentBytes / 1024 / 1024}MB");
-    }
-
-    private static long EstimateBitmapBytes(BitmapSource? bitmap)
-    {
-        if (bitmap == null) return 0;
-        var bytesPerPixel = (bitmap.Format.BitsPerPixel + 7) / 8;
-        return (long)bitmap.PixelWidth * bitmap.PixelHeight * bytesPerPixel;
+        return _pdfDocumentSession.GetPageBitmap(pageIndex, PdfDefaultDpi);
     }
 
     #endregion
@@ -437,7 +318,7 @@ public partial class PaintOverlayWindow
             return false;
         }
         var next = _currentPageIndex + direction;
-        if (next < 1 || next > _pdfPageCount)
+        if (next < 1 || next > _pdfDocumentSession.PageCount)
         {
             return false;  // PDF到边界时返回false，允许跳转到序列中的下一个文件
         }
@@ -530,7 +411,7 @@ public partial class PaintOverlayWindow
             return;
         }
         var unique = pageIndexes
-            .Where(p => p >= 1 && p <= _pdfPageCount)
+            .Where(p => p >= 1 && p <= _pdfDocumentSession.PageCount)
             .Distinct()
             .ToArray();
         if (unique.Length == 0)
@@ -669,7 +550,7 @@ public partial class PaintOverlayWindow
 
     private bool PrefetchPdfPage(int pageIndex, LatestRequestTicket<PdfPrefetchRequest> ticket)
     {
-        if (pageIndex < 1 || pageIndex > _pdfPageCount)
+        if (pageIndex < 1 || pageIndex > _pdfDocumentSession.PageCount)
         {
             return false;
         }
@@ -677,36 +558,11 @@ public partial class PaintOverlayWindow
         {
             return true;
         }
-        if (!Monitor.TryEnter(_pdfRenderLock, PhotoDocumentRuntimeDefaults.PdfPrefetchTryEnterTimeoutMs))
-        {
-            return false;
-        }
-        try
-        {
-            if (!_pdfPrefetchRequests.IsCurrent(ticket) || _pdfDocument == null || _pdfPageCount <= 0)
-            {
-                return false;
-            }
-            if (_pdfPageCache.ContainsKey(pageIndex))
-            {
-                TouchPdfCacheUnsafe(pageIndex);
-                return true;
-            }
-            var rendered = _pdfDocument.RenderPage(pageIndex, PdfDefaultDpi);
-            if (rendered == null)
-            {
-                return false;
-            }
-            _pdfPageCache[pageIndex] = rendered;
-            _pdfCacheCurrentBytes += EstimateBitmapBytes(rendered);
-            TouchPdfCacheUnsafe(pageIndex);
-            TrimPdfCacheUnsafe();
-        }
-        finally
-        {
-            Monitor.Exit(_pdfRenderLock);
-        }
-        return true;
+        return _pdfDocumentSession.TryPrefetchPage(
+            pageIndex,
+            PdfDefaultDpi,
+            PhotoDocumentRuntimeDefaults.PdfPrefetchTryEnterTimeoutMs,
+            () => _pdfPrefetchRequests.IsCurrent(ticket));
     }
 
     #endregion
