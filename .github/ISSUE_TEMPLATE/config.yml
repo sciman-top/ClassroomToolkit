@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 教师使用指南与排查清单
+    url: https://github.com/sciman-top/ClassroomToolkit/blob/main/%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97.md
+    about: 遇到使用疑问、学生表格读取、照片不显示或快捷键设置，请先查阅使用指南
+  - name: 💬 初中物理教研与数字化工具交流群
+    url: https://github.com/sciman-top/ClassroomToolkit#%E4%BA%A4%E6%B5%81%E4%B8%8E%E4%BD%9C%E8%80%85
+    about: 加入 QQ 群（323728546）与其他一线老师交流课堂用法或咨询部署
