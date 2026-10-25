@@ -1,8 +1,9 @@
+using ClassroomToolkit.App.Paint;
 using ClassroomToolkit.App.Session;
 using AwesomeAssertions;
 using Xunit;
 
-namespace ClassroomToolkit.Tests.Session;
+namespace ClassroomToolkit.Tests.Paint;
 
 public sealed class PaintOverlaySessionEffectRunnerTests
 {

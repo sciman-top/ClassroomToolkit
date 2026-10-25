@@ -47,4 +47,23 @@ public sealed class RelocatedDialogsConstructionTests
             autoExit.Close();
         });
     }
+
+    [Fact]
+    public void RelocatedWindows_ShouldConstructAndClose()
+    {
+        WpfStaTestRunner.Run(() =>
+        {
+            WpfStaTestRunner.EnsureApplication();
+
+            var paintSettings = new ClassroomToolkit.App.Paint.PaintSettingsDialog(
+                new ClassroomToolkit.App.Settings.AppSettings());
+            paintSettings.Close();
+
+            var groupOverlay = new ClassroomToolkit.App.RollCall.RollCallGroupOverlayWindow();
+            groupOverlay.Close();
+
+            var launcherBubble = new ClassroomToolkit.App.Launcher.LauncherBubbleWindow();
+            launcherBubble.Close();
+        });
+    }
 }

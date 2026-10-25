@@ -1,7 +1,7 @@
 using AwesomeAssertions;
 using ClassroomToolkit.Interop.Presentation;
 
-namespace ClassroomToolkit.Tests;
+namespace ClassroomToolkit.Tests.Interop;
 
 [Trait("Gate", "CoreContract")]
 public sealed class InteropHookEventDispatchContractTests

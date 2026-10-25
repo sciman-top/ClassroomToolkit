@@ -2,7 +2,7 @@ using AwesomeAssertions;
 using ClassroomToolkit.Interop.Presentation;
 using ClassroomToolkit.Services.Input;
 
-namespace ClassroomToolkit.Tests;
+namespace ClassroomToolkit.Tests.Services;
 
 /// <summary>
 /// GlobalHookService 注册-回滚生命周期契约的行为级验证：使用注入的假句柄

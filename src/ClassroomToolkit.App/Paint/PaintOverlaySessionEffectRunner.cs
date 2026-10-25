@@ -1,7 +1,8 @@
 using System;
 using ClassroomToolkit.App;
+using ClassroomToolkit.App.Session;
 
-namespace ClassroomToolkit.App.Session;
+namespace ClassroomToolkit.App.Paint;
 
 internal sealed class PaintOverlaySessionEffectRunner : IUiSessionEffectRunner
 {
