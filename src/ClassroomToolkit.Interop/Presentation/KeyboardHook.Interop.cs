@@ -30,7 +30,7 @@ public sealed partial class KeyboardHook
 
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll", CharSet = CharSet.Auto)]
-    private static extern short GetKeyState(int nVirtKey);
+    private static extern short GetAsyncKeyState(int vKey);
 
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]

@@ -84,8 +84,11 @@ public static class KeyBindingParser
                         {
                             return false;
                         }
+                        break;
                     }
-                    break;
+                    // 未知 token 必须整体失败：静默丢弃会把含拼写错误的组合键降级为裸键，
+                    // 而注册端 SuppressWhenMatched=true 会把该裸键全局吞掉。
+                    return false;
             }
         }
         if (key == null)

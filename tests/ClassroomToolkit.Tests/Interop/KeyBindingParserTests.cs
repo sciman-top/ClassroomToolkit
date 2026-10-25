@@ -30,4 +30,38 @@ public sealed class KeyBindingParserTests
         ok.Should().BeFalse();
         binding.Should().BeNull();
     }
+
+    [Fact]
+    public void ParseUnknownModifierLikeToken_ShouldFailInsteadOfDroppingToken()
+    {
+        // 拼错的 token 若被静默丢弃，"pgdown+enter" 会降级为裸 Enter 并被全局吞键。
+        var ok = KeyBindingParser.TryParse("pgdown+enter", out var binding);
+        ok.Should().BeFalse();
+        binding.Should().BeNull();
+    }
+
+    [Fact]
+    public void ParseOutOfRangeFunctionKey_ShouldFail()
+    {
+        var ok = KeyBindingParser.TryParse("f13", out var binding);
+        ok.Should().BeFalse();
+        binding.Should().BeNull();
+    }
+
+    [Fact]
+    public void ParseUnknownTokenWithModifier_ShouldFail()
+    {
+        var ok = KeyBindingParser.TryParse("ctrl+xyz", out var binding);
+        ok.Should().BeFalse();
+        binding.Should().BeNull();
+    }
+
+    [Fact]
+    public void ParseFunctionKey_ShouldWork()
+    {
+        var ok = KeyBindingParser.TryParse("ctrl+f5", out var binding);
+        ok.Should().BeTrue();
+        binding!.Key.Should().Be(VirtualKey.F5);
+        binding.Modifiers.Should().Be(KeyModifiers.Control);
+    }
 }

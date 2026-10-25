@@ -134,7 +134,10 @@ public sealed partial class KeyboardHook
 
     private static bool IsKeyDown(VirtualKey key)
     {
-        return (GetKeyState((int)key) & 0x8000) != 0;
+        // LL hook 回调运行在独立线程，GetKeyState 读到的是本线程消息队列的键态
+        // （后台时常为陈旧值，会用错误修饰键覆盖正确跟踪导致热键失效）；
+        // GetAsyncKeyState 反映物理键的异步状态，才是 hook 侧校准的正确来源。
+        return (GetAsyncKeyState((int)key) & 0x8000) != 0;
     }
 
     private KeyModifiers CurrentModifiers()
