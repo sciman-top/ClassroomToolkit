@@ -15,6 +15,7 @@ using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.Infra.Logging;
 using ClassroomToolkit.App.UI.Themes;
 using ClassroomToolkit.App.UI;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App;
 
@@ -51,11 +52,12 @@ public partial class App : WpfApplication
             LogException(ex, "App.OnStartup");
             try
             {
-                System.Windows.MessageBox.Show(
+                // 启动期尚无任何 Window 可作 owner，走 native MB_TOPMOST，
+                // 防止提示被全屏放映或已存在的置顶窗口盖住（表现为"点了没反应"）。
+                TopmostMessageBox.ShowNativeTopmost(
                     $"程序启动失败：{ex.Message}\n\n详细错误已记录到日志文件。",
                     "启动错误",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                    isError: true);
             }
             catch (Exception showEx) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(showEx))
             {
@@ -219,7 +221,18 @@ public partial class App : WpfApplication
             var message = $"程序遇到了未预期的错误 ({source}):\n\n{ex.Message}\n\n详细错误已记录到日志文件。";
             try
             {
-                System.Windows.MessageBox.Show(message, "系统错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                // 主窗口/工具条/气泡常驻 Topmost 且受 watchdog 持续重刷 z-order，
+                // 无 owner 的裸 MessageBox 会被压在下面，教师视角表现为"整个工具卡死"。
+                // 与 ConfirmExitWithoutSavingSettings 同走 owner + 抑制期路径；
+                // 无可用 owner 时（启动早期）退回 native MB_TOPMOST。
+                if (WpfApplication.Current?.MainWindow is Window { IsLoaded: true } owner)
+                {
+                    TopmostMessageBox.Show(owner, message, "系统错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                else
+                {
+                    TopmostMessageBox.ShowNativeTopmost(message, "系统错误", isError: true);
+                }
             }
             finally
             {

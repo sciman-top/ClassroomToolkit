@@ -73,11 +73,9 @@ internal sealed class StartupOrchestrator
         if (startupCompatibility.HasBlockingIssues)
         {
             var message = BuildStartupBlockingMessage(startupCompatibility, startupCompatibilityReportPath);
-            System.Windows.MessageBox.Show(
-                message,
-                "启动环境不兼容",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+            // 阻断提示的典型触发场景是 PPT/WPS 全屏在最上层，必须 MB_TOPMOST 才可见
+            //（此时 MainWindow 尚未创建，不能走 owner 型 TopmostMessageBox）。
+            TopmostMessageBox.ShowNativeTopmost(message, "启动环境不兼容", isError: true);
             return false;
         }
 

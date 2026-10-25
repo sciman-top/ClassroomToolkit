@@ -48,10 +48,28 @@ internal static class WindowExtensions
         {
             return dialog.ShowDialog();
         }
-        catch (InvalidOperationException)
+        catch (InvalidOperationException) when (dialog.IsVisible)
         {
-            dialog.Show();
-            return dialog.DialogResult;
+            // 已在别处可见：前置激活而不是再弹一份；按取消处理。
+            try
+            {
+                dialog.Activate();
+            }
+            catch (Exception activateEx) when (AppGlobalExceptionHandling.IsNonFatal(activateEx))
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"WindowExtensions.SafeShowDialog activate failed: {activateEx.GetType().Name} - {activateEx.Message}");
+            }
+
+            return null;
+        }
+        catch (InvalidOperationException ex)
+        {
+            // 降级非模态 Show 会让设置 DialogResult 的按钮二次抛异常，产出半坏的
+            // 对话框；与通用异常路径一致按取消处理并留痕。
+            System.Diagnostics.Debug.WriteLine(
+                $"WindowExtensions.SafeShowDialog failed: {ex.GetType().Name} - {ex.Message}");
+            return false;
         }
         catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
