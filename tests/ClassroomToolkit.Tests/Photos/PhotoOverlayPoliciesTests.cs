@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using ClassroomToolkit.App.Photos;
+using ClassroomToolkit.App.Paint;
 
 namespace ClassroomToolkit.Tests.Photos;
 

@@ -1,3 +1,4 @@
+using ClassroomToolkit.App.Windowing;
 using
 ClassroomToolkit.App.Photos;
 using
@@ -5,7 +6,7 @@ System.Windows;
 using
 System;
 
-namespace ClassroomToolkit.App.Windowing;
+namespace ClassroomToolkit.App.Photos;
 
 internal enum ImageManagerActivationReason
 {

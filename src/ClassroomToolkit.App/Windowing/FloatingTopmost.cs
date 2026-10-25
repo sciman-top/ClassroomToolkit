@@ -1,3 +1,6 @@
+using ClassroomToolkit.App.Paint;
+using ClassroomToolkit.App.Launcher;
+using ClassroomToolkit.App.Photos;
 using
 ClassroomToolkit.App.Session;
 using

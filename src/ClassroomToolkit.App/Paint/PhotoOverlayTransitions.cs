@@ -1,3 +1,4 @@
+using ClassroomToolkit.App.Windowing;
 using
 ClassroomToolkit.App.Paint;
 using
@@ -5,7 +6,7 @@ ClassroomToolkit.App.Photos;
 using
 System;
 
-namespace ClassroomToolkit.App.Windowing;
+namespace ClassroomToolkit.App.Paint;
 
 internal readonly record struct PhotoCloseTransitionContext(
     bool OverlayVisible);

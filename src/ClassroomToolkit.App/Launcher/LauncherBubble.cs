@@ -1,7 +1,8 @@
+using ClassroomToolkit.App.Windowing;
 using
 System;
 
-namespace ClassroomToolkit.App.Windowing;
+namespace ClassroomToolkit.App.Launcher;
 
 internal readonly record struct LauncherBubbleVisibilityRuntimeState(
     bool SuppressVisibleChangedApply,

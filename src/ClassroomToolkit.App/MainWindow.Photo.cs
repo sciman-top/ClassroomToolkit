@@ -9,6 +9,7 @@ using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Presentation;
 using ClassroomToolkit.Application.UseCases.Photos;
 using ClassroomToolkit.App.Windowing;
+using ClassroomToolkit.App.Paint;
 
 namespace ClassroomToolkit.App;
 

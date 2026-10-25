@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using ClassroomToolkit.App.Windowing;
 using System.Windows;
 using Xunit;
+using ClassroomToolkit.App.Paint;
 
 namespace ClassroomToolkit.Tests.Windowing;
 

@@ -3,6 +3,7 @@ using ClassroomToolkit.App;
 using ClassroomToolkit.App.Windowing;
 using System.Windows;
 using Xunit;
+using ClassroomToolkit.App.Launcher;
 
 namespace ClassroomToolkit.Tests.Windowing;
 

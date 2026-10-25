@@ -127,7 +127,7 @@ internal static class AppCompositionRoot
     private static void AddPaintFeature(IServiceCollection services)
     {
         services.AddSingleton<IPaintWindowFactory, PaintWindowFactory>();
-        services.AddSingleton<Services.IPaintWindowOrchestrator, Services.PaintWindowOrchestrator>();
+        services.AddSingleton<Paint.IPaintWindowOrchestrator, Paint.PaintWindowOrchestrator>();
     }
 
     private static void AddPhotoFeature(IServiceCollection services)

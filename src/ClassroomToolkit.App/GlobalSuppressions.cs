@@ -269,7 +269,7 @@ using System.Diagnostics.CodeAnalysis;
     "CA1515:Consider making public types internal",
     Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.Dialogs.AutoExitDialog")]
+    Target = "~T:ClassroomToolkit.App.Launcher.AutoExitDialog")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
@@ -281,7 +281,7 @@ using System.Diagnostics.CodeAnalysis;
     "CA1515:Consider making public types internal",
     Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.Windowing.LauncherBubbleWindow")]
+    Target = "~T:ClassroomToolkit.App.Launcher.LauncherBubbleWindow")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
@@ -449,7 +449,7 @@ using System.Diagnostics.CodeAnalysis;
     "CA1515:Consider making public types internal",
     Justification = "Paint window orchestration is consumed through MainWindow constructor injection and explicit event contracts, so it remains public at the composition boundary.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.Services.IPaintWindowOrchestrator")]
+    Target = "~T:ClassroomToolkit.App.Paint.IPaintWindowOrchestrator")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",

@@ -1,5 +1,6 @@
+using ClassroomToolkit.App.Windowing;
 
-namespace ClassroomToolkit.App.Windowing;
+namespace ClassroomToolkit.App.Launcher;
 
 internal enum LauncherWindowKind
 {

@@ -3,6 +3,9 @@ using ClassroomToolkit.App.Session;
 using ClassroomToolkit.App.Windowing;
 using System;
 using Xunit;
+using ClassroomToolkit.App.Launcher;
+using ClassroomToolkit.App.Paint;
+using ClassroomToolkit.App.Photos;
 
 namespace ClassroomToolkit.Tests.Windowing;
 

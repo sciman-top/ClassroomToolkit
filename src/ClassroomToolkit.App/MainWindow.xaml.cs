@@ -18,6 +18,8 @@ using ClassroomToolkit.App.ViewModels;
 using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.App.UI.Themes;
 using ClassroomToolkit.App.RollCall;
+using ClassroomToolkit.App.Launcher;
+using ClassroomToolkit.App.Paint;
 
 namespace ClassroomToolkit.App;
 
@@ -69,7 +71,7 @@ public partial class MainWindow : Window
     private readonly MainViewModel _mainViewModel;
     private readonly IConfigurationService _configurationService;
     private readonly IRollCallWindowFactory _rollCallWindowFactory;
-    private readonly Services.IPaintWindowOrchestrator _paintWindowOrchestrator;
+    private readonly Paint.IPaintWindowOrchestrator _paintWindowOrchestrator;
     private readonly Photos.ImageManagerWindowCoordinator _imageManagerWindowCoordinator;
     private readonly IWindowOrchestrator _windowOrchestrator;
     private readonly ThemeManager _themeManager;
@@ -85,7 +87,7 @@ public partial class MainWindow : Window
         MainViewModel mainViewModel,
         IConfigurationService configurationService,
         IRollCallWindowFactory rollCallWindowFactory,
-        Services.IPaintWindowOrchestrator paintWindowOrchestrator,
+        Paint.IPaintWindowOrchestrator paintWindowOrchestrator,
         Photos.IImageManagerWindowFactory imageManagerWindowFactory,
         IWindowOrchestrator windowOrchestrator,
         ThemeManager themeManager)

@@ -1,7 +1,8 @@
+using ClassroomToolkit.App.Windowing;
 using
 System.Windows;
 
-namespace ClassroomToolkit.App.Windowing;
+namespace ClassroomToolkit.App.Paint;
 
 internal readonly record struct PaintWindowVisibilityHideContext(
     bool OverlayVisible,

@@ -9,6 +9,8 @@ using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.App.RollCall;
+using ClassroomToolkit.App.Paint;
+using ClassroomToolkit.App.Launcher;
 
 namespace ClassroomToolkit.App;
 

@@ -11,7 +11,7 @@ using ClassroomToolkit.App.Session;
 using ClassroomToolkit.App.Windowing;
 using Microsoft.Extensions.Logging;
 
-namespace ClassroomToolkit.App.Services;
+namespace ClassroomToolkit.App.Paint;
 
 [SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based events are the existing app orchestration contract.")]
 public interface IPaintWindowOrchestrator

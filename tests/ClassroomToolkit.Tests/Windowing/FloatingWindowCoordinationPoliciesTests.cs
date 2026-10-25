@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using ClassroomToolkit.App.Windowing;
 using Xunit;
+using ClassroomToolkit.App.Photos;
 
 namespace ClassroomToolkit.Tests.Windowing;
 

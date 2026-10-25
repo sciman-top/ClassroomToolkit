@@ -4,7 +4,7 @@ using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Windowing;
 
-namespace ClassroomToolkit.App.Dialogs;
+namespace ClassroomToolkit.App.Launcher;
 
 public partial class AutoExitDialog : Window
 {

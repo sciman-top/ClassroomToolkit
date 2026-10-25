@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using ClassroomToolkit.Interop;
 
-namespace ClassroomToolkit.App.Windowing;
+namespace ClassroomToolkit.App.Paint;
 
 internal readonly record struct DpiSuggestedBounds(
     int Left,

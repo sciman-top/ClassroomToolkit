@@ -2,7 +2,7 @@ using ClassroomToolkit.App.Windowing;
 using System.Windows;
 using System;
 
-namespace ClassroomToolkit.App;
+namespace ClassroomToolkit.App.Launcher;
 
 internal readonly record struct LauncherAutoExitTimerPlan(
     bool ShouldStart,

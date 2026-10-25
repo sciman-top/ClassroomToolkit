@@ -10,6 +10,7 @@ using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.UI.Themes;
 using AwesomeAssertions;
 using ClassroomToolkit.App.Dialogs;
+using ClassroomToolkit.App.Launcher;
 
 namespace ClassroomToolkit.Tests.Ink;
 

@@ -9,6 +9,7 @@ using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Session;
 using ClassroomToolkit.App.Windowing;
+using ClassroomToolkit.App.Launcher;
 
 namespace ClassroomToolkit.App;
 

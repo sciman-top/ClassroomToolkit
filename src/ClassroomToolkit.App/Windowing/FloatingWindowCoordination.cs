@@ -1,3 +1,5 @@
+using ClassroomToolkit.App.Photos;
+using ClassroomToolkit.App.Launcher;
 using
 System.Collections.Generic;
 using
