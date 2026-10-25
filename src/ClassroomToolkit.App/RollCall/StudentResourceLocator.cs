@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Startup;
 
 namespace ClassroomToolkit.App.RollCall;
 

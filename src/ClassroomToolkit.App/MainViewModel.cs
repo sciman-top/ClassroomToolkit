@@ -1,8 +1,9 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using ClassroomToolkit.App.UI;
 
-namespace ClassroomToolkit.App.ViewModels;
+namespace ClassroomToolkit.App;
 
 public sealed class MainViewModel : ViewModelBase
 {

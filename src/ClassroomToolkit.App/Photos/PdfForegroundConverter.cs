@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Data;
 using Media = System.Windows.Media;
 
-namespace ClassroomToolkit.App.Converters;
+namespace ClassroomToolkit.App.Photos;
 
 public sealed class PdfForegroundConverter : IValueConverter
 {

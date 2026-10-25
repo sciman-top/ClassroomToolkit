@@ -2,7 +2,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 
-namespace ClassroomToolkit.App.Behaviors;
+namespace ClassroomToolkit.App.Paint;
 
 public static class LongPressBehavior
 {

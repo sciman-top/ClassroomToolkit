@@ -2,10 +2,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
-using ClassroomToolkit.App.Helpers;
 
 using MediaColor = System.Windows.Media.Color;
 using WpfButton = System.Windows.Controls.Button;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Paint;
 

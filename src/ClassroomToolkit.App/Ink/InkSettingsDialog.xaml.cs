@@ -1,7 +1,6 @@
 using System;
 using System.Globalization;
 using System.Windows;
-using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Windowing;
 

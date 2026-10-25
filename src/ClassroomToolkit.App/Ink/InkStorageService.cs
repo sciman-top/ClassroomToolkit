@@ -388,7 +388,7 @@ internal sealed class InkStorageService
 
     private static string ResolveDefaultRootPath()
     {
-        if (Helpers.PortableRuntimeContext.DataDirectory is { } portableDataRoot)
+        if (Startup.PortableRuntimeContext.DataDirectory is { } portableDataRoot)
         {
             return Path.Combine(portableDataRoot, "Ink");
         }

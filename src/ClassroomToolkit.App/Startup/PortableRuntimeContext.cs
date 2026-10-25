@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace ClassroomToolkit.App.Helpers;
+namespace ClassroomToolkit.App.Startup;
 
 internal static class PortableRuntimeContext
 {

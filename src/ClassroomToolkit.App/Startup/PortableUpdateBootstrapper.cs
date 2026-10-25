@@ -7,7 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Windows;
-using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Startup;
 
 namespace ClassroomToolkit.App.Startup;
 

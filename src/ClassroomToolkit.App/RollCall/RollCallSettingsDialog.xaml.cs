@@ -1,7 +1,6 @@
 using System.Windows;
 using ClassroomToolkit.App.Settings;
 using System.Linq;
-using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.Services.Input;
 

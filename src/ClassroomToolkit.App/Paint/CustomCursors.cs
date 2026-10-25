@@ -14,7 +14,7 @@ using WpfPen = System.Windows.Media.Pen;
 using WpfSize = System.Windows.Size;
 using IOPath = System.IO.Path;
 
-namespace ClassroomToolkit.App.Utilities;
+namespace ClassroomToolkit.App.Paint;
 
 /// <summary>
 /// 自定义光标生成器 - 为画笔工具创建形象美观的光标

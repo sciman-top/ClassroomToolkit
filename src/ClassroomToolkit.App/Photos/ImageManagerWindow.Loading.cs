@@ -6,7 +6,6 @@ using System.Windows;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Threading;
-using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Utilities;
 
 namespace ClassroomToolkit.App.Photos;

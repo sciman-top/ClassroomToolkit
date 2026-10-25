@@ -4,7 +4,6 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
-using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Presentation;
 using ClassroomToolkit.Application.UseCases.Photos;

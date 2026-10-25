@@ -8,7 +8,7 @@ public sealed class LowFrequencyCallbackIsolationContractTests
     [Fact]
     public void SafeDragMoveFailureCallback_ShouldBeIsolated()
     {
-        var source = File.ReadAllText(GetAppSourcePath("Helpers", "WindowExtensions.cs"));
+        var source = File.ReadAllText(GetAppSourcePath("Windowing", "WindowExtensions.cs"));
 
         source.Should().Contain("WindowExtensions.SafeDragMove failure callback failed");
         source.Should().Contain("catch (Exception callbackEx) when (AppGlobalExceptionHandling.IsNonFatal(callbackEx))");

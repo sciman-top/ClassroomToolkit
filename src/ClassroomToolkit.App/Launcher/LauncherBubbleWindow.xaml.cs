@@ -2,7 +2,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
-using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Launcher;

@@ -1,5 +1,4 @@
 using System.Windows;
-using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Paint;

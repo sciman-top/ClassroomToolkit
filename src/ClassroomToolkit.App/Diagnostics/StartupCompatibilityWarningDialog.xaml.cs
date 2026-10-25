@@ -1,5 +1,4 @@
 using System.Windows;
-using ClassroomToolkit.App.Helpers;
 using System.Diagnostics;
 using System.IO;
 using ClassroomToolkit.App.Windowing;

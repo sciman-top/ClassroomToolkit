@@ -1,8 +1,8 @@
 using System.Windows;
 using ClassroomToolkit.App;
-using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Windowing;
+using ClassroomToolkit.App.UI;
 
 namespace ClassroomToolkit.App.Diagnostics;
 

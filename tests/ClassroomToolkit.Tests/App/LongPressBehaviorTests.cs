@@ -1,8 +1,8 @@
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
-using ClassroomToolkit.App.Behaviors;
-using ClassroomToolkit.App.Commands;
+using ClassroomToolkit.App.Paint;
+using ClassroomToolkit.App.UI;
 using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests.App;

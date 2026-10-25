@@ -167,7 +167,7 @@ public sealed class AppSettings
 
     public static string ResolveDefaultInkPhotoRootPath()
     {
-        if (Helpers.PortableRuntimeContext.DataDirectory is { } portableDataRoot)
+        if (Startup.PortableRuntimeContext.DataDirectory is { } portableDataRoot)
         {
             return Path.Combine(portableDataRoot, "Ink", "Photos");
         }

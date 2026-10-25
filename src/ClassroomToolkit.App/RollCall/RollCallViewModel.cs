@@ -2,14 +2,13 @@ using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using ClassroomToolkit.App.Photos;
-using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.Application.UseCases.RollCall;
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Services;
 using ClassroomToolkit.Domain.Timers;
 using ClassroomToolkit.Domain.Utilities;
 using ClassroomToolkit.App.Windowing;
-using ClassroomToolkit.App.ViewModels;
+using ClassroomToolkit.App.UI;
 
 namespace ClassroomToolkit.App.RollCall;
 

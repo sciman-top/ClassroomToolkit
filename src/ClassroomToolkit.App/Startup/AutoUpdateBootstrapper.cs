@@ -27,7 +27,7 @@ internal static class AutoUpdateBootstrapper
             return;
         }
 
-        if (Helpers.PortableRuntimeContext.IsEnabled)
+        if (Startup.PortableRuntimeContext.IsEnabled)
         {
             PortableUpdateBootstrapper.Schedule();
             return;

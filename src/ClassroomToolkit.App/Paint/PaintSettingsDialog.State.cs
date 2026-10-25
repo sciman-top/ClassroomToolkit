@@ -3,7 +3,6 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
-using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Ink;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Windowing;

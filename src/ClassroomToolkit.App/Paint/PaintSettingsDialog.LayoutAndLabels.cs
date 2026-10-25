@@ -1,7 +1,7 @@
 using System;
 using System.Windows;
-using ClassroomToolkit.App.Helpers;
 using WpfGrid = System.Windows.Controls.Grid;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Paint;
 

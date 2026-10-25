@@ -1,6 +1,6 @@
 using System.Windows.Media;
 using AwesomeAssertions;
-using ClassroomToolkit.App.Utilities;
+using ClassroomToolkit.App.Paint;
 
 namespace ClassroomToolkit.Tests;
 

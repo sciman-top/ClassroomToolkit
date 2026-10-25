@@ -1,6 +1,6 @@
 using System.Windows;
 
-namespace ClassroomToolkit.App.Helpers;
+namespace ClassroomToolkit.App.Windowing;
 
 internal static class WindowPlacementHelper
 {

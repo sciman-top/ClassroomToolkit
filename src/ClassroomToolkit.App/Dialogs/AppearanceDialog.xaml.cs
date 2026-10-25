@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Controls;
-using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.UI.Themes;
 using ClassroomToolkit.App.Windowing;
 

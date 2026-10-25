@@ -2,7 +2,6 @@ using System;
 using System.Windows;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Utilities;
-using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.RollCall;

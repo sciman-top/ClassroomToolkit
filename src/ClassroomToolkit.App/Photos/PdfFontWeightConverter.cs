@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 
-namespace ClassroomToolkit.App.Converters;
+namespace ClassroomToolkit.App.Photos;
 
 public sealed class PdfFontWeightConverter : IValueConverter
 {

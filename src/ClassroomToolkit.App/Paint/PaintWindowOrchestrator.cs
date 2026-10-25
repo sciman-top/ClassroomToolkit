@@ -3,7 +3,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
-using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Paint;
 using ClassroomToolkit.App.Presentation;
 using ClassroomToolkit.App.Settings;

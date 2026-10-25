@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
-using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Startup;
 
 namespace ClassroomToolkit.App.Settings;
 

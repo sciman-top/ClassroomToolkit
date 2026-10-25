@@ -3,7 +3,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using ClassroomToolkit.App;
 
-namespace ClassroomToolkit.App.ViewModels;
+namespace ClassroomToolkit.App.UI;
 
 /// <summary>
 /// ViewModel 基类，提供属性变更通知和通用辅助方法

@@ -4,10 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using ClassroomToolkit.App.Diagnostics;
-using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.Services.Compatibility;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Startup;
 

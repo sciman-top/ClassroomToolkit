@@ -119,7 +119,7 @@ internal static class AppCompositionRoot
 
     private static void AddShell(IServiceCollection services)
     {
-        services.AddSingleton<ClassroomToolkit.App.ViewModels.MainViewModel>();
+        services.AddSingleton<ClassroomToolkit.App.MainViewModel>();
         services.AddSingleton<Windowing.IWindowOrchestrator, Windowing.WindowOrchestrator>();
         services.AddSingleton<MainWindow>();
     }

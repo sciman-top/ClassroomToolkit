@@ -15,7 +15,6 @@ using System.Globalization;
 using System.IO;
 using System.Threading;
 using IoPath = System.IO.Path;
-using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Paint.Brushes;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.Application.UseCases.Photos;

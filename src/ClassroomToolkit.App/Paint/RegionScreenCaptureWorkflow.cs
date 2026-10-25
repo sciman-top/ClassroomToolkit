@@ -7,7 +7,7 @@ using System.IO;
 using System.Windows.Forms;
 using System.Windows.Threading;
 using ClassroomToolkit.App;
-using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Startup;
 
 namespace ClassroomToolkit.App.Paint;
 

@@ -2,7 +2,6 @@ using AwesomeAssertions;
 using ClassroomToolkit.App;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.RollCall;
-using ClassroomToolkit.App.ViewModels;
 using ClassroomToolkit.Application.UseCases.RollCall;
 using ClassroomToolkit.Infra.Settings;
 using ClassroomToolkit.Infra.Storage;

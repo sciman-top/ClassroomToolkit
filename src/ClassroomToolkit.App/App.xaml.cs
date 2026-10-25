@@ -7,7 +7,6 @@ using System.Threading;
 using System.Globalization;
 using System.IO;
 using System.Diagnostics;
-using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Diagnostics;
 using ClassroomToolkit.App.Photos;
 using ClassroomToolkit.App.Settings;
@@ -15,6 +14,7 @@ using ClassroomToolkit.App.Startup;
 using ClassroomToolkit.Application.Abstractions;
 using ClassroomToolkit.Infra.Logging;
 using ClassroomToolkit.App.UI.Themes;
+using ClassroomToolkit.App.UI;
 
 namespace ClassroomToolkit.App;
 

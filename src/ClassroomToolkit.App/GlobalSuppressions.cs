@@ -77,13 +77,13 @@ using System.Diagnostics.CodeAnalysis;
     "CA1030:Use events where appropriate",
     Justification = "RelayCommand follows the WPF ICommand pattern where RaiseCanExecuteChanged is an imperative notification helper.",
     Scope = "member",
-    Target = "~M:ClassroomToolkit.App.Commands.RelayCommand.RaiseCanExecuteChanged")]
+    Target = "~M:ClassroomToolkit.App.UI.RelayCommand.RaiseCanExecuteChanged")]
 [assembly: SuppressMessage(
     "Design",
     "CA1030:Use events where appropriate",
     Justification = "RaisePropertyChanged is a ViewModel helper for batching existing INotifyPropertyChanged events.",
     Scope = "member",
-    Target = "~M:ClassroomToolkit.App.ViewModels.ViewModelBase.RaisePropertyChanged(System.String[])")]
+    Target = "~M:ClassroomToolkit.App.UI.ViewModelBase.RaisePropertyChanged(System.String[])")]
 [assembly: SuppressMessage(
     "Design",
     "CA1034:Nested types should not be visible",
@@ -509,7 +509,7 @@ using System.Diagnostics.CodeAnalysis;
     "CA1515:Consider making public types internal",
     Justification = "XAML behaviors, controls, and converters are referenced directly from markup resources and templates, so they remain public WPF component contracts.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.Behaviors.LongPressBehavior")]
+    Target = "~T:ClassroomToolkit.App.Paint.LongPressBehavior")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
@@ -521,13 +521,13 @@ using System.Diagnostics.CodeAnalysis;
     "CA1515:Consider making public types internal",
     Justification = "XAML behaviors, controls, and converters are referenced directly from markup resources and templates, so they remain public WPF component contracts.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.Converters.PdfFontWeightConverter")]
+    Target = "~T:ClassroomToolkit.App.Photos.PdfFontWeightConverter")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
     Justification = "XAML behaviors, controls, and converters are referenced directly from markup resources and templates, so they remain public WPF component contracts.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.Converters.PdfForegroundConverter")]
+    Target = "~T:ClassroomToolkit.App.Photos.PdfForegroundConverter")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
@@ -557,13 +557,13 @@ using System.Diagnostics.CodeAnalysis;
     "CA1515:Consider making public types internal",
     Justification = "XAML-bound view models and item records are referenced by bindings, templates, and tests, so they remain public UI contracts.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.ViewModels.ViewModelBase")]
+    Target = "~T:ClassroomToolkit.App.UI.ViewModelBase")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
     Justification = "XAML-bound view models and item records are referenced by bindings, templates, and tests, so they remain public UI contracts.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.ViewModels.MainViewModel")]
+    Target = "~T:ClassroomToolkit.App.MainViewModel")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",

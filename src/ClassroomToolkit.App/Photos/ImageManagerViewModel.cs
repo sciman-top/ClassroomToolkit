@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
-using ClassroomToolkit.App.ViewModels;
+using ClassroomToolkit.App.UI;
 
 namespace ClassroomToolkit.App.Photos;
 

@@ -1,4 +1,5 @@
-using ClassroomToolkit.App.ViewModels;
+using ClassroomToolkit.App;
+using ClassroomToolkit.App.UI;
 using AwesomeAssertions;
 using Xunit;
 

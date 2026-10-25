@@ -1,7 +1,7 @@
 using System.Windows.Input;
 using ClassroomToolkit.App;
 
-namespace ClassroomToolkit.App.Commands;
+namespace ClassroomToolkit.App.UI;
 
 internal sealed class RelayCommand : ICommand
 {

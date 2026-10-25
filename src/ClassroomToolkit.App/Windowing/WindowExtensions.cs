@@ -3,7 +3,7 @@ using System.Windows;
 using ClassroomToolkit.App;
 using ClassroomToolkit.App.Windowing;
 
-namespace ClassroomToolkit.App.Helpers;
+namespace ClassroomToolkit.App.Windowing;
 
 internal static class WindowExtensions
 {

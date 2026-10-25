@@ -10,7 +10,6 @@ using System.Windows.Input;
 using System.Runtime.InteropServices;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.Windowing;
 using IOPath = System.IO.Path;

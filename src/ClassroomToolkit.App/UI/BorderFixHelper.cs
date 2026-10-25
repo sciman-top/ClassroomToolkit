@@ -4,7 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using ClassroomToolkit.App;
 
-namespace ClassroomToolkit.App.Helpers
+namespace ClassroomToolkit.App.UI
 {
     /// <summary>
     /// 全局 Border 修复工具，自动修复 BorderBrush 问题

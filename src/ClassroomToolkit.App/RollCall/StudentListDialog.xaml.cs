@@ -1,8 +1,8 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Media;
-using ClassroomToolkit.App.Helpers;
 using WpfSize = System.Windows.Size;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.RollCall;
 

@@ -1,5 +1,5 @@
 using System.Globalization;
-using ClassroomToolkit.App.Converters;
+using ClassroomToolkit.App.Photos;
 using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests;

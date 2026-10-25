@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Navigation;
-using ClassroomToolkit.App.Helpers;
+using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Dialogs;
 

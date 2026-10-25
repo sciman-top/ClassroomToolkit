@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Input;
-using ClassroomToolkit.App.Helpers;
 using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.Services.Input;
 
