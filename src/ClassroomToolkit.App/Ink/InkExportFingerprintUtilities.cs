@@ -67,6 +67,29 @@ internal static class InkExportFingerprintUtilities
             return;
         }
 
-        hash.AppendData(Encoding.UTF8.GetBytes(value));
+        // 全页哈希在每次抬笔/变更收尾都会重算：这里若走 GetBytes 会给每条旧笔迹的
+        // 每个 token 重新分配字节数组（几何路径可达数十 KB）。固定栈缓冲 + 池化
+        // 大缓冲后输出字节流与 GetBytes 完全一致，哈希值不变。
+        var byteCount = Encoding.UTF8.GetByteCount(value);
+        if (byteCount <= StackBufferSize)
+        {
+            Span<byte> buffer = stackalloc byte[StackBufferSize];
+            var written = Encoding.UTF8.GetBytes(value, buffer);
+            hash.AppendData(buffer[..written]);
+            return;
+        }
+
+        var rented = System.Buffers.ArrayPool<byte>.Shared.Rent(byteCount);
+        try
+        {
+            var written = Encoding.UTF8.GetBytes(value, rented);
+            hash.AppendData(rented.AsSpan(0, written));
+        }
+        finally
+        {
+            System.Buffers.ArrayPool<byte>.Shared.Return(rented);
+        }
     }
+
+    private const int StackBufferSize = 512;
 }
