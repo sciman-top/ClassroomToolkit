@@ -45,10 +45,11 @@ function Resolve-StableFilter {
 
 # 每个 FullyQualifiedName~<Class> 段都必须对应测试工程里真实存在的类。
 # 此前 quick 过滤器引用已删除的类导致 8 段静默变 7 段，无人察觉。
+# 段允许带命名空间与 record 声明（都按末段类型名匹配源码声明）。
 function Assert-FilterTestClassSegmentsExist {
     param([Parameter(Mandatory = $true)][string]$Filter)
 
-    $segmentMatches = [regex]::Matches($Filter, 'FullyQualifiedName~([A-Za-z0-9_]+)')
+    $segmentMatches = [regex]::Matches($Filter, 'FullyQualifiedName~([A-Za-z0-9_.]+)')
     if ($segmentMatches.Count -eq 0) {
         return
     }
@@ -61,7 +62,8 @@ function Assert-FilterTestClassSegmentsExist {
     $sourceFiles = Get-ChildItem -LiteralPath $testsRoot -Recurse -Filter "*.cs" -File
     foreach ($match in $segmentMatches) {
         $className = $match.Groups[1].Value
-        $pattern = "class $([regex]::Escape($className))\b"
+        $shortName = ($className -split '\.')[-1]
+        $pattern = "(class|record|struct) $([regex]::Escape($shortName))\b"
         $declared = $sourceFiles | Where-Object {
             Select-String -LiteralPath $_.FullName -Pattern $pattern -Quiet
         }

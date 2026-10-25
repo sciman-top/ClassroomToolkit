@@ -167,8 +167,9 @@ public partial class PaintOverlayWindow
         }
 
         // 与换页/自动保存一致走后台队列：此前 undo 在 UI 线程同步重写全文档 sidecar，
-        // 连续 undo 时磁盘 IO 会直接卡住绘制线程。先标记运行时哈希，确保队列的
-        // stale-snapshot 门放行（本地 undo 分支不会经其它路径更新该哈希）。
+        // 连续 undo 时磁盘 IO 会直接卡住绘制线程。此处显式标记运行时哈希与快照一致，
+        // 确保队列的 stale-snapshot 门放行；调用方经 NotifyInkStateChanged 已标记过
+        // 相同内容（哈希确定性保证两次结果一致），此标记是幂等的安全带。
         var cloned = CloneInkStrokes(strokes);
         var snapshotHash = ComputeInkHash(cloned);
         MarkInkPageModified(sourcePath, pageIndex, snapshotHash, cloned);

@@ -250,9 +250,10 @@ public class FileLoggerProvider : ILoggerProvider
             return;
         }
 
-        // 保留策略原本只在启动时执行一次：整天不重启的课堂机会让当日 app_*.log
-        // 无上限增长。跨日后借写盘路径补触发一次清理（每天最多一次），历史文件的
-        // 过期/超限得以回收；失败不阻断本次写盘。
+        // 保留策略原本只在启动时执行一次：整天不重启的课堂让 app_*.log 持续累积。
+        // 跨日后借写盘路径补触发一次清理（每天最多一次），历史文件的过期/超限得以
+        // 回收；当日文件在跨日前仍无上限（保留策略按设计跳过当天文件）。失败不阻断
+        // 本次写盘。
         _lastRetentionCheckedDate = itemTimestamp.Date;
         try
         {
