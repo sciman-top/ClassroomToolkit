@@ -342,6 +342,17 @@ public partial class ImageManagerWindow
         var isRecentlyValidated =
             validatedAtUtcTicks != 0
             && (ulong)(DateTime.UtcNow.Ticks - validatedAtUtcTicks) <= (ulong)FingerprintRevalidationTtlTicks;
+        if (!isRecentlyValidated
+            && TryReadCheapMetadataMismatch(path, entry.Fingerprint))
+        {
+            // 廉价元数据预检已确认文件变更：直接判失效，免去"变更文件还要先
+            // 整读一遍哈希才能判失效"的慢介质整读；未变更仍走全内容校验，
+            // 保留对同尺寸同时间戳替换的防御（见上方注释）。
+            InvalidateCachedThumbnail(key, entry);
+            thumbnail = null;
+            pageCount = 0;
+            return false;
+        }
         if (isRecentlyValidated || PhotoFileFingerprintReader.TryRead(path, out var currentFingerprint)
             && entry.Fingerprint.Matches(currentFingerprint))
         {
@@ -349,15 +360,7 @@ public partial class ImageManagerWindow
         }
         else
         {
-            lock (_thumbnailCacheLock)
-            {
-                if (_thumbnailCache.TryGetValue(key, out var currentEntry)
-                    && ReferenceEquals(currentEntry, entry))
-                {
-                    _thumbnailCache.Remove(key);
-                    _thumbnailCacheLru.Remove(entry.LruNode);
-                }
-            }
+            InvalidateCachedThumbnail(key, entry);
             thumbnail = null;
             pageCount = 0;
             return false;
@@ -378,6 +381,34 @@ public partial class ImageManagerWindow
             thumbnail = currentEntry.Thumbnail;
             pageCount = currentEntry.PageCount;
             return true;
+        }
+    }
+
+    private static bool TryReadCheapMetadataMismatch(string path, PhotoFileFingerprint cached)
+    {
+        try
+        {
+            var info = new System.IO.FileInfo(path);
+            return info.Length != cached.Length
+                || info.LastWriteTimeUtc.Ticks != cached.LastWriteTimeUtcTicks;
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
+        {
+            // 元数据读取失败（文件被删/网络断开等）交给全内容路径按既有语义处理。
+            return false;
+        }
+    }
+
+    private void InvalidateCachedThumbnail(string key, ThumbnailCacheEntry entry)
+    {
+        lock (_thumbnailCacheLock)
+        {
+            if (_thumbnailCache.TryGetValue(key, out var currentEntry)
+                && ReferenceEquals(currentEntry, entry))
+            {
+                _thumbnailCache.Remove(key);
+                _thumbnailCacheLru.Remove(entry.LruNode);
+            }
         }
     }
 

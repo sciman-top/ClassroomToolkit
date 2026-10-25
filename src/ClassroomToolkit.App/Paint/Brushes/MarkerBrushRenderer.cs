@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Windows;
@@ -497,8 +498,39 @@ internal class MarkerBrushRenderer : IBrushRenderer
             return null;
         }
 
-        var source = _points.GetRange(start, count);
-        return BuildPreviewGeometryFromPoints(source);
+        // 尾窗重建在书写期间每个采样点都会执行：GetRange 会把整段点列拷贝进新 List，
+        // 换成零分配的区间视图（下游全部按下标访问）。
+        return BuildPreviewGeometryFromPoints(new MarkerPointRangeView(_points, start, count));
+    }
+
+    /// <summary>
+    /// 原点列的连续区间只读视图，避免尾窗重建时 GetRange 的整段拷贝分配。
+    /// </summary>
+    private readonly struct MarkerPointRangeView : IReadOnlyList<MarkerPoint>
+    {
+        private readonly IReadOnlyList<MarkerPoint> _source;
+        private readonly int _start;
+
+        public MarkerPointRangeView(IReadOnlyList<MarkerPoint> source, int start, int count)
+        {
+            _source = source;
+            _start = start;
+            Count = count;
+        }
+
+        public MarkerPoint this[int index] => _source[_start + index];
+
+        public int Count { get; }
+
+        IEnumerator<MarkerPoint> IEnumerable<MarkerPoint>.GetEnumerator()
+        {
+            for (int i = 0; i < Count; i++)
+            {
+                yield return this[i];
+            }
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable<MarkerPoint>)this).GetEnumerator();
     }
 
     private Geometry? BuildPreviewGeometryFromPoints(IReadOnlyList<MarkerPoint> sourcePoints)
