@@ -5,7 +5,6 @@ using ClassroomToolkit.Interop.Utilities;
 
 namespace ClassroomToolkit.Interop.Presentation;
 
-[SuppressMessage("Usage", "CA2216:Disposable types should declare finalizer", Justification = "Hook handles are released by explicit lifecycle control; finalizers are avoided for callback-bound Win32 hooks.")]
 public sealed partial class WpsSlideshowNavigationHook : IDisposable
 {
     private const int WhKeyboardLl = 13;

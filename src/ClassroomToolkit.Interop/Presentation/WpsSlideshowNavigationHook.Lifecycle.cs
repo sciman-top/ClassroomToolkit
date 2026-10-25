@@ -174,4 +174,21 @@ public sealed partial class WpsSlideshowNavigationHook
         NavigationRequestCaptured = null;
         Debug.WriteLine($"[WpsNavHook] Dispose deferred; residual hook remains active error={LastError}");
     }
+
+    ~WpsSlideshowNavigationHook()
+    {
+        // 与 KeyboardHook 的 finalizer 兜底对齐：Dispose 失败或漏调时，对象回收前
+        // 必须摘除系统级钩子，否则回调委托随对象回收后仍被系统调用会导致原生崩溃。
+        // finalizer 线程上不取 _lifecycleSync、不改共享状态，仅按句柄直接摘钩。
+        var keyboardHook = _keyboardHook;
+        var mouseHook = _mouseHook;
+        if (keyboardHook != IntPtr.Zero)
+        {
+            UnhookWindowsHookEx(keyboardHook);
+        }
+        if (mouseHook != IntPtr.Zero)
+        {
+            UnhookWindowsHookEx(mouseHook);
+        }
+    }
 }
