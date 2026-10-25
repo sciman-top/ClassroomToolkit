@@ -115,7 +115,7 @@ public sealed class RollCallWindowSettingsReloadContractTests
         return TestPathHelper.ResolveRepoPath(
             "src",
             "ClassroomToolkit.App",
-            "RollCallWindow.xaml.cs");
+            "RollCall", "RollCallWindow.xaml.cs");
     }
 
     private static string GetStateSourcePath()
@@ -123,7 +123,7 @@ public sealed class RollCallWindowSettingsReloadContractTests
         return TestPathHelper.ResolveRepoPath(
             "src",
             "ClassroomToolkit.App",
-            "RollCallWindow.State.cs");
+            "RollCall", "RollCallWindow.State.cs");
     }
 
     private static string GetInputSourcePath()
@@ -131,7 +131,7 @@ public sealed class RollCallWindowSettingsReloadContractTests
         return TestPathHelper.ResolveRepoPath(
             "src",
             "ClassroomToolkit.App",
-            "RollCallWindow.Input.cs");
+            "RollCall", "RollCallWindow.Input.cs");
     }
 
     private static string GetWindowingSourcePath()
@@ -139,7 +139,7 @@ public sealed class RollCallWindowSettingsReloadContractTests
         return TestPathHelper.ResolveRepoPath(
             "src",
             "ClassroomToolkit.App",
-            "RollCallWindow.Windowing.cs");
+            "RollCall", "RollCallWindow.Windowing.cs");
     }
 
     private static string ReadCombinedMainWindowSource()

@@ -17,6 +17,7 @@ using ClassroomToolkit.Application.UseCases.Photos;
 using ClassroomToolkit.App.ViewModels;
 using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.App.UI.Themes;
+using ClassroomToolkit.App.RollCall;
 
 namespace ClassroomToolkit.App;
 

@@ -11,7 +11,7 @@ using System.Diagnostics.CodeAnalysis;
     "CA1001:Types that own disposable fields should be disposable",
     Justification = "WPF window lifecycle is close-driven and owned disposable fields are released in closed/shutdown paths.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.RollCallWindow")]
+    Target = "~T:ClassroomToolkit.App.RollCall.RollCallWindow")]
 [assembly: SuppressMessage(
     "Design",
     "CA1001:Types that own disposable fields should be disposable",
@@ -59,7 +59,7 @@ using System.Diagnostics.CodeAnalysis;
     "CA2007:Consider calling ConfigureAwait on the awaited task",
     Justification = "WPF window continuations must resume on the dispatcher thread to update bound UI state safely.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.RollCallWindow")]
+    Target = "~T:ClassroomToolkit.App.RollCall.RollCallWindow")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2007:Consider calling ConfigureAwait on the awaited task",
@@ -257,7 +257,7 @@ using System.Diagnostics.CodeAnalysis;
     "CA1515:Consider making public types internal",
     Justification = "WPF application and window root types are activated through generated XAML and app composition, so they remain public framework entrypoints.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.RollCallWindow")]
+    Target = "~T:ClassroomToolkit.App.RollCall.RollCallWindow")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
@@ -275,7 +275,7 @@ using System.Diagnostics.CodeAnalysis;
     "CA1515:Consider making public types internal",
     Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.Dialogs.ClassSelectDialog")]
+    Target = "~T:ClassroomToolkit.App.RollCall.ClassSelectDialog")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
@@ -287,25 +287,25 @@ using System.Diagnostics.CodeAnalysis;
     "CA1515:Consider making public types internal",
     Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.Dialogs.RemoteKeyDialog")]
+    Target = "~T:ClassroomToolkit.App.RollCall.RemoteKeyDialog")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
     Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.Dialogs.RollCallSettingsDialog")]
+    Target = "~T:ClassroomToolkit.App.RollCall.RollCallSettingsDialog")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
     Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.Dialogs.StudentListDialog")]
+    Target = "~T:ClassroomToolkit.App.RollCall.StudentListDialog")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
     Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.Dialogs.TimerSetDialog")]
+    Target = "~T:ClassroomToolkit.App.RollCall.TimerSetDialog")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
@@ -347,19 +347,19 @@ using System.Diagnostics.CodeAnalysis;
     "CA1515:Consider making public types internal",
     Justification = "Factory interfaces appear in MainWindow constructor injection and application composition, so they remain public DI contracts.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.IRollCallWindowFactory")]
+    Target = "~T:ClassroomToolkit.App.RollCall.IRollCallWindowFactory")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
     Justification = "XAML-bound model items are referenced by templates, bindings, dialogs, and tests, so they remain public UI contracts.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.Models.GroupButtonItem")]
+    Target = "~T:ClassroomToolkit.App.RollCall.GroupButtonItem")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
     Justification = "XAML-bound model items are referenced by templates, bindings, dialogs, and tests, so they remain public UI contracts.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.Models.StudentListItem")]
+    Target = "~T:ClassroomToolkit.App.RollCall.StudentListItem")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
@@ -497,7 +497,7 @@ using System.Diagnostics.CodeAnalysis;
     "CA1515:Consider making public types internal",
     Justification = "WPF dialog/window types are activated through generated XAML or explicit window composition, so they remain public UI entrypoints.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.Photos.RollCallGroupOverlayWindow")]
+    Target = "~T:ClassroomToolkit.App.RollCall.RollCallGroupOverlayWindow")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
@@ -515,7 +515,7 @@ using System.Diagnostics.CodeAnalysis;
     "CA1515:Consider making public types internal",
     Justification = "XAML behaviors, controls, and converters are referenced directly from markup resources and templates, so they remain public WPF component contracts.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.Converters.InverseBooleanToVisibilityConverter")]
+    Target = "~T:ClassroomToolkit.App.RollCall.InverseBooleanToVisibilityConverter")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
@@ -569,7 +569,7 @@ using System.Diagnostics.CodeAnalysis;
     "CA1515:Consider making public types internal",
     Justification = "XAML-bound view models and item records are referenced by bindings, templates, and tests, so they remain public UI contracts.",
     Scope = "type",
-    Target = "~T:ClassroomToolkit.App.ViewModels.RollCallViewModel")]
+    Target = "~T:ClassroomToolkit.App.RollCall.RollCallViewModel")]
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",

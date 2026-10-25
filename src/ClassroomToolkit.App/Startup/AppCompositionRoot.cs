@@ -11,6 +11,7 @@ using ClassroomToolkit.Infra.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using WpfApplication = System.Windows.Application;
+using ClassroomToolkit.App.RollCall;
 
 namespace ClassroomToolkit.App.Startup;
 

@@ -4,6 +4,7 @@ using System.Windows;
 using ClassroomToolkit.App.Settings;
 using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.App.Dialogs;
+using ClassroomToolkit.App.RollCall;
 
 namespace ClassroomToolkit.App;
 

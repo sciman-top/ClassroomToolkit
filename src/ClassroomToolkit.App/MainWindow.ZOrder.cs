@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Threading;
 using ClassroomToolkit.App.Windowing;
+using ClassroomToolkit.App.RollCall;
 
 namespace ClassroomToolkit.App;
 

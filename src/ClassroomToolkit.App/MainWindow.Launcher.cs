@@ -14,6 +14,7 @@ using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.App.UI.Themes;
 using ClassroomToolkit.App.Dialogs;
 using ClassroomToolkit.Services.Compatibility;
+using ClassroomToolkit.App.RollCall;
 
 namespace ClassroomToolkit.App;
 

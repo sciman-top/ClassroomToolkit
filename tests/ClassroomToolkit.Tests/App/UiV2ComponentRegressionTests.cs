@@ -9,7 +9,7 @@ public sealed class UiV2ComponentRegressionTests
     private static readonly string[] SegmentedTabViews =
     [
         "src/ClassroomToolkit.App/Paint/PaintSettingsDialog.xaml",
-        "src/ClassroomToolkit.App/Dialogs/RollCallSettingsDialog.xaml",
+        "src/ClassroomToolkit.App/RollCall/RollCallSettingsDialog.xaml",
         "src/ClassroomToolkit.App/Diagnostics/DiagnosticsDialog.xaml",
         "src/ClassroomToolkit.App/Diagnostics/StartupCompatibilityWarningDialog.xaml"
     ];
@@ -100,7 +100,7 @@ public sealed class UiV2ComponentRegressionTests
     [Fact]
     public void WarningResetContent_ShouldInheritTheButtonForeground()
     {
-        var rollCall = Load("src/ClassroomToolkit.App/RollCallWindow.xaml");
+        var rollCall = Load("src/ClassroomToolkit.App/RollCall/RollCallWindow.xaml");
         var resetButtons = rollCall.Descendants()
             .Where(element => string.Equals(element.Name.LocalName, "Button", StringComparison.Ordinal))
             .Where(element =>

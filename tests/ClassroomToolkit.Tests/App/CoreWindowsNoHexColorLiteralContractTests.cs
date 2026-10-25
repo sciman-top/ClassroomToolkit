@@ -11,15 +11,15 @@ public sealed class CoreWindowsNoHexColorLiteralContractTests
         var files = new[]
         {
             GetXamlPath("MainWindow.xaml"),
-            GetXamlPath("RollCallWindow.xaml"),
+            GetXamlPath("RollCall", "RollCallWindow.xaml"),
             GetXamlPath("Dialogs", "AboutDialog.xaml"),
-            GetXamlPath("Dialogs", "TimerSetDialog.xaml"),
-            GetXamlPath("Dialogs", "RollCallSettingsDialog.xaml"),
+            GetXamlPath("RollCall", "TimerSetDialog.xaml"),
+            GetXamlPath("RollCall", "RollCallSettingsDialog.xaml"),
             GetXamlPath("Paint", "PaintSettingsDialog.xaml"),
             GetXamlPath("Paint", "PaintOverlayWindow.xaml"),
             GetXamlPath("Photos", "PhotoOverlayWindow.xaml"),
             GetXamlPath("Photos", "ImageManagerWindow.xaml"),
-            GetXamlPath("Dialogs", "StudentListDialog.xaml"),
+            GetXamlPath("RollCall", "StudentListDialog.xaml"),
             GetXamlPath("Diagnostics", "DiagnosticsDialog.xaml")
         };
 

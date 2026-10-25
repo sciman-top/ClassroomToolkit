@@ -1,6 +1,6 @@
 using System;
 
-namespace ClassroomToolkit.App;
+namespace ClassroomToolkit.App.RollCall;
 
 internal static class RollCallRuntimeDefaults
 {

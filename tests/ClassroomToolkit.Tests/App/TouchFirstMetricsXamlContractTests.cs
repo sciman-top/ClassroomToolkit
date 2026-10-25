@@ -54,7 +54,7 @@ public sealed class TouchFirstMetricsXamlContractTests
         var rollCallWindow = XDocument.Load(TestPathHelper.ResolveRepoPath(
             "src",
             "ClassroomToolkit.App",
-            "RollCallWindow.xaml"));
+            "RollCall", "RollCallWindow.xaml"));
         rollCallWindow
             .Descendants()
             .Where(element => string.Equals(element.Name.LocalName, "RowDefinition", StringComparison.Ordinal))
