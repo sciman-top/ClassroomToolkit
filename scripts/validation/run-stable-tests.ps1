@@ -31,7 +31,7 @@ function Resolve-StableFilter {
 
     switch ($StableProfile) {
         "quick" {
-            return "FullyQualifiedName~FileLoggerProviderTests|FullyQualifiedName~StudentPhotoResolverTests|FullyQualifiedName~SafeTaskRunnerTests|FullyQualifiedName~WindowInteropRetryExecutorTests|FullyQualifiedName~InteropBackgroundDispatchExecutorTests|FullyQualifiedName~RollCallViewModelPreloadConcurrencyTests|FullyQualifiedName~ImageManagerThumbnailCacheWarmupContractTests|FullyQualifiedName~DiagnosticsBundleExportServiceTests"
+            return "FullyQualifiedName~FileLoggerProviderTests|FullyQualifiedName~StudentPhotoResolverTests|FullyQualifiedName~SafeTaskRunnerTests|FullyQualifiedName~WindowInteropRetryExecutorTests|FullyQualifiedName~InteropBackgroundDispatchExecutorTests|FullyQualifiedName~RollCallViewModelPreloadConcurrencyTests|FullyQualifiedName~ImageManagerLoadLifecycleTests|FullyQualifiedName~DiagnosticsBundleExportServiceTests"
         }
         "standard" {
             return "Gate!=CoreContract&Gate!=Performance"
@@ -40,6 +40,34 @@ function Resolve-StableFilter {
             return "Gate!=CoreContract"
         }
         default { throw "Unsupported stable test profile: $StableProfile" }
+    }
+}
+
+# 每个 FullyQualifiedName~<Class> 段都必须对应测试工程里真实存在的类。
+# 此前 quick 过滤器引用已删除的类导致 8 段静默变 7 段，无人察觉。
+function Assert-FilterTestClassSegmentsExist {
+    param([Parameter(Mandatory = $true)][string]$Filter)
+
+    $segmentMatches = [regex]::Matches($Filter, 'FullyQualifiedName~([A-Za-z0-9_]+)')
+    if ($segmentMatches.Count -eq 0) {
+        return
+    }
+
+    $testsRoot = Join-Path $PSScriptRoot "..\..\tests"
+    if (-not (Test-Path -LiteralPath $testsRoot)) {
+        throw "[stable-tests] Test source root not found: $testsRoot"
+    }
+
+    $sourceFiles = Get-ChildItem -LiteralPath $testsRoot -Recurse -Filter "*.cs" -File
+    foreach ($match in $segmentMatches) {
+        $className = $match.Groups[1].Value
+        $pattern = "class $([regex]::Escape($className))\b"
+        $declared = $sourceFiles | Where-Object {
+            Select-String -LiteralPath $_.FullName -Pattern $pattern -Quiet
+        }
+        if (-not $declared) {
+            throw "[stable-tests] Filter segment 'FullyQualifiedName~$className' matches no test class under $testsRoot. Update the filter to a live class."
+        }
     }
 }
 
@@ -95,6 +123,7 @@ $filter = if (-not [string]::IsNullOrWhiteSpace($FilterOverride)) {
 else {
     Resolve-StableFilter -StableProfile $Profile
 }
+Assert-FilterTestClassSegmentsExist -Filter $filter
 $command = @(
     "test",
     $resolvedProjectPath,
