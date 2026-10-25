@@ -166,9 +166,19 @@ public partial class PaintOverlayWindow
             return;
         }
 
+        // 与换页/自动保存一致走后台队列：此前 undo 在 UI 线程同步重写全文档 sidecar，
+        // 连续 undo 时磁盘 IO 会直接卡住绘制线程。先标记运行时哈希，确保队列的
+        // stale-snapshot 门放行（本地 undo 分支不会经其它路径更新该哈希）。
+        var cloned = CloneInkStrokes(strokes);
+        var snapshotHash = ComputeInkHash(cloned);
+        MarkInkPageModified(sourcePath, pageIndex, snapshotHash, cloned);
         _inkSidecarAutoSaveTimer?.Stop();
-        _inkSidecarAutoSaveGate.NextGeneration();
-        PersistInkToSidecar(CloneInkStrokes(strokes), sourcePath, pageIndex);
+        QueueSidecarAutoSave(new SidecarPersistSnapshot(
+            _inkPersistence,
+            sourcePath,
+            pageIndex,
+            cloned,
+            snapshotHash));
     }
 
     public void UpdateNeighborPrefetchRadiusMax(int maxRadius)
