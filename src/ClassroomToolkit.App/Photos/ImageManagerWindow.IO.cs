@@ -100,13 +100,39 @@ public partial class ImageManagerWindow
                     ex.Message)));
     }
 
-    private static (ImageSource? Thumbnail, int PageCount) LoadPdfPreview(string path)
+    private static ImageSource? LoadThumbnail(byte[] content, int decodePixelWidth)
+    {
+        return ExecuteIoSafe<ImageSource?>(
+            () =>
+        {
+            var bitmap = new BitmapImage();
+            using var stream = new MemoryStream(content, writable: false);
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.StreamSource = stream;
+            bitmap.DecodePixelWidth = decodePixelWidth;
+            bitmap.EndInit();
+            bitmap.Freeze();
+            return bitmap;
+        },
+            fallback: null,
+            onFailure: ex => System.Diagnostics.Debug.WriteLine(
+                ImageManagerPolicies.FormatThumbnailLoadFailureMessage(
+                    "<memory>",
+                    sourceType: "image",
+                    ex.GetType().Name,
+                    ex.Message)));
+    }
+
+    internal static (ImageSource? Thumbnail, int PageCount) LoadPdfPreview(
+        string path,
+        int decodePixelWidth)
     {
         return ExecuteIoSafe(
             () =>
         {
             using var doc = PdfDocumentHost.Open(path);
-            return (doc.RenderPage(1, 96), doc.PageCount);
+                return (doc.RenderPage(1, ResolvePdfThumbnailDpi(doc, decodePixelWidth)), doc.PageCount);
         },
             fallback: (null, 0),
             onFailure: ex => System.Diagnostics.Debug.WriteLine(
@@ -117,16 +143,19 @@ public partial class ImageManagerWindow
                     ex.Message)));
     }
 
-    private static DateTime GetModifiedTime(string path)
+    private static double ResolvePdfThumbnailDpi(PdfDocumentHost document, int decodePixelWidth)
     {
-        return ExecuteIoSafe(
-            () => File.GetLastWriteTime(path),
-            fallback: DateTime.MinValue,
-            onFailure: ex => System.Diagnostics.Debug.WriteLine(
-                ImageManagerPolicies.FormatModifiedTimeReadFailureMessage(
-                    path,
-                    ex.GetType().Name,
-                    ex.Message)));
+        const double defaultDpi = 96;
+        if (decodePixelWidth <= 0
+            || !document.TryGetPageSize(1, out var pageSize)
+            || pageSize.Width <= 0)
+        {
+            return defaultDpi;
+        }
+
+        // TryGetPageSize returns PDF points, while PdfDocumentHost scales the
+        // page's 96-DIP width by dpi/96. Convert the target width accordingly.
+        return Math.Min(defaultDpi, decodePixelWidth * 72.0 / pageSize.Width);
     }
 
     private static void ExecuteIoSafe(Action action, Action<Exception> onFailure)
@@ -171,123 +200,99 @@ public partial class ImageManagerWindow
             return null;
         }
 
-        AppendFolderEntries(list, folder, token);
-        if (token.IsCancellationRequested) return null;
-        AppendFileEntries(list, folder, token);
+        var directories = new List<(string Path, DateTime Modified)>();
+        var pdfs = new List<(string Path, DateTime Modified)>();
+        var images = new List<(string Path, DateTime Modified)>();
+        ExecuteIoSafe(
+            () =>
+            {
+                var directory = new DirectoryInfo(folder);
+                foreach (var entry in directory.EnumerateFileSystemInfos(
+                             "*",
+                             TopLevelIgnoreInaccessibleOptions))
+                {
+                    if (token.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+                    var name = entry.Name;
+                    if (name.StartsWith('.') || IsHiddenEntry(entry))
+                    {
+                        continue;
+                    }
+
+                    if (entry is DirectoryInfo)
+                    {
+                        directories.Add((entry.FullName, entry.LastWriteTime));
+                        continue;
+                    }
+
+                    var kind = GetMediaFileKind(entry.FullName.AsSpan());
+                    if (kind == MediaFileKind.None)
+                    {
+                        continue;
+                    }
+
+                    var target = kind == MediaFileKind.Pdf ? pdfs : images;
+                    target.Add((entry.FullName, entry.LastWriteTime));
+                }
+            },
+            onFailure: ex => System.Diagnostics.Debug.WriteLine(
+                $"ImageManager: Directory scan failed: {ex.GetType().Name} - {ex.Message}"));
+
+        if (token.IsCancellationRequested)
+        {
+            return null;
+        }
+
+        directories.Sort(static (left, right) => string.Compare(left.Path, right.Path, StringComparison.OrdinalIgnoreCase));
+        pdfs.Sort(static (left, right) => string.Compare(left.Path, right.Path, StringComparison.OrdinalIgnoreCase));
+        images.Sort(static (left, right) => string.Compare(left.Path, right.Path, StringComparison.OrdinalIgnoreCase));
+
+        foreach (var entry in directories)
+        {
+            if (token.IsCancellationRequested)
+            {
+                return null;
+            }
+
+            list.Add(new ImageItem(entry.Path, null, isFolder: true, pageCount: 0, modified: entry.Modified, isImage: false));
+        }
+
+        foreach (var entry in pdfs)
+        {
+            if (token.IsCancellationRequested)
+            {
+                return null;
+            }
+
+            list.Add(new ImageItem(entry.Path, null, isFolder: false, pageCount: 0, modified: entry.Modified, isImage: false));
+        }
+
+        foreach (var entry in images)
+        {
+            if (token.IsCancellationRequested)
+            {
+                return null;
+            }
+
+            list.Add(new ImageItem(entry.Path, null, isFolder: false, pageCount: 0, modified: entry.Modified, isImage: true));
+        }
 
         return list;
     }
 
-    private static void AppendFolderEntries(List<ImageItem> list, string folder, System.Threading.CancellationToken token)
+    private static bool IsHiddenEntry(FileSystemInfo entry)
     {
-        ExecuteIoSafe(
-            () =>
-        {
-            var directories = new List<string>();
-            foreach (var directory in Directory.EnumerateDirectories(folder, "*", TopLevelIgnoreInaccessibleOptions))
-            {
-                if (token.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                var name = Path.GetFileName(directory);
-                if (name.StartsWith('.') || IsHiddenFile(directory))
-                {
-                    continue;
-                }
-
-                directories.Add(directory);
-            }
-
-            directories.Sort(StringComparer.OrdinalIgnoreCase);
-            foreach (var dir in directories)
-            {
-                var modified = GetModifiedTime(dir);
-                list.Add(new ImageItem(dir, null, isFolder: true, pageCount: 0, modified: modified, isImage: false));
-            }
-        },
+        return ExecuteIoSafe(
+            () => (entry.Attributes & FileAttributes.Hidden) == FileAttributes.Hidden,
+            fallback: false,
             onFailure: ex => System.Diagnostics.Debug.WriteLine(
-                $"ImageManager: Folder scan failed: {ex.GetType().Name} - {ex.Message}"));
+                ImageManagerPolicies.FormatFileAttributeReadFailureMessage(
+                    entry.FullName,
+                    ex.GetType().Name,
+                    ex.Message)));
     }
 
-    private static void AppendFileEntries(List<ImageItem> list, string folder, System.Threading.CancellationToken token)
-    {
-        ExecuteIoSafe(
-            () =>
-        {
-            var pdfs = new List<string>();
-            var images = new List<string>();
-            foreach (var file in Directory.EnumerateFiles(folder, "*.*", TopLevelIgnoreInaccessibleOptions))
-            {
-                if (token.IsCancellationRequested)
-                {
-                    return;
-                }
-                if (IsDotPrefixedFileName(file.AsSpan()))
-                {
-                    continue;
-                }
-
-                var kind = GetMediaFileKind(file.AsSpan());
-                if (kind == MediaFileKind.None)
-                {
-                    continue;
-                }
-                if (IsHiddenFile(file))
-                {
-                    continue;
-                }
-                if (kind == MediaFileKind.Pdf)
-                {
-                    pdfs.Add(file);
-                    continue;
-                }
-                if (kind == MediaFileKind.Image)
-                {
-                    images.Add(file);
-                }
-            }
-
-            pdfs.Sort(StringComparer.OrdinalIgnoreCase);
-            images.Sort(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var file in pdfs)
-            {
-                if (token.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                var modified = GetModifiedTime(file);
-                // Defer heavy PDF metadata probing to thumbnail worker to keep initial folder scan responsive.
-                list.Add(new ImageItem(file, null, isFolder: false, pageCount: 0, modified: modified, isImage: false));
-            }
-
-            foreach (var file in images)
-            {
-                if (token.IsCancellationRequested)
-                {
-                    return;
-                }
-
-                var modified = GetModifiedTime(file);
-                list.Add(new ImageItem(file, null, isFolder: false, pageCount: 0, modified: modified, isImage: true));
-            }
-        },
-            onFailure: ex => System.Diagnostics.Debug.WriteLine(
-                $"ImageManager: File scan failed: {ex.GetType().Name} - {ex.Message}"));
-    }
-
-    private static bool IsDotPrefixedFileName(ReadOnlySpan<char> path)
-    {
-        if (path.IsEmpty)
-        {
-            return false;
-        }
-
-        var separatorIndex = path.LastIndexOfAny('\\', '/');
-        var fileName = separatorIndex >= 0 ? path[(separatorIndex + 1)..] : path;
-        return !fileName.IsEmpty && fileName[0] == '.';
-    }
 }

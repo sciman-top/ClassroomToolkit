@@ -57,25 +57,26 @@ public partial class ImageManagerWindow
 
             var directories = await Task.Run(() =>
             {
-                var result = new List<string>();
-                foreach (var dir in Directory.EnumerateDirectories(folderPath, "*", TopLevelIgnoreInaccessibleOptions))
+                var result = new List<(string Path, string Name)>();
+                foreach (var dir in new DirectoryInfo(folderPath).EnumerateDirectories(
+                             "*",
+                             TopLevelIgnoreInaccessibleOptions))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var name = Path.GetFileName(dir);
-                    if (string.IsNullOrWhiteSpace(name) || name.StartsWith('.'))
+                    if (string.IsNullOrWhiteSpace(dir.Name) || dir.Name.StartsWith('.'))
                     {
                         continue;
                     }
 
-                    if (IsHiddenFile(dir))
+                    if (IsHiddenEntry(dir))
                     {
                         continue;
                     }
 
-                    result.Add(dir);
+                    result.Add((dir.FullName, dir.Name));
                 }
 
-                result.Sort(StringComparer.OrdinalIgnoreCase);
+                result.Sort(static (left, right) => string.Compare(left.Path, right.Path, StringComparison.OrdinalIgnoreCase));
                 return result;
             });
 
@@ -85,11 +86,10 @@ public partial class ImageManagerWindow
                 for (var j = i; j < upperBound; j++)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    var dir = directories[j];
-                    var name = Path.GetFileName(dir);
-                    if (!string.IsNullOrWhiteSpace(name))
+                    var directory = directories[j];
+                    if (!string.IsNullOrWhiteSpace(directory.Name))
                     {
-                        item.Items.Add(CreateFolderNode(dir, name));
+                        item.Items.Add(CreateFolderNode(directory.Path, directory.Name));
                     }
                 }
 

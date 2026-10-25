@@ -113,3 +113,30 @@ public sealed class StartupDiagnosticsGatePolicyTests
         StartupDiagnosticsPolicies.ShouldRun("false").Should().BeTrue();
     }
 }
+
+public sealed class StartupDiagnosticsReuseContractTests
+{
+    [Fact]
+    public void StartupDiagnostics_ShouldReuseCompatibilityReportFromStartupGate()
+    {
+        var appSource = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "App.xaml.cs"));
+        var orchestratorSource = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "Startup",
+            "StartupOrchestrator.cs"));
+        var launcherSource = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "src",
+            "ClassroomToolkit.App",
+            "MainWindow.Launcher.cs"));
+
+        appSource.Should().Contain("StartupCompatibilityReportPropertyKey");
+        orchestratorSource.Should().Contain(
+            "_appProperties[App.StartupCompatibilityReportPropertyKey] = startupCompatibility;");
+        launcherSource.Should().Contain("as StartupCompatibilityReport");
+        launcherSource.Should().Contain("startupCompatibility);");
+    }
+}

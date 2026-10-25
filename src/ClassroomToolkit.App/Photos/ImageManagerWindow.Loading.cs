@@ -79,21 +79,10 @@ public partial class ImageManagerWindow
 
         try
         {
-            var loadResult = await Task.Run(() =>
-            {
-                var cleanupSummary = CleanupOrphanInkArtifacts(folder);
-                var scanResult = ScanDirectory(folder, token);
-                return (cleanupSummary, scanResult);
-            }, token);
-            var result = loadResult.scanResult;
+            var result = await Task.Run(() => ScanDirectory(folder, token), token);
             if (result == null || token.IsCancellationRequested || requestId != Volatile.Read(ref _loadImagesRequestId))
             {
                 return;
-            }
-            if (loadResult.cleanupSummary.SidecarsDeleted > 0 || loadResult.cleanupSummary.CompositesDeleted > 0)
-            {
-                Debug.WriteLine(
-                    $"[ImageManager] orphan-ink-cleanup folder={folder} sidecars={loadResult.cleanupSummary.SidecarsDeleted} composites={loadResult.cleanupSummary.CompositesDeleted}");
             }
 
             await AppendScanResultsAsync(result, token, requestId);
@@ -106,6 +95,13 @@ public partial class ImageManagerWindow
 
             ViewModel.CurrentIndex = GetNavigableItems().Count > 0 ? 0 : -1;
             EmptyHintText.Visibility = ViewModel.Images.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+            var cleanupSummary = await Task.Run(() => CleanupOrphanInkArtifacts(folder), token);
+            if (cleanupSummary.SidecarsDeleted > 0 || cleanupSummary.CompositesDeleted > 0)
+            {
+                Debug.WriteLine(
+                    $"[ImageManager] orphan-ink-cleanup folder={folder} sidecars={cleanupSummary.SidecarsDeleted} composites={cleanupSummary.CompositesDeleted}");
+            }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested || _isClosing) { }
         catch (ObjectDisposedException)
@@ -172,23 +168,35 @@ public partial class ImageManagerWindow
 
                 ImageSource? thumbnail = null;
                 int pageCount = item.PageCount;
+                PhotoFileFingerprint? fingerprint = null;
                 try
                 {
                     if (isPdf)
                     {
-                        var preview = LoadPdfPreview(item.Path);
+                        var preview = LoadPdfPreview(item.Path, decodeWidth);
                         thumbnail = preview.Thumbnail;
                         pageCount = preview.PageCount;
                     }
                     else
                     {
-                        thumbnail = LoadThumbnail(item.Path, decodeWidth);
+                        if (PhotoFileFingerprintReader.TryReadWithContent(
+                                item.Path,
+                                out var combinedFingerprint,
+                                out var content))
+                        {
+                            fingerprint = combinedFingerprint;
+                            thumbnail = LoadThumbnail(content, decodeWidth);
+                        }
+                        else
+                        {
+                            thumbnail = LoadThumbnail(item.Path, decodeWidth);
+                        }
                     }
                 }
                 finally { TryReleaseThumbnailSemaphore(); }
 
-                PhotoFileFingerprint? fingerprint = null;
                 if (thumbnail != null
+                    && !fingerprint.HasValue
                     && PhotoFileFingerprintReader.TryRead(item.Path, out var currentFingerprint))
                 {
                     fingerprint = currentFingerprint;

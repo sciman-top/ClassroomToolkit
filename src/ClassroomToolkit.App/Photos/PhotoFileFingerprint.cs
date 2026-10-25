@@ -21,10 +21,29 @@ internal static class PhotoFileFingerprintReader
 {
     private const int BufferSize = 64 * 1024;
     private const int StableReadAttempts = 2;
+    internal const long MaxCombinedReadContentBytes = 64L * 1024 * 1024;
 
     public static bool TryRead(string path, out PhotoFileFingerprint fingerprint)
     {
+        return TryReadCore(path, includeContent: false, out fingerprint, out _);
+    }
+
+    public static bool TryReadWithContent(
+        string path,
+        out PhotoFileFingerprint fingerprint,
+        out byte[] content)
+    {
+        return TryReadCore(path, includeContent: true, out fingerprint, out content);
+    }
+
+    private static bool TryReadCore(
+        string path,
+        bool includeContent,
+        out PhotoFileFingerprint fingerprint,
+        out byte[] content)
+    {
         fingerprint = default;
+        content = Array.Empty<byte>();
         if (string.IsNullOrWhiteSpace(path))
         {
             return false;
@@ -43,7 +62,20 @@ internal static class PhotoFileFingerprintReader
                     BufferSize,
                     FileOptions.SequentialScan);
                 var length = stream.Length;
-                var contentHash = Convert.ToHexString(SHA256.HashData(stream));
+                if (includeContent)
+                {
+                    if (length > MaxCombinedReadContentBytes)
+                    {
+                        return false;
+                    }
+
+                    content = new byte[length];
+                    stream.ReadExactly(content);
+                }
+
+                var contentHash = includeContent
+                    ? Convert.ToHexString(SHA256.HashData(content))
+                    : Convert.ToHexString(SHA256.HashData(stream));
                 var afterLength = new FileInfo(path).Length;
                 var afterWriteTimeUtcTicks = File.GetLastWriteTimeUtc(path).Ticks;
 

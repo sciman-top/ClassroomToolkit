@@ -13,6 +13,7 @@ using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.App.UI.Themes;
 using ClassroomToolkit.App.Dialogs;
+using ClassroomToolkit.Services.Compatibility;
 
 namespace ClassroomToolkit.App;
 
@@ -470,13 +471,16 @@ public partial class MainWindow
             : _configurationService.SettingsDocumentPath;
         var studentPath = ResolveStudentWorkbookPath();
         var photoRoot = _settings.InkPhotoRootPath;
+        var startupCompatibility = System.Windows.Application.Current.Properties[
+            App.StartupCompatibilityReportPropertyKey] as StartupCompatibilityReport;
         _ = SafeTaskRunner.Run("MainWindow.StartupDiagnostics", async token =>
         {
             var result = SystemDiagnostics.CollectSystemDiagnostics(
                 _settings,
                 settingsPath,
                 studentPath,
-                photoRoot);
+                photoRoot,
+                startupCompatibility);
             if (!result.HasIssues)
             {
                 return;

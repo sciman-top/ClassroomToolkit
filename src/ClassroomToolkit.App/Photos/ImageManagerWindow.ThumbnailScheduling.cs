@@ -305,7 +305,7 @@ public partial class ImageManagerWindow
     private static string BuildThumbnailCacheKey(string path, bool isPdf, int decodeWidth)
     {
         return isPdf
-            ? $"pdf|{path}"
+            ? $"pdf|{decodeWidth}|{path}"
             : $"img|{decodeWidth}|{path}";
     }
 

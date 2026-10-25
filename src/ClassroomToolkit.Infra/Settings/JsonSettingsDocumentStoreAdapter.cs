@@ -12,6 +12,7 @@ namespace ClassroomToolkit.Infra.Settings;
 public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
 {
     private const long MaxSettingsFileBytes = 4L * 1024 * 1024;
+    private const int Utf8ByteOrderMarkLength = 3;
     private static long _oversizedSettingsRejectCount;
     private readonly string _path;
     private int _hasValidatedExistingFileState;
@@ -44,8 +45,9 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
 
             EnsureInputSizeWithinLimit(operation: "load");
 
-            using var stream = File.OpenRead(_path);
-            using var document = JsonDocument.Parse(stream);
+            var content = File.ReadAllBytes(_path);
+            var contentHash = Convert.ToHexString(SHA256.HashData(content));
+            using var document = ParseJsonDocument(content);
             EnsureObjectRoot(document, operation: "load");
             var rawRoot = JsonNode.Parse(document.RootElement.GetRawText())?.AsObject()
                 ?? throw new InvalidDataException("Settings JSON root could not be materialized.");
@@ -80,7 +82,7 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
             Interlocked.Exchange(ref _hasValidatedExistingFileState, 1);
             Interlocked.Exchange(ref _overwriteBlockedAfterLoadFailure, 0);
             Interlocked.Exchange(ref _lastValidatedWriteTimeUtcTicks, GetCurrentWriteTimeUtcTicks());
-            _lastValidatedContentHash = GetCurrentContentHash();
+            _lastValidatedContentHash = contentHash;
             _rawRoot = rawRoot;
             return result;
         }
@@ -147,6 +149,20 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
             $"Settings JSON root must be an object during {operation}. path={_path} actual={document.RootElement.ValueKind}.");
     }
 
+    private static JsonDocument ParseJsonDocument(byte[] content)
+    {
+        var offset = HasUtf8ByteOrderMark(content) ? Utf8ByteOrderMarkLength : 0;
+        return JsonDocument.Parse(content.AsMemory(offset));
+    }
+
+    private static bool HasUtf8ByteOrderMark(byte[] content)
+    {
+        return content.Length >= Utf8ByteOrderMarkLength
+               && content[0] == 0xEF
+               && content[1] == 0xBB
+               && content[2] == 0xBF;
+    }
+
     private void EnsureExistingFileStateValidated()
     {
         if (!File.Exists(_path))
@@ -157,8 +173,21 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
             return;
         }
 
+        byte[] content;
+        string currentContentHash;
         var currentWriteTimeUtcTicks = GetCurrentWriteTimeUtcTicks();
-        var currentContentHash = TryGetCurrentContentHash();
+        try
+        {
+            EnsureInputSizeWithinLimit(operation: "save-preflight");
+            content = File.ReadAllBytes(_path);
+            currentContentHash = Convert.ToHexString(SHA256.HashData(content));
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            RecordLoadFailure(ex, "save-preflight");
+            return;
+        }
+
         if (Interlocked.CompareExchange(ref _hasValidatedExistingFileState, 1, 1) == 1
             && Interlocked.Read(ref _lastValidatedWriteTimeUtcTicks) == currentWriteTimeUtcTicks
             && string.Equals(_lastValidatedContentHash, currentContentHash, StringComparison.Ordinal))
@@ -168,15 +197,12 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
 
         try
         {
-            EnsureInputSizeWithinLimit(operation: "save-preflight");
-
-            using var stream = File.OpenRead(_path);
-            using var document = JsonDocument.Parse(stream);
+            using var document = ParseJsonDocument(content);
             EnsureObjectRoot(document, operation: "save-preflight");
             _rawRoot = JsonNode.Parse(document.RootElement.GetRawText())?.AsObject()
                 ?? throw new InvalidDataException("Settings JSON root could not be materialized during save-preflight.");
             Interlocked.Exchange(ref _lastValidatedWriteTimeUtcTicks, currentWriteTimeUtcTicks);
-            _lastValidatedContentHash = currentContentHash ?? GetCurrentContentHash();
+            _lastValidatedContentHash = currentContentHash;
         }
         catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
         {
@@ -202,18 +228,6 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
         return File.Exists(_path)
             ? File.GetLastWriteTimeUtc(_path).Ticks
             : DateTime.MinValue.Ticks;
-    }
-
-    private string? TryGetCurrentContentHash()
-    {
-        try
-        {
-            return GetCurrentContentHash();
-        }
-        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
-        {
-            return null;
-        }
     }
 
     private string? GetCurrentContentHash()

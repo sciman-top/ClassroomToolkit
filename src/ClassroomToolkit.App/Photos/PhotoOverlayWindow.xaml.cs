@@ -21,6 +21,10 @@ namespace ClassroomToolkit.App.Photos;
 [SuppressMessage("Design", "CA1003:Use generic event handler instances", Justification = "Action-based photo close callback is an existing UI contract covered by callback-safety contract tests.")]
 public partial class PhotoOverlayWindow : Window
 {
+    private readonly record struct PhotoBitmapLoadResult(
+        BitmapImage? Bitmap,
+        PhotoFileFingerprint? Fingerprint);
+
     private readonly DispatcherTimer _autoCloseTimer;
     private readonly System.Windows.Media.Brush _defaultLoadingMaskBrush;
     private DateTime _autoCloseDueUtc;
@@ -170,16 +174,9 @@ public partial class PhotoOverlayWindow : Window
                 PhotoOverlayDiagnostics.Log(
                     "load-start",
                     $"req={requestId} path={IOPath.GetFileName(path)}");
-                var bitmap = await LoadBitmapAsync(path);
-                PhotoFileFingerprint? loadedFingerprint = null;
-                if (bitmap != null)
-                {
-                    loadedFingerprint = await Task.Run(
-                        () => PhotoFileFingerprintReader.TryRead(path, out var fingerprint)
-                            ? fingerprint
-                            : (PhotoFileFingerprint?)null,
-                        cancellationToken);
-                }
+                var loadResult = await LoadBitmapAsync(path);
+                var bitmap = loadResult.Bitmap;
+                var loadedFingerprint = loadResult.Fingerprint;
                 if (cancellationToken.IsCancellationRequested)
                 {
                     return;
@@ -798,6 +795,32 @@ public partial class PhotoOverlayWindow : Window
         }
     }
 
+    private static BitmapImage? LoadBitmap(byte[] content)
+    {
+        try
+        {
+            var bitmap = new BitmapImage();
+            using var stream = new MemoryStream(content, writable: false);
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.StreamSource = stream;
+            var decodePixelWidth = ResolveDecodePixelWidth();
+            if (decodePixelWidth > 0)
+            {
+                bitmap.DecodePixelWidth = decodePixelWidth;
+            }
+            bitmap.EndInit();
+            bitmap.Freeze();
+
+            return bitmap;
+        }
+        catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
+        {
+            System.Diagnostics.Debug.WriteLine($"[PhotoOverlayWindow] Failed to load bitmap from content. Error: {ex.Message}");
+            return null;
+        }
+    }
+
     private static int ResolveDecodePixelWidth()
     {
         var maxEdge = Math.Max(
@@ -981,16 +1004,36 @@ public partial class PhotoOverlayWindow : Window
         }
     }
 
-    private static Task<BitmapImage?> LoadBitmapAsync(string path)
+    private static Task<PhotoBitmapLoadResult> LoadBitmapAsync(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
-            return Task.FromResult<BitmapImage?>(null);
+            return Task.FromResult(new PhotoBitmapLoadResult(null, null));
         }
 
         // 解码必须离开调用方线程：假异步（Task.FromResult(LoadBitmap(path))）一旦被
         // UI 线程直接 await 就会整卡一帧大图解码。
-        return Task.Run(() => LoadBitmap(path));
+        return Task.Run(() =>
+        {
+            if (PhotoFileFingerprintReader.TryReadWithContent(
+                    path,
+                    out var fingerprint,
+                    out var content))
+            {
+                return new PhotoBitmapLoadResult(LoadBitmap(content), fingerprint);
+            }
+
+            // 超大图片不走一次性内存读取，保留旧的“解码 + 指纹”路径，
+            // 避免为了减少一次磁盘读引入不可控的内存峰值。
+            var bitmap = LoadBitmap(path);
+            PhotoFileFingerprint? fallbackFingerprint = null;
+            if (bitmap != null && PhotoFileFingerprintReader.TryRead(path, out var fallback))
+            {
+                fallbackFingerprint = fallback;
+            }
+
+            return new PhotoBitmapLoadResult(bitmap, fallbackFingerprint);
+        });
     }
 
 }

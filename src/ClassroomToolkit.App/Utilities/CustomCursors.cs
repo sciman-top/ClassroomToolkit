@@ -21,8 +21,9 @@ namespace ClassroomToolkit.App.Utilities;
 /// </summary>
 internal static class CustomCursors
 {
-    private static WpfCursor? _brushCursor;
-    private static MediaColor _currentBrushColor = Colors.Red;
+    private const int BrushCursorCacheCapacity = 8;
+    private static readonly Dictionary<MediaColor, WpfCursor> BrushCursorCache = new();
+    private static readonly Queue<MediaColor> BrushCursorCacheOrder = new();
     private static readonly Dictionary<int, WpfCursor> EraserCursorCache = new();
     private static WpfCursor? _regionEraseCursor;
     private static readonly List<string> TempCursorFiles = new();
@@ -44,15 +45,23 @@ internal static class CustomCursors
     /// </summary>
     public static WpfCursor GetBrushCursor(MediaColor color)
     {
-        // 如果颜色变化或缓存不存在，重新创建
-        if (_brushCursor == null || !AreColorsEqual(_currentBrushColor, color))
+        if (!BrushCursorCache.TryGetValue(color, out var cursor))
         {
-            _currentBrushColor = color;
-            var previous = _brushCursor;
-            _brushCursor = CreateColoredBrushCursor(color);
-            ReleaseTempCursor(previous);
+            cursor = CreateColoredBrushCursor(color);
+            BrushCursorCache[color] = cursor;
+            BrushCursorCacheOrder.Enqueue(color);
+
+            while (BrushCursorCache.Count > BrushCursorCacheCapacity)
+            {
+                var oldestColor = BrushCursorCacheOrder.Dequeue();
+                if (BrushCursorCache.Remove(oldestColor, out var oldestCursor))
+                {
+                    ReleaseTempCursor(oldestCursor);
+                }
+            }
         }
-        return _brushCursor;
+
+        return cursor;
     }
 
     /// <summary>
@@ -469,14 +478,6 @@ internal static class CustomCursors
 
         // 加载光标
         return cursor;
-    }
-
-    /// <summary>
-    /// 比较两个颜色是否相等
-    /// </summary>
-    private static bool AreColorsEqual(MediaColor a, MediaColor b)
-    {
-        return a.A == b.A && a.R == b.R && a.G == b.G && a.B == b.B;
     }
 
     private static void TrackTempCursorFile(WpfCursor cursor, string path)

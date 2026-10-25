@@ -18,7 +18,8 @@ internal static class SystemDiagnostics
         AppSettings settings,
         string settingsPath,
         string studentPath,
-        string photoRoot)
+        string photoRoot,
+        StartupCompatibilityReport? startupCompatibility = null)
     {
         ArgumentNullException.ThrowIfNull(settings);
 
@@ -33,16 +34,16 @@ internal static class SystemDiagnostics
         lines.Add($"可执行文件：{Environment.ProcessPath ?? "unknown"}");
         lines.Add($"工作目录：{Environment.CurrentDirectory}");
         lines.Add($"程序目录：{AppDomain.CurrentDomain.BaseDirectory}");
-        var startupCompatibility = StartupCompatibilityProbe.Collect(
+        var resolvedStartupCompatibility = startupCompatibility ?? StartupCompatibilityProbe.Collect(
             settingsPath,
             settings.PresentationClassifierOverridesJson);
-        var startupStatus = StartupDiagnosticsPolicies.Resolve(startupCompatibility);
+        var startupStatus = StartupDiagnosticsPolicies.Resolve(resolvedStartupCompatibility);
         var startupBadge = StartupDiagnosticsPolicies.ToBadgeText(startupStatus);
         lines.Add(startupBadge);
-        if (startupCompatibility.Issues.Count > 0)
+        if (resolvedStartupCompatibility.Issues.Count > 0)
         {
             lines.Add(
-                $"启动兼容问题统计：阻断={startupCompatibility.Issues.Count(issue => issue.IsBlocking)}，提示={startupCompatibility.Issues.Count(issue => !issue.IsBlocking)}");
+                $"启动兼容问题统计：阻断={resolvedStartupCompatibility.Issues.Count(issue => issue.IsBlocking)}，提示={resolvedStartupCompatibility.Issues.Count(issue => !issue.IsBlocking)}");
         }
 
         lines.Add($"设置文件：{settingsPath}");

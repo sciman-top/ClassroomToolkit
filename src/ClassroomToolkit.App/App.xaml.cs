@@ -21,6 +21,7 @@ namespace ClassroomToolkit.App;
 public partial class App : WpfApplication
 {
     internal const string StartupCompatibilityWarningShownPropertyKey = "StartupCompatibilityWarningShown";
+    internal const string StartupCompatibilityReportPropertyKey = "StartupCompatibilityReport";
     private const int MaxErrorLogRetentionAttempts = 3;
     private static readonly object LogWriteLock = new();
     private static readonly ConfigurationService AppConfiguration = new();

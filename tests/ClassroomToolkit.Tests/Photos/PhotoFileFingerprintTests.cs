@@ -65,4 +65,31 @@ public sealed class PhotoFileFingerprintTests
             }
         }
     }
+
+    [Fact]
+    public void TryReadWithContent_ShouldReturnSameContentAndFingerprint()
+    {
+        var rootPath = TestPathHelper.CreateDirectory("ctool_photo_fingerprint_content");
+        var path = Path.Combine(rootPath, "student.png");
+        var expectedContent = new byte[] { 0x10, 0x20, 0x30, 0x40, 0x50 };
+
+        try
+        {
+            File.WriteAllBytes(path, expectedContent);
+
+            PhotoFileFingerprintReader.TryReadWithContent(path, out var fingerprint, out var content)
+                .Should().BeTrue();
+            PhotoFileFingerprintReader.TryRead(path, out var expectedFingerprint).Should().BeTrue();
+
+            content.Should().Equal(expectedContent);
+            fingerprint.Matches(expectedFingerprint).Should().BeTrue();
+        }
+        finally
+        {
+            if (Directory.Exists(rootPath))
+            {
+                Directory.Delete(rootPath, recursive: true);
+            }
+        }
+    }
 }

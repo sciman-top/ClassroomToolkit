@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using Microsoft.Win32;
 using System.Runtime.InteropServices;
@@ -105,6 +106,9 @@ public static class StartupCompatibilityProbe
     };
 
     private readonly record struct PresentationProcessSnapshot(string Label, int? ProcessId);
+    private readonly record struct NativeLoadProbeResult(bool Failed, string Error);
+    private static readonly ConcurrentDictionary<string, NativeLoadProbeResult> NativeLoadProbeCache =
+        new(StringComparer.OrdinalIgnoreCase);
 
     public static StartupCompatibilityReport Collect(
         string settingsPath,
@@ -324,6 +328,30 @@ public static class StartupCompatibilityProbe
     }
 
     internal static bool TryProbeNativeLibraryLoad(string libraryPath, out string error)
+    {
+        error = string.Empty;
+        if (string.IsNullOrWhiteSpace(libraryPath))
+        {
+            error = "path-empty";
+            return true;
+        }
+
+        if (NativeLoadProbeCache.TryGetValue(libraryPath, out var cached))
+        {
+            error = cached.Error;
+            return cached.Failed;
+        }
+
+        var failed = TryProbeNativeLibraryLoadUncached(libraryPath, out error);
+        if (!failed)
+        {
+            NativeLoadProbeCache[libraryPath] = new NativeLoadProbeResult(failed, error);
+        }
+
+        return failed;
+    }
+
+    private static bool TryProbeNativeLibraryLoadUncached(string libraryPath, out string error)
     {
         error = string.Empty;
         if (string.IsNullOrWhiteSpace(libraryPath))

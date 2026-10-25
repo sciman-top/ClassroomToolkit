@@ -51,6 +51,7 @@ internal sealed class StartupOrchestrator
     {
         var settingsPath = ResolveStartupSettingsPath();
         var startupCompatibility = CollectStartupCompatibilityReport(settingsPath);
+        _appProperties[App.StartupCompatibilityReportPropertyKey] = startupCompatibility;
         var startupCompatibilityReportPath = PersistStartupCompatibilityReport(startupCompatibility);
         var autoRemediation = StartupCompatibilityAutoRemediationPolicy.Apply(
             startupCompatibility,

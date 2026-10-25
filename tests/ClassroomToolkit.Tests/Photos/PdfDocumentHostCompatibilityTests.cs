@@ -192,6 +192,40 @@ public sealed class PdfDocumentHostPerformanceTests
             File.Delete(path);
         }
     }
+
+    [Fact]
+    public void ImageManagerPdfPreview_ShouldRenderAtThumbnailScale()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"classroom-toolkit-{Guid.NewGuid():N}.pdf");
+        File.WriteAllBytes(path, MinimalPdfFixtureBuilder.Build((612, 792)));
+        try
+        {
+            using var document = PdfDocumentHost.Open(path);
+            var fullPreview = document.RenderPage(1, 96);
+            fullPreview.Should().NotBeNull();
+
+            var (thumbnailSource, pageCount) = ImageManagerWindow.LoadPdfPreview(path, decodePixelWidth: 120);
+            thumbnailSource.Should().NotBeNull();
+            thumbnailSource.Should().BeAssignableTo<BitmapSource>();
+            var thumbnail = (BitmapSource)thumbnailSource!;
+            pageCount.Should().Be(1);
+            thumbnail.PixelWidth.Should().BeLessThanOrEqualTo(120);
+
+            var fullPixels = (long)fullPreview!.PixelWidth * fullPreview.PixelHeight;
+            var thumbnailPixels = (long)thumbnail.PixelWidth * thumbnail.PixelHeight;
+            var pixelReduction = fullPixels / Math.Max(1, thumbnailPixels);
+            TestContext.Current.TestOutputHelper?.WriteLine(
+                "PDF thumbnail pixel reduction: {0} -> {1} pixels ({2}x).",
+                fullPixels,
+                thumbnailPixels,
+                pixelReduction);
+            pixelReduction.Should().BeGreaterThanOrEqualTo(4);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
 }
 
 internal static class MinimalPdfFixtureBuilder
