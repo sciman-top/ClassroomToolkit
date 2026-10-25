@@ -50,7 +50,7 @@ public sealed class CrossPageDisplayLifecycleContractTests
         var source = ContractSourceAggregateLoader.LoadByPattern(
             "src",
             "ClassroomToolkit.App",
-            "Paint",
+            "Paint", "CrossPage",
             "PaintOverlayWindow.Photo.CrossPage*.cs");
 
         source.Should().Contain("HandleCrossPageDisplayUpdateDispatchFailureOnUiThread(");
@@ -64,7 +64,7 @@ public sealed class CrossPageDisplayLifecycleContractTests
         var source = ContractSourceAggregateLoader.LoadByPattern(
             "src",
             "ClassroomToolkit.App",
-            "Paint",
+            "Paint", "CrossPage",
             "PaintOverlayWindow.Photo.CrossPage*.cs");
 
         source.Should().Contain("ScheduleNeighborInkSidecarLoad(");
@@ -76,7 +76,7 @@ public sealed class CrossPageDisplayLifecycleContractTests
         return TestPathHelper.ResolveRepoPath(
             "src",
             "ClassroomToolkit.App",
-            "Paint",
+            "Paint", "CrossPage",
             "PaintOverlayWindow.Photo.CrossPage.Helpers.cs");
     }
 }

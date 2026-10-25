@@ -15,7 +15,7 @@ public sealed class CoreWindowsNoHexColorLiteralContractTests
             GetXamlPath("Dialogs", "AboutDialog.xaml"),
             GetXamlPath("RollCall", "TimerSetDialog.xaml"),
             GetXamlPath("RollCall", "RollCallSettingsDialog.xaml"),
-            GetXamlPath("Paint", "PaintSettingsDialog.xaml"),
+            GetXamlPath("Paint", "Settings", "PaintSettingsDialog.xaml"),
             GetXamlPath("Paint", "PaintOverlayWindow.xaml"),
             GetXamlPath("Photos", "PhotoOverlayWindow.xaml"),
             GetXamlPath("Photos", "ImageManagerWindow.xaml"),
