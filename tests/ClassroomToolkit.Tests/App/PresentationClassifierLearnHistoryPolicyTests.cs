@@ -1,0 +1,44 @@
+using ClassroomToolkit.App.Presentation;
+using AwesomeAssertions;
+
+namespace ClassroomToolkit.Tests.App;
+
+public sealed class PresentationClassifierLearnHistoryPolicyTests
+{
+    [Fact]
+    public void Append_ShouldKeepRecentFiveRecords()
+    {
+        var json = string.Empty;
+        for (var i = 0; i < 7; i++)
+        {
+            json = PresentationClassifierLearnHistoryPolicy.Append(
+                json,
+                new DateTime(2026, 3, 18, 8, 0, i, DateTimeKind.Utc),
+                $"detail-{i}");
+        }
+
+        var records = PresentationClassifierLearnHistoryPolicy.Parse(json);
+
+        records.Count.Should().Be(5);
+        records[0].Detail.Should().Be("detail-2");
+        records[^1].Detail.Should().Be("detail-6");
+    }
+
+    [Fact]
+    public void Parse_ShouldReturnEmpty_WhenJsonInvalid()
+    {
+        var records = PresentationClassifierLearnHistoryPolicy.Parse("{not-json");
+
+        records.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Parse_ShouldIgnoreNullArrayEntries()
+    {
+        var records = PresentationClassifierLearnHistoryPolicy.Parse(
+            "[null,{\"Utc\":\"2026-09-05T00:00:00Z\",\"Detail\":\"ok\"}]");
+
+        records.Should().ContainSingle();
+        records[0].Detail.Should().Be("ok");
+    }
+}

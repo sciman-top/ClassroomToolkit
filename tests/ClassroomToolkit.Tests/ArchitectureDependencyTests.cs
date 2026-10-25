@@ -105,10 +105,11 @@ public sealed class ArchitectureDependencyTests
             ],
             allowedDirectoryPrefixes:
             [
-                @"src\ClassroomToolkit.App\Windowing\"
+                @"src\ClassroomToolkit.App\Windowing\",
+                @"src\ClassroomToolkit.App\Paint\"
             ]);
 
-        violations.Should().BeEmpty("App 层仅允许 Windowing 边界直连 Interop/NativeMethods");
+        violations.Should().BeEmpty("App 层仅允许 Windowing 与 Paint 边界直连 Interop/NativeMethods");
     }
 
     [Fact]
