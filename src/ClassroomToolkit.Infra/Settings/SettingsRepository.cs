@@ -86,6 +86,9 @@ public sealed class SettingsRepository
             _migrationBackupRequired = false;
             _lastValidatedWriteTimeUtcTicks = DateTime.MinValue.Ticks;
             _lastValidatedContentHash = null;
+            // 文件被外部删除后丢弃行基线，下一次 Save 全新生成，
+            // 避免把被删文件里的注释与畸形行复活写回。
+            _store.InvalidatePersistedBaseline();
             return;
         }
 

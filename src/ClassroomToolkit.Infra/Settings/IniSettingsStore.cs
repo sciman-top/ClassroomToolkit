@@ -19,6 +19,15 @@ public sealed class IniSettingsStore
 
     public string Path => _path;
 
+    /// <summary>
+    /// 丢弃已加载的文件行基线。设置文件被外部删除后调用，使下一次 Save 走全新生成，
+    /// 而不是把被删文件的注释与畸形行从残留基线复活写回。
+    /// </summary>
+    public void InvalidatePersistedBaseline()
+    {
+        _loadedLines = null;
+    }
+
     public Dictionary<string, Dictionary<string, string>> Load()
     {
         TryLoad(out var data);

@@ -170,6 +170,9 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
             Interlocked.Exchange(ref _hasValidatedExistingFileState, 0);
             Interlocked.Exchange(ref _lastValidatedWriteTimeUtcTicks, DateTime.MinValue.Ticks);
             _lastValidatedContentHash = null;
+            // 文件被外部删除后必须丢弃旧内容基线，否则下一次 Save 会从残留 _rawRoot
+            // 合并，把已删除文件里的 section 复活写回。
+            _rawRoot = null;
             return;
         }
 

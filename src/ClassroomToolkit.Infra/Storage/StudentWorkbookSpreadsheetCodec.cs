@@ -3,6 +3,7 @@ using ClosedXML.Excel;
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Serialization;
 using ClassroomToolkit.Domain.Utilities;
+using ClassroomToolkit.Infra.Logging;
 
 namespace ClassroomToolkit.Infra.Storage;
 
@@ -16,6 +17,9 @@ internal static class StudentWorkbookSpreadsheetCodec
     private static readonly string[] DefaultHeaders = { "学号", "姓名", "分组" };
     private static readonly string[] CanonicalColumns = { "学号", "姓名", "分组", ClassRoster.InternalRowIdColumn };
     private const string InternalRowIdColumn = ClassRoster.InternalRowIdColumn;
+
+    /// <summary>Excel 单元格字符硬上限；超出会让 Excel 把文件判为“需要修复”。</summary>
+    internal const int MaxRollStateCellCharacters = 32767;
 
     /// <summary>表头识别扫描行数：兼容真实表头之上有装饰性标题行的工作簿。</summary>
     private const int HeaderScanRowCount = 5;
@@ -88,8 +92,24 @@ internal static class StudentWorkbookSpreadsheetCodec
 
         var stateSheet = workbookDocument.Worksheets.Add(StudentWorkbookStore.RollStateSheetName);
         stateSheet.Cell(1, 1).Value = StudentWorkbookStore.RollStateColumn;
-        stateSheet.Cell(2, 1).Value = EnsureRollStateJson(rollStateJson);
+        stateSheet.Cell(2, 1).Value = ResolveRollStateJsonWithinCellLimit(rollStateJson);
         stateSheet.Column(1).Width = 100;
+    }
+
+    private static string ResolveRollStateJsonWithinCellLimit(string? rollStateJson)
+    {
+        var json = EnsureRollStateJson(rollStateJson);
+        if (json.Length <= MaxRollStateCellCharacters)
+        {
+            return json;
+        }
+
+        // 大型学校级名册（数百学生集中单簿）的点名状态 JSON 可能超过单元格上限：
+        // 落盘成功但 Excel 打开即报“发现不可读内容”。此处保留名册、丢弃本次点名
+        // 状态并留痕；应用自身下次加载按空状态初始化，可正常继续使用。
+        InfraDiagnosticsLog.Write(
+            $"[StudentWorkbookSpreadsheetCodec] roll-state-json-exceeds-cell-limit length={json.Length} max={MaxRollStateCellCharacters}; roster kept, roll state dropped");
+        return EnsureRollStateJson(null);
     }
 
     internal static StudentWorkbookLoadResult CreateTemplateWorkbook()

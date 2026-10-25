@@ -743,4 +743,33 @@ public sealed class StudentWorkbookStoreTests
         }
     }
 
+    [Fact]
+    public void Save_ShouldDropOversizedRollStateJson_InsteadOfProducingExcelRepairPrompt()
+    {
+        var path = TestPathHelper.CreateFilePath("ctool_rollstate_cell_limit", ".xlsx");
+        try
+        {
+            var store = new StudentWorkbookStore();
+            var loaded = store.LoadOrCreate(path);
+            // Excel 单元格硬上限 32767 字符：超出时 Excel 打开即报“发现不可读内容”。
+            var oversizedRollStateJson = "{\"pad\":\"" + new string('a', 40_000) + "\"}";
+            oversizedRollStateJson.Length.Should().BeGreaterThan(32767);
+
+            var save = () => store.Save(loaded.Workbook, path, oversizedRollStateJson);
+            save.Should().NotThrow();
+
+            var reloaded = store.LoadOrCreate(path);
+            reloaded.Workbook.Classes.Should().NotBeEmpty();
+            reloaded.RollStateJson.Should().NotBeNull();
+            reloaded.RollStateJson!.Length.Should().BeLessThanOrEqualTo(32767);
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
 }

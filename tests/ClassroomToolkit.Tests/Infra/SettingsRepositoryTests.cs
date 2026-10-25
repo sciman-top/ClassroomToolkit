@@ -433,4 +433,35 @@ public sealed class SettingsRepositoryTests
             Directory.Delete(directory, recursive: true);
         }
     }
+
+    [Fact]
+    public void Save_ShouldNotResurrectDeletedFileLines_WhenFileDeletedExternally()
+    {
+        var path = TestPathHelper.CreateFilePath("ctool_ini_resurrection", ".ini");
+        try
+        {
+            File.WriteAllText(path, "[General]\ntheme=dark\n# 用户注释\n");
+            var repo = new SettingsRepository(path);
+            _ = repo.Load();
+
+            File.Delete(path);
+
+            repo.Save(new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Session"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["duration"] = "5"
+                }
+            });
+
+            var content = File.ReadAllText(path);
+            content.Should().Contain("[Session]");
+            content.Should().NotContain("用户注释");
+            content.Should().NotContain("theme=dark");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
 }

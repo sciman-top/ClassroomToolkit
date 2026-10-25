@@ -505,4 +505,40 @@ public sealed class JsonSettingsDocumentStoreAdapterTests
 
         writer.Write(suffix);
     }
+
+    [Fact]
+    public void Save_ShouldNotResurrectDeletedFileSections_WhenFileDeletedExternally()
+    {
+        var path = TestPathHelper.CreateFilePath("ctool_json_resurrection", ".json");
+        try
+        {
+            var adapter = new JsonSettingsDocumentStoreAdapter(path);
+            adapter.Save(new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Paint"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["color"] = "red"
+                }
+            });
+            _ = adapter.Load();
+
+            File.Delete(path);
+
+            adapter.Save(new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["General"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["theme"] = "dark"
+                }
+            });
+
+            var content = File.ReadAllText(path);
+            content.Should().Contain("General");
+            content.Should().NotContain("Paint");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
 }
