@@ -1,7 +1,7 @@
-using ClassroomToolkit.Domain.Utilities;
+using ClassroomToolkit.IO;
 using AwesomeAssertions;
 
-namespace ClassroomToolkit.Tests.Domain;
+namespace ClassroomToolkit.Tests.IO;
 
 public sealed class AtomicFileReplaceUtilityTests
 {

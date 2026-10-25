@@ -151,50 +151,32 @@ public sealed class PhotoInteractionModePolicyTests
     }
 }
 
-public sealed class PhotoRightButtonDownExecutionPolicyTests
-{
-    [Theory]
-    [InlineData(false, false, false, false)]
-    [InlineData(true, false, true, false)]
-    [InlineData(false, true, false, true)]
-    [InlineData(true, true, true, true)]
-    public void Resolve_ShouldMatchExpected(
-        bool shouldArmPending,
-        bool shouldAllowPan,
-        bool expectedArmPending,
-        bool expectedTryBeginPan)
-    {
-        var plan = PhotoWindowPolicies.ResolvePhotoRightButtonDownExecution(
-            shouldArmPending,
-            shouldAllowPan);
-
-        plan.ShouldArmPending.Should().Be(expectedArmPending);
-        plan.ShouldTryBeginPan.Should().Be(expectedTryBeginPan);
-    }
-}
-
 public sealed class PhotoRightButtonUpExecutionPolicyTests
 {
     [Fact]
-    public void Resolve_ShouldReturnPassThrough_WhenContextMenuShouldNotShow()
+    public void ShouldShowContextMenuOnUp_ReturnsFalse_WhenNotPending()
     {
-        var plan = PhotoWindowPolicies.ResolvePhotoRightButtonUpExecution(shouldShowContextMenuOnUp: false);
-
-        plan.Should().Be(new PhotoRightButtonUpExecutionPlan(
-            Action: PhotoRightButtonUpAction.PassThrough,
-            ShouldMarkHandled: false,
-            ShouldClearPending: false));
+        PhotoWindowPolicies
+            .ShouldShowContextMenuOnUp(
+                rightClickPending: false,
+                photoModeActive: true,
+                photoFullscreen: true,
+                mode: PaintToolMode.Cursor)
+            .Should()
+            .BeFalse();
     }
 
     [Fact]
-    public void Resolve_ShouldReturnShowContextMenuPlan_WhenContextMenuShouldShow()
+    public void ShouldShowContextMenuOnUp_ReturnsTrue_WhenPendingAndArmStateMatches()
     {
-        var plan = PhotoWindowPolicies.ResolvePhotoRightButtonUpExecution(shouldShowContextMenuOnUp: true);
-
-        plan.Should().Be(new PhotoRightButtonUpExecutionPlan(
-            Action: PhotoRightButtonUpAction.ShowContextMenu,
-            ShouldMarkHandled: true,
-            ShouldClearPending: true));
+        PhotoWindowPolicies
+            .ShouldShowContextMenuOnUp(
+                rightClickPending: true,
+                photoModeActive: true,
+                photoFullscreen: true,
+                mode: PaintToolMode.Cursor)
+            .Should()
+            .BeTrue();
     }
 }
 
@@ -273,37 +255,30 @@ public sealed class PhotoRightClickContextMenuPolicyTests
 public sealed class PhotoTitleBarDragZOrderPolicyTests
 {
     [Fact]
-    public void Resolve_ShouldAllowDragAndRequestSingleNonForcedRetouch_WhenLeftButtonDragInWindowedPhotoMode()
+    public void CanStartDrag_ReturnsTrue_ForLeftButtonDragInWindowedPhotoMode()
     {
-        var plan = PhotoWindowPolicies.ResolvePhotoTitleBarDragZOrder(
-            photoModeActive: true,
-            photoFullscreen: false,
-            changedButton: MouseButton.Left);
-
-        plan.CanDrag.Should().BeTrue();
-        plan.RequestZOrderBeforeDrag.Should().BeFalse();
-        plan.RequestZOrderAfterDrag.Should().BeTrue();
-        plan.ForceAfterDrag.Should().BeFalse();
+        PhotoWindowPolicies
+            .CanStartPhotoTitleBarDrag(
+                photoModeActive: true,
+                photoFullscreen: false,
+                changedButton: MouseButton.Left)
+            .Should()
+            .BeTrue();
     }
 
     [Theory]
     [InlineData(false, false, MouseButton.Left)]
     [InlineData(true, true, MouseButton.Left)]
     [InlineData(true, false, MouseButton.Right)]
-    public void Resolve_ShouldBlockDrag_WhenPreconditionsNotMet(
+    public void CanStartDrag_ReturnsFalse_WhenPreconditionsNotMet(
         bool photoModeActive,
         bool photoFullscreen,
         MouseButton changedButton)
     {
-        var plan = PhotoWindowPolicies.ResolvePhotoTitleBarDragZOrder(
-            photoModeActive,
-            photoFullscreen,
-            changedButton);
-
-        plan.CanDrag.Should().BeFalse();
-        plan.RequestZOrderBeforeDrag.Should().BeFalse();
-        plan.RequestZOrderAfterDrag.Should().BeFalse();
-        plan.ForceAfterDrag.Should().BeFalse();
+        PhotoWindowPolicies
+            .CanStartPhotoTitleBarDrag(photoModeActive, photoFullscreen, changedButton)
+            .Should()
+            .BeFalse();
     }
 }
 

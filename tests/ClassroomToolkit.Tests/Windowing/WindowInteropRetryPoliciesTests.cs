@@ -35,13 +35,6 @@ public sealed class WindowPlacementInteropRetryPolicyTests
         decision.Reason.Should().Be(WindowPlacementInteropRetryReason.RetryableError);
     }
 
-    [Fact]
-    public void ShouldRetry_ShouldMapResolveDecision()
-    {
-        var shouldRetry = WindowInteropRetryPolicies.ShouldRetryWindowPlacementInteropRetry(attempt: 1, errorCode: 5);
-
-        shouldRetry.Should().BeTrue();
-    }
 }
 
 public sealed class WindowStyleInteropRetryPolicyTests
@@ -75,13 +68,6 @@ public sealed class WindowStyleInteropRetryPolicyTests
         decision.Reason.Should().Be(WindowStyleInteropRetryReason.RetryableError);
     }
 
-    [Fact]
-    public void ShouldRetry_ShouldMapResolveDecision()
-    {
-        var shouldRetry = WindowInteropRetryPolicies.ShouldRetryWindowStyleInteropRetry(attempt: 1, errorCode: 5);
-
-        shouldRetry.Should().BeTrue();
-    }
 }
 
 public sealed class WindowTopmostInteropRetryPolicyTests
@@ -115,11 +101,4 @@ public sealed class WindowTopmostInteropRetryPolicyTests
         decision.Reason.Should().Be(WindowTopmostInteropRetryReason.RetryableError);
     }
 
-    [Fact]
-    public void ShouldRetry_ShouldMapResolveDecision()
-    {
-        var shouldRetry = WindowInteropRetryPolicies.ShouldRetryWindowTopmostInteropRetry(attempt: 1, errorCode: 5);
-
-        shouldRetry.Should().BeTrue();
-    }
 }

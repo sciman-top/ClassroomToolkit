@@ -17,30 +17,19 @@ public partial class PaintOverlayWindow
             return;
         }
         e.Handled = true;
-        var plan = PhotoWindowPolicies.ResolvePhotoTitleBarDragZOrder(
-            _photoModeActive,
-            _photoFullscreen,
-            e.ChangedButton);
-        if (!plan.CanDrag)
+        if (!PhotoWindowPolicies.CanStartPhotoTitleBarDrag(
+                _photoModeActive,
+                _photoFullscreen,
+                e.ChangedButton))
         {
             return;
         }
 
-        if (plan.RequestZOrderBeforeDrag)
-        {
-            SafeActionExecutionExecutor.TryExecute(
-                () => FloatingZOrderRequested?.Invoke(new FloatingZOrderRequest(plan.ForceAfterDrag)),
-                ex => Debug.WriteLine($"[FloatingZOrderRequested] drag-before callback failed: {ex.GetType().Name} - {ex.Message}"));
-        }
-
         PaintActionInvoker.TryInvoke(DragMove);
 
-        if (plan.RequestZOrderAfterDrag)
-        {
-            SafeActionExecutionExecutor.TryExecute(
-                () => FloatingZOrderRequested?.Invoke(new FloatingZOrderRequest(plan.ForceAfterDrag)),
-                ex => Debug.WriteLine($"[FloatingZOrderRequested] drag-after callback failed: {ex.GetType().Name} - {ex.Message}"));
-        }
+        SafeActionExecutionExecutor.TryExecute(
+            () => FloatingZOrderRequested?.Invoke(new FloatingZOrderRequest(ForceEnforceZOrder: false)),
+            ex => Debug.WriteLine($"[FloatingZOrderRequested] drag-after callback failed: {ex.GetType().Name} - {ex.Message}"));
     }
 
     private void ShowPhotoContextMenu(WpfPoint position)

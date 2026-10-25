@@ -179,7 +179,9 @@ internal sealed class InkStorageService
         IEnumerable<string> files;
         try
         {
-            files = Directory.EnumerateFiles(pagesFolder, "slide_*.json", TopLevelIgnoreInaccessibleOptions);
+            // Materialize within the guard: enumeration can fail in MoveNext
+            // when a removable drive or network directory disappears.
+            files = Directory.EnumerateFiles(pagesFolder, "slide_*.json", TopLevelIgnoreInaccessibleOptions).ToArray();
         }
         catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
@@ -301,7 +303,9 @@ internal sealed class InkStorageService
         {
             return;
         }
-        var cutoff = DateTime.Today.AddDays(-retentionDays);
+        var today = DateTime.Today;
+        var maximumDays = (today - DateTime.MinValue).Days;
+        var cutoff = today.AddDays(-Math.Min(retentionDays, maximumDays));
         CleanupDateFolders(_rootPath, cutoff);
         CleanupDateFolders(_photoRootPath, cutoff);
     }
@@ -312,7 +316,17 @@ internal sealed class InkStorageService
         {
             return;
         }
-        foreach (var folder in Directory.EnumerateDirectories(rootPath, "*", TopLevelIgnoreInaccessibleOptions))
+        string[] folders;
+        try
+        {
+            folders = Directory.EnumerateDirectories(rootPath, "*", TopLevelIgnoreInaccessibleOptions).ToArray();
+        }
+        catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[InkStorage] cleanup enumeration failed root={rootPath} ex={ex.GetType().Name} msg={ex.Message}");
+            return;
+        }
+        foreach (var folder in folders)
         {
             var name = Path.GetFileName(folder);
             if (!DateTime.TryParseExact(name, "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))

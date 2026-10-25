@@ -30,11 +30,4 @@ public sealed class FloatingActivationExecutionPolicyTests
         decision.Reason.Should().Be(FloatingActivationExecutionReason.None);
     }
 
-    [Fact]
-    public void ShouldActivate_ShouldMapResolveDecision()
-    {
-        FloatingWindowCoordinationPolicies.ShouldActivate("overlay", shouldActivate: true)
-            .Should()
-            .BeTrue();
-    }
 }

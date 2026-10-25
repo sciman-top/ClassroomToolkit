@@ -8,74 +8,63 @@ namespace ClassroomToolkit.Tests.Windowing;
 public sealed class PaintVisibilityTransitionPolicyTests
 {
     [Fact]
-    public void ResolveEnsureOverlayVisible_ShouldShowOverlayAndSyncOwners_WhenOverlayHidden()
+    public void ResolveEnsureOverlayVisible_AlwaysRequestsEnsureVisible()
     {
-        var plan = PaintWindowVisibilityPolicies.ResolveEnsureOverlayVisible(overlayVisible: false);
-
-        plan.ShowOverlay.Should().BeTrue();
-        plan.SyncFloatingOwnersVisible.Should().BeTrue();
-        plan.RequestZOrderApply.Should().BeTrue();
-        plan.ForceEnforceZOrder.Should().BeFalse();
+        PaintWindowVisibilityPolicies.ResolveEnsureOverlayVisible(overlayVisible: false)
+            .Should()
+            .Be(PaintVisibilityTransition.EnsureOverlayVisible);
+        PaintWindowVisibilityPolicies.ResolveEnsureOverlayVisible(overlayVisible: true)
+            .Should()
+            .Be(PaintVisibilityTransition.EnsureOverlayVisible);
     }
 
     [Fact]
-    public void ResolveEnsureOverlayVisible_ShouldSkipShow_WhenOverlayAlreadyVisible()
+    public void ResolvePaintToggle_MapsOverlayStateToHideOrShow()
     {
-        var plan = PaintWindowVisibilityPolicies.ResolveEnsureOverlayVisible(overlayVisible: true);
-
-        plan.ShowOverlay.Should().BeFalse();
-        plan.SyncFloatingOwnersVisible.Should().BeTrue();
-        plan.RequestZOrderApply.Should().BeTrue();
-        plan.ForceEnforceZOrder.Should().BeFalse();
+        PaintWindowVisibilityPolicies.ResolvePaintToggle(overlayVisible: true)
+            .Should()
+            .Be(PaintVisibilityTransition.ToggleHidePaint);
+        PaintWindowVisibilityPolicies.ResolvePaintToggle(overlayVisible: false)
+            .Should()
+            .Be(PaintVisibilityTransition.ToggleShowPaint);
     }
 
     [Fact]
-    public void ResolvePaintToggle_ShouldHideOverlayAndCaptureToolbar_WhenOverlayVisible()
+    public void ResolvePhotoModeChange_MapsActiveStateToEnterOrExit()
     {
-        var plan = PaintWindowVisibilityPolicies.ResolvePaintToggle(overlayVisible: true);
-
-        plan.HideOverlay.Should().BeTrue();
-        plan.CaptureToolbarPosition.Should().BeTrue();
-        plan.SyncFloatingOwnersVisible.Should().BeFalse();
-        plan.RequestZOrderApply.Should().BeTrue();
-        plan.ForceEnforceZOrder.Should().BeFalse();
+        PaintWindowVisibilityPolicies.ResolvePhotoModeChange(
+                photoModeActive: true,
+                toolbarWindowState: WindowState.Minimized)
+            .Should()
+            .Be(PaintVisibilityTransition.EnterPhotoMode);
+        PaintWindowVisibilityPolicies.ResolvePhotoModeChange(
+                photoModeActive: false,
+                toolbarWindowState: WindowState.Normal)
+            .Should()
+            .Be(PaintVisibilityTransition.ExitPhotoMode);
     }
 
     [Fact]
-    public void ResolvePaintToggle_ShouldShowOverlayAndSyncOwners_WhenOverlayHidden()
+    public void ShouldNormalizeToolbarWindowState_OnlyForMinimizedEnterPhoto()
     {
-        var plan = PaintWindowVisibilityPolicies.ResolvePaintToggle(overlayVisible: false);
-
-        plan.ShowOverlay.Should().BeTrue();
-        plan.SyncFloatingOwnersVisible.Should().BeTrue();
-        plan.RequestZOrderApply.Should().BeTrue();
-        plan.ForceEnforceZOrder.Should().BeFalse();
-    }
-
-    [Fact]
-    public void ResolvePhotoModeChange_ShouldShowToolbarAndNormalize_WhenToolbarMinimized()
-    {
-        var plan = PaintWindowVisibilityPolicies.ResolvePhotoModeChange(
-            photoModeActive: true,
-            toolbarWindowState: WindowState.Minimized);
-
-        plan.ShowToolbar.Should().BeTrue();
-        plan.NormalizeToolbarWindowState.Should().BeTrue();
-        plan.TouchPhotoFullscreenSurface.Should().BeTrue();
-        plan.ForceEnforceZOrder.Should().BeFalse();
-    }
-
-    [Fact]
-    public void ResolvePhotoModeChange_ShouldSyncOwners_WhenPhotoModeExits()
-    {
-        var plan = PaintWindowVisibilityPolicies.ResolvePhotoModeChange(
-            photoModeActive: false,
-            toolbarWindowState: WindowState.Normal);
-
-        plan.SyncFloatingOwnersVisible.Should().BeTrue();
-        plan.RequestZOrderApply.Should().BeTrue();
-        plan.ShowToolbar.Should().BeFalse();
-        plan.ForceEnforceZOrder.Should().BeFalse();
+        PaintWindowVisibilityPolicies
+            .ShouldNormalizeToolbarWindowState(
+                PaintVisibilityTransition.EnterPhotoMode,
+                WindowState.Minimized)
+            .Should()
+            .BeTrue();
+        PaintWindowVisibilityPolicies
+            .ShouldNormalizeToolbarWindowState(
+                PaintVisibilityTransition.EnterPhotoMode,
+                WindowState.Normal)
+            .Should()
+            .BeFalse();
+        PaintWindowVisibilityPolicies
+            .ShouldNormalizeToolbarWindowState(
+                PaintVisibilityTransition.ExitPhotoMode,
+                WindowState.Minimized)
+            .Should()
+            .BeFalse();
     }
 }
 
@@ -190,30 +179,4 @@ public sealed class PaintWindowVisibilityPolicyTests
         plan.HideToolbar.Should().BeFalse();
     }
 
-    [Fact]
-    public void ResolveShow_ContextOverload_ShouldShowOverlay_WhenOverlayHidden()
-    {
-        var context = new PaintWindowVisibilityShowContext(
-            OverlayVisible: false,
-            ToolbarExists: true,
-            ToolbarOwnerAlreadyOverlay: false);
-
-        var plan = PaintWindowVisibilityPolicies.ResolveShow(context);
-
-        plan.ShowOverlay.Should().BeTrue();
-        plan.ToolbarOwnerAction.Should().Be(FloatingOwnerBindingAction.AttachOverlay);
-    }
-
-    [Fact]
-    public void ResolveHide_ContextOverload_ShouldHideOverlay_WhenVisible()
-    {
-        var context = new PaintWindowVisibilityHideContext(
-            OverlayVisible: true,
-            ToolbarVisible: false);
-
-        var plan = PaintWindowVisibilityPolicies.ResolveHide(context);
-
-        plan.HideOverlay.Should().BeTrue();
-        plan.HideToolbar.Should().BeFalse();
-    }
 }

@@ -31,29 +31,6 @@ internal static class FloatingTopmostDialogSuppressionState
     }
 }
 
-internal enum FloatingTopmostDriftReason
-{
-    None = 0,
-    ToolbarDrift = 1,
-    RollCallDrift = 2,
-    LauncherDrift = 3,
-    NoDrift = 4
-}
-
-internal readonly record struct FloatingTopmostDriftDecision(
-    bool HasDrift,
-    FloatingTopmostDriftReason Reason);
-
-internal enum FloatingTopmostForceEnforceReason
-{
-    None = 0,
-    DisabledByDesign = 1
-}
-
-internal readonly record struct FloatingTopmostForceEnforceDecision(
-    bool ShouldForceEnforce,
-    FloatingTopmostForceEnforceReason Reason);
-
 internal static class FloatingTopmostDriftRepairExecutor
 {
     internal static void Apply(
@@ -188,17 +165,6 @@ internal readonly record struct FloatingTopmostPlan(
     bool ImageManagerTopmost,
     bool OverlayShouldActivate);
 
-internal enum FloatingTopmostRetouchReason
-{
-    None = 0,
-    OverlayTopmostNotRising = 1,
-    OverlayTopmostBecameRequired = 2
-}
-
-internal readonly record struct FloatingTopmostRetouchDecision(
-    bool ShouldEnsureFloatingOnTransition,
-    FloatingTopmostRetouchReason Reason);
-
 internal static class FloatingTopmostPolicies
 {
     private readonly record struct TopmostPlanSnapshot(
@@ -207,22 +173,7 @@ internal static class FloatingTopmostPolicies
         bool LauncherTopmost,
         bool ImageManagerTopmost);
 
-    internal enum FloatingTopmostApplyReason
-    {
-        None = 0,
-        ForceRequested = 1,
-        MissingLastState = 2,
-        FrontSurfaceChanged = 3,
-        TopmostPlanChanged = 4,
-        Unchanged = 5,
-        LauncherInteractiveRetouch = 6
-    }
-
-    internal readonly record struct FloatingTopmostApplyDecision(
-        bool ShouldEnforceZOrder,
-        FloatingTopmostApplyReason Reason);
-
-    internal static FloatingTopmostApplyDecision ResolveApply(
+    internal static bool ShouldEnforceZOrder(
         ZOrderSurface? lastFrontSurface,
         ZOrderSurface currentFrontSurface,
         FloatingTopmostPlan? lastPlan,
@@ -231,59 +182,32 @@ internal static class FloatingTopmostPolicies
     {
         if (forceEnforceZOrder)
         {
-            return new FloatingTopmostApplyDecision(
-                ShouldEnforceZOrder: true,
-                Reason: FloatingTopmostApplyReason.ForceRequested);
+            return true;
         }
 
         if (!lastFrontSurface.HasValue || !lastPlan.HasValue)
         {
-            return new FloatingTopmostApplyDecision(
-                ShouldEnforceZOrder: true,
-                Reason: FloatingTopmostApplyReason.MissingLastState);
+            return true;
         }
 
         if (lastFrontSurface.Value != currentFrontSurface)
         {
-            return new FloatingTopmostApplyDecision(
-                ShouldEnforceZOrder: true,
-                Reason: FloatingTopmostApplyReason.FrontSurfaceChanged);
+            return true;
         }
 
         var lastTopmost = ToTopmostPlan(lastPlan.Value);
         var currentTopmost = ToTopmostPlan(currentPlan);
         if (lastTopmost != currentTopmost)
         {
-            return new FloatingTopmostApplyDecision(
-                ShouldEnforceZOrder: true,
-                Reason: FloatingTopmostApplyReason.TopmostPlanChanged);
+            return true;
         }
 
         if (ShouldRetouchLauncherOnInteractiveSurface(currentFrontSurface, currentPlan))
         {
-            return new FloatingTopmostApplyDecision(
-                ShouldEnforceZOrder: true,
-                Reason: FloatingTopmostApplyReason.LauncherInteractiveRetouch);
+            return true;
         }
 
-        return new FloatingTopmostApplyDecision(
-            ShouldEnforceZOrder: false,
-            Reason: FloatingTopmostApplyReason.Unchanged);
-    }
-
-    internal static bool ShouldEnforceZOrder(
-        ZOrderSurface? lastFrontSurface,
-        ZOrderSurface currentFrontSurface,
-        FloatingTopmostPlan? lastPlan,
-        FloatingTopmostPlan currentPlan,
-        bool forceEnforceZOrder = false)
-    {
-        return ResolveApply(
-            lastFrontSurface,
-            currentFrontSurface,
-            lastPlan,
-            currentPlan,
-            forceEnforceZOrder).ShouldEnforceZOrder;
+        return false;
     }
 
     private static TopmostPlanSnapshot ToTopmostPlan(FloatingTopmostPlan plan)
@@ -309,50 +233,21 @@ internal static class FloatingTopmostPolicies
             or ZOrderSurface.Whiteboard;
     }
 
-    internal static FloatingTopmostDriftDecision ResolveDrift(ToolbarInteractionRetouchSnapshot snapshot)
-    {
-        if (snapshot.ToolbarVisible && !snapshot.ToolbarTopmost)
-        {
-            return new FloatingTopmostDriftDecision(
-                HasDrift: true,
-                Reason: FloatingTopmostDriftReason.ToolbarDrift);
-        }
-
-        if (snapshot.RollCallVisible && !snapshot.RollCallTopmost)
-        {
-            return new FloatingTopmostDriftDecision(
-                HasDrift: true,
-                Reason: FloatingTopmostDriftReason.RollCallDrift);
-        }
-
-        if (snapshot.LauncherVisible && !snapshot.LauncherTopmost)
-        {
-            return new FloatingTopmostDriftDecision(
-                HasDrift: true,
-                Reason: FloatingTopmostDriftReason.LauncherDrift);
-        }
-
-        return new FloatingTopmostDriftDecision(
-            HasDrift: false,
-            Reason: FloatingTopmostDriftReason.NoDrift);
-    }
-
     internal static bool HasDrift(ToolbarInteractionRetouchSnapshot snapshot)
     {
-        return ResolveDrift(snapshot).HasDrift;
+        return (snapshot.ToolbarVisible && !snapshot.ToolbarTopmost)
+            || (snapshot.RollCallVisible && !snapshot.RollCallTopmost)
+            || (snapshot.LauncherVisible && !snapshot.LauncherTopmost);
     }
 
-    internal static FloatingTopmostForceEnforceDecision ResolveForceEnforce(ToolbarInteractionRetouchSnapshot snapshot)
-    {
-        _ = snapshot;
-        return new FloatingTopmostForceEnforceDecision(
-            ShouldForceEnforce: false,
-            Reason: FloatingTopmostForceEnforceReason.DisabledByDesign);
-    }
-
+    /// <summary>
+    /// Toolbar-interaction retouch deliberately never escalates to forced z-order;
+    /// photo/fullscreen surfaces own that escalation elsewhere.
+    /// </summary>
     internal static bool ShouldForceEnforce(ToolbarInteractionRetouchSnapshot snapshot)
     {
-        return ResolveForceEnforce(snapshot).ShouldForceEnforce;
+        _ = snapshot;
+        return false;
     }
 
     internal static bool ResolveDriftRepairEnforce(ToolbarInteractionRetouchSnapshot snapshot, ToolbarInteractionRetouchTrigger trigger)
@@ -433,22 +328,10 @@ internal static class FloatingTopmostPolicies
         return toolbarVisible || rollCallVisible || launcherVisible;
     }
 
-    internal static FloatingTopmostRetouchDecision ResolveRetouch(UiSessionTransition transition)
-    {
-        var shouldEnsure = transition.Previous.OverlayTopmostRequired != transition.Current.OverlayTopmostRequired
-            && transition.Current.OverlayTopmostRequired;
-        return shouldEnsure
-            ? new FloatingTopmostRetouchDecision(
-                ShouldEnsureFloatingOnTransition: true,
-                Reason: FloatingTopmostRetouchReason.OverlayTopmostBecameRequired)
-            : new FloatingTopmostRetouchDecision(
-                ShouldEnsureFloatingOnTransition: false,
-                Reason: FloatingTopmostRetouchReason.OverlayTopmostNotRising);
-    }
-
     internal static bool ShouldEnsureFloatingOnTransition(UiSessionTransition transition)
     {
-        return ResolveRetouch(transition).ShouldEnsureFloatingOnTransition;
+        return transition.Previous.OverlayTopmostRequired != transition.Current.OverlayTopmostRequired
+            && transition.Current.OverlayTopmostRequired;
     }
 
     private const int IntervalMs = 700;

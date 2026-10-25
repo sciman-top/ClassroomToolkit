@@ -80,21 +80,6 @@ internal static class PhotoDocumentRuntimeDefaults
     internal const int NeighborPageCacheLimit = 5;
 }
 
-internal readonly record struct PhotoRightButtonDownExecutionPlan(
-    bool ShouldArmPending,
-    bool ShouldTryBeginPan);
-
-internal enum PhotoRightButtonUpAction
-{
-    PassThrough,
-    ShowContextMenu
-}
-
-internal readonly record struct PhotoRightButtonUpExecutionPlan(
-    PhotoRightButtonUpAction Action,
-    bool ShouldMarkHandled,
-    bool ShouldClearPending);
-
 internal static class PhotoRightClickContextMenuDefaults
 {
     internal const double MinThresholdDip = 0.0;
@@ -134,12 +119,6 @@ internal static class PhotoRightClickPendingStateUpdater
         }
     }
 }
-
-internal readonly record struct PhotoTitleBarDragZOrderPlan(
-    bool CanDrag,
-    bool RequestZOrderBeforeDrag,
-    bool RequestZOrderAfterDrag,
-    bool ForceAfterDrag);
 
 internal static class PhotoWindowPolicies
 {
@@ -214,31 +193,6 @@ internal static class PhotoWindowPolicies
             && IsPhotoTransformEnabled(photoModeActive, boardActive);
     }
 
-    internal static PhotoRightButtonDownExecutionPlan ResolvePhotoRightButtonDownExecution(
-        bool shouldArmPending,
-        bool shouldAllowPan)
-    {
-        return new PhotoRightButtonDownExecutionPlan(
-            ShouldArmPending: shouldArmPending,
-            ShouldTryBeginPan: shouldAllowPan);
-    }
-
-    internal static PhotoRightButtonUpExecutionPlan ResolvePhotoRightButtonUpExecution(bool shouldShowContextMenuOnUp)
-    {
-        if (!shouldShowContextMenuOnUp)
-        {
-            return new PhotoRightButtonUpExecutionPlan(
-                Action: PhotoRightButtonUpAction.PassThrough,
-                ShouldMarkHandled: false,
-                ShouldClearPending: false);
-        }
-
-        return new PhotoRightButtonUpExecutionPlan(
-            Action: PhotoRightButtonUpAction.ShowContextMenu,
-            ShouldMarkHandled: true,
-            ShouldClearPending: true);
-    }
-
     internal static bool ShouldArmPending(
         bool photoModeActive,
         bool photoFullscreen,
@@ -264,28 +218,14 @@ internal static class PhotoWindowPolicies
         return rightClickPending && ShouldArmPending(photoModeActive, photoFullscreen, mode);
     }
 
-    internal static PhotoTitleBarDragZOrderPlan ResolvePhotoTitleBarDragZOrder(
+    internal static bool CanStartPhotoTitleBarDrag(
         bool photoModeActive,
         bool photoFullscreen,
         MouseButton changedButton)
     {
-        var canDrag = photoModeActive
+        return photoModeActive
             && !photoFullscreen
             && changedButton == MouseButton.Left;
-        if (!canDrag)
-        {
-            return new PhotoTitleBarDragZOrderPlan(
-                CanDrag: false,
-                RequestZOrderBeforeDrag: false,
-                RequestZOrderAfterDrag: false,
-                ForceAfterDrag: false);
-        }
-
-        return new PhotoTitleBarDragZOrderPlan(
-            CanDrag: true,
-            RequestZOrderBeforeDrag: false,
-            RequestZOrderAfterDrag: true,
-            ForceAfterDrag: false);
     }
 
     internal static bool ShouldUseManipulation(int activeTouchCount)

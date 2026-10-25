@@ -38,7 +38,8 @@ internal static class PhotoModeTransitionCoordinator
 {
     internal static PhotoModeTransitionExecutionResult Apply(
         bool active,
-        PaintVisibilityTransitionPlan transitionPlan,
+        PaintVisibilityTransition transition,
+        bool shouldNormalizeToolbarWindowState,
         Action<bool> setImageManagerKeyboardNavigationSuppressed,
         Action normalizeToolbarWindowState,
         Action showToolbarWindow,
@@ -54,28 +55,27 @@ internal static class PhotoModeTransitionCoordinator
         setImageManagerKeyboardNavigationSuppressed(active);
         normalizeToolbarWindowState();
 
-        if (transitionPlan.ShowToolbar)
+        var showToolbar = transition == PaintVisibilityTransition.EnterPhotoMode;
+        if (showToolbar)
         {
             showToolbarWindow();
         }
 
-        if (PhotoOverlayPolicies.ShouldSyncOwners(transitionPlan.TouchPhotoFullscreenSurface))
+        var touchesPhotoFullscreenSurface = transition == PaintVisibilityTransition.EnterPhotoMode;
+        var shouldSyncOwners = PhotoOverlayPolicies.ShouldSyncOwners(touchesPhotoFullscreenSurface);
+        if (shouldSyncOwners)
         {
             syncOwners();
         }
 
-        var appliedSurfaceDecision = false;
-        if (transitionPlan.RequestZOrderApply)
-        {
-            applyPhotoModeSurfaceTransition();
-            appliedSurfaceDecision = true;
-        }
+        applyPhotoModeSurfaceTransition();
+        const bool appliedSurfaceDecision = true;
 
         return new PhotoModeTransitionExecutionResult(
             UpdatedImageManagerKeyboardSuppression: true,
-            NormalizedToolbarWindowState: transitionPlan.NormalizeToolbarWindowState,
-            ShowedToolbarWindow: transitionPlan.ShowToolbar,
-            SyncedOwners: PhotoOverlayPolicies.ShouldSyncOwners(transitionPlan.TouchPhotoFullscreenSurface),
+            NormalizedToolbarWindowState: shouldNormalizeToolbarWindowState,
+            ShowedToolbarWindow: showToolbar,
+            SyncedOwners: shouldSyncOwners,
             AppliedSurfaceDecision: appliedSurfaceDecision);
     }
 }

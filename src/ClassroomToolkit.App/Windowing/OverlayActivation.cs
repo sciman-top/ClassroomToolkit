@@ -227,24 +227,6 @@ internal static class OverlayActivationPolicies
                 Reason: OverlayActivationReason.None);
     }
 
-    internal static bool ShouldActivateOverlayActivation(
-        bool overlayVisible,
-        bool overlayShouldActivate,
-        bool overlayActive,
-        bool toolbarActive,
-        bool imageManagerActive,
-        bool rollCallActive,
-        bool launcherActive)
-    {
-        return ResolveOverlayActivation(
-            overlayVisible,
-            overlayShouldActivate,
-            overlayActive,
-            toolbarActive: toolbarActive,
-            imageManagerActive: imageManagerActive,
-            rollCallActive: rollCallActive,
-            launcherActive: launcherActive).ShouldActivate;
-    }
 
     internal static string FormatRetouchSkipMessage(OverlayActivationRetouchReason reason)
     {
@@ -267,11 +249,6 @@ internal static class OverlayActivationPolicies
                 Reason: OverlayActivationSuppressionReason.None);
     }
 
-    internal static bool ShouldSuppress(bool suppressNextOverlayActivatedZOrderApply)
-    {
-        return ResolveSuppression(suppressNextOverlayActivatedZOrderApply).ShouldSuppress;
-    }
-
     internal static OverlayActivationSurfaceDecision ResolveSurface(bool overlayVisible, ZOrderSurface frontSurface)
     {
         if (!overlayVisible)
@@ -289,11 +266,6 @@ internal static class OverlayActivationPolicies
             : new OverlayActivationSurfaceDecision(
                 ShouldActivate: false,
                 Reason: OverlayActivationSurfaceReason.SurfaceNotSupported);
-    }
-
-    internal static bool ShouldActivateSurface(bool overlayVisible, ZOrderSurface frontSurface)
-    {
-        return ResolveSurface(overlayVisible, frontSurface).ShouldActivate;
     }
 
     internal static OverlayActivationRetouchDecision ResolveRetouch(
@@ -331,19 +303,6 @@ internal static class OverlayActivationPolicies
                 ShouldApply: false,
                 ShouldUpdateLastRetouchUtc: false,
                 Reason: OverlayActivationRetouchReason.Throttled);
-    }
-
-    internal static bool ShouldApply(
-        SurfaceZOrderDecision decision,
-        DateTime lastRetouchUtc,
-        DateTime nowUtc,
-        int minimumIntervalMs)
-    {
-        return ResolveRetouch(
-            decision,
-            lastRetouchUtc,
-            nowUtc,
-            minimumIntervalMs).ShouldApply;
     }
 
     internal static bool ShouldUpdateLastRetouchUtc(

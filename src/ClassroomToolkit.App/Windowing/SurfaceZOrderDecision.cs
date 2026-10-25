@@ -55,24 +55,6 @@ internal static class SurfaceZOrderDecisionStateUpdater
     }
 }
 
-internal static class SurfaceZOrderDecisionDedupIntervalPolicy
-{
-    internal static int ResolveMs(
-        bool overlayVisible,
-        bool photoModeActive,
-        bool whiteboardActive,
-        int defaultMs = FloatingInteractiveDedupIntervalDefaults.DefaultMs,
-        int interactiveMs = FloatingInteractiveDedupIntervalDefaults.InteractiveMs)
-    {
-        return WindowingDedupPolicies.ResolveMs(
-            overlayVisible,
-            photoModeActive,
-            whiteboardActive,
-            defaultMs,
-            interactiveMs);
-    }
-}
-
 internal readonly record struct SurfaceZOrderDecisionDedupDecision(
     bool ShouldApply,
     SurfaceZOrderDecision LastDecision,

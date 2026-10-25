@@ -46,7 +46,12 @@ public partial class MainWindow
     private void ApplySurfaceZOrderDecision(SurfaceZOrderDecision decision)
     {
         var interactionState = CaptureOverlayInteractionState();
-        var dedupIntervalMs = MainWindowZOrderDedupIntervalPolicy.ResolveSurfaceDecisionIntervalMs(interactionState);
+        var dedupIntervalMs = WindowingDedupPolicies.ResolveMs(
+            interactionState.OverlayVisible,
+            interactionState.PhotoModeActive,
+            interactionState.WhiteboardActive,
+            FloatingInteractiveDedupIntervalDefaults.DefaultMs,
+            FloatingInteractiveDedupIntervalDefaults.InteractiveMs);
         var dedupDecision = SurfaceZOrderDecisionDedupPolicy.Resolve(
             decision,
             _surfaceZOrderDecisionState,
@@ -83,7 +88,12 @@ public partial class MainWindow
         var nowUtc = GetCurrentUtcTimestamp();
         var previousRequestState = _zOrderRequestState;
         var interactionState = CaptureOverlayInteractionState();
-        var dedupIntervalMs = MainWindowZOrderDedupIntervalPolicy.ResolveRequestIntervalMs(interactionState);
+        var dedupIntervalMs = WindowingDedupPolicies.ResolveMs(
+            interactionState.OverlayVisible,
+            interactionState.PhotoModeActive,
+            interactionState.WhiteboardActive,
+            ZOrderRequestBurstThresholds.RequestDedupMs,
+            ZOrderRequestBurstThresholds.InteractiveRequestDedupMs);
         var admission = ZOrderRequestPolicies.ResolveAdmission(
             _zOrderPolicyApplying,
             _floatingDispatchQueueState.ApplyQueued,
@@ -186,7 +196,7 @@ public partial class MainWindow
 
     private MainWindowOverlayInteractionState CaptureOverlayInteractionState()
     {
-        return MainWindowOverlayInteractionStatePolicy.Resolve(
+        return new MainWindowOverlayInteractionState(
             _overlayWindow?.IsVisible == true,
             _overlayWindow?.IsPhotoModeActive == true,
             _toolbarWindow?.BoardActive == true);

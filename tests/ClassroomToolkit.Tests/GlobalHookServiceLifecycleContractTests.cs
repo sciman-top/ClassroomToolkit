@@ -12,6 +12,34 @@ namespace ClassroomToolkit.Tests;
 [Trait("Gate", "CoreContract")]
 public sealed class GlobalHookServiceLifecycleContractTests
 {
+    [Fact]
+    public async Task UnregisterAll_ShouldInvalidateRegistrationStillStarting_AndAllowNewRegistration()
+    {
+        using var service = new GlobalHookService();
+        var releaseStart = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var binding = new KeyBinding(VirtualKey.Tab, KeyModifiers.None);
+        var pendingHook = new FakeKeyboardHook { BoundBinding = binding, StartCompletion = releaseStart.Task };
+        service.HookFactory = _ => pendingHook;
+        var callbackCount = 0;
+        var pendingRegistration = service.RegisterHookAsync([binding], _ => callbackCount++, () => true);
+        pendingRegistration.IsCompleted.Should().BeFalse();
+
+        service.UnregisterAll();
+        releaseStart.SetResult();
+
+        (await pendingRegistration).Should().BeFalse("unregister must also cancel registrations awaiting StartAsync");
+        pendingHook.Disposed.Should().BeTrue();
+        pendingHook.Raise(binding);
+        callbackCount.Should().Be(0);
+        service.ResidualHookCount.Should().Be(0);
+
+        var nextHook = new FakeKeyboardHook { BoundBinding = binding };
+        service.HookFactory = _ => nextHook;
+        (await service.RegisterHookAsync([binding], _ => callbackCount++, () => true)).Should().BeTrue();
+        nextHook.Raise(binding);
+        callbackCount.Should().Be(1);
+    }
+
     [Theory]
     [InlineData(2, false)]
     [InlineData(3, false)]
@@ -310,6 +338,7 @@ public sealed class GlobalHookServiceLifecycleContractTests
         public KeyBinding? BoundBinding { get; init; }
         public bool ActiveAfterStart { get; set; } = true;
         public bool ThrowOnStart { get; set; }
+        public Task StartCompletion { get; init; } = Task.CompletedTask;
         public bool ThrowOnDispose { get; set; }
         public int DisposeFailuresRemaining { get; set; }
         public bool ClearHandlersOnDispose { get; set; }
@@ -322,15 +351,15 @@ public sealed class GlobalHookServiceLifecycleContractTests
             remove => _triggered -= value;
         }
 
-        public Task StartAsync()
+        public async Task StartAsync()
         {
             if (ThrowOnStart)
             {
                 throw new InvalidOperationException("start-boom");
             }
 
+            await StartCompletion;
             IsActive = ActiveAfterStart;
-            return Task.CompletedTask;
         }
 
         public void Raise(KeyBinding binding)

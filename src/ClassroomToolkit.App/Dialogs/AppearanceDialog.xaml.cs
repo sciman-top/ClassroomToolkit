@@ -23,7 +23,9 @@ public partial class AppearanceDialog : Window
     public event Action<AppTheme>? ThemeSelected;
 
     private AppTheme SelectedTheme =>
-        Enum.TryParse<AppTheme>(SelectedRadio()?.Tag as string, out var theme) ? theme : ThemePreferenceService.DefaultTheme;
+        Enum.TryParse<AppTheme>(SelectedRadio()?.Tag as string, out var theme) && Enum.IsDefined(theme)
+            ? theme
+            : ThemePreferenceService.DefaultTheme;
 
     private void SelectRadio(AppTheme theme)
     {

@@ -924,6 +924,41 @@ public sealed class AppSettingsServiceTests
     }
 
     [Fact]
+    public void Load_ShouldFallbackForUndefinedNumericPaintEnumValues()
+    {
+        var path = CreateTempIniPath("ctool_app_settings_invalid_enum_values");
+        try
+        {
+            File.WriteAllText(
+                path,
+                "[Paint]\n"
+                + "brush_style=999\n"
+                + "whiteboard_preset=999\n"
+                + "calligraphy_preset=999\n"
+                + "classroom_writing_mode=999\n"
+                + "shape_type=999\n"
+                + "ink_export_scope=999\n");
+            var defaults = new AppSettings();
+
+            var settings = CreateService(path).Load();
+
+            settings.BrushStyle.Should().Be(defaults.BrushStyle);
+            settings.WhiteboardPreset.Should().Be(defaults.WhiteboardPreset);
+            settings.CalligraphyPreset.Should().Be(defaults.CalligraphyPreset);
+            settings.ClassroomWritingMode.Should().Be(defaults.ClassroomWritingMode);
+            settings.ShapeType.Should().Be(defaults.ShapeType);
+            settings.InkExportScope.Should().Be(defaults.InkExportScope);
+        }
+        finally
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
     public void SaveAndLoad_ShouldPersistStylusAdaptiveState()
     {
         var path = CreateTempIniPath("ctool_app_settings");

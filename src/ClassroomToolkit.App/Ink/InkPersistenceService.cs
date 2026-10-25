@@ -562,11 +562,11 @@ public sealed class InkPersistenceService
         }
     }
 
-    private static IEnumerable<string> EnumerateInkSidecarFilesSafe(string inkFolder)
+    private static string[] EnumerateInkSidecarFilesSafe(string inkFolder)
     {
         try
         {
-            return Directory.EnumerateFiles(inkFolder, "*.ink.json", TopLevelIgnoreInaccessibleOptions);
+            return Directory.EnumerateFiles(inkFolder, "*.ink.json", TopLevelIgnoreInaccessibleOptions).ToArray();
         }
         catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {

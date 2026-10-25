@@ -222,14 +222,4 @@ internal static class ZOrderRequestPolicies
                 Reason: ZOrderApplyReentryReason.ApplyingAndQueued);
     }
 
-    internal static bool ShouldAcceptRequest(
-        bool zOrderApplying,
-        bool applyQueued,
-        bool forceEnforceZOrder)
-    {
-        return ResolveZOrderApplyReentry(
-            zOrderApplying,
-            applyQueued,
-            forceEnforceZOrder).ShouldAcceptRequest;
-    }
 }

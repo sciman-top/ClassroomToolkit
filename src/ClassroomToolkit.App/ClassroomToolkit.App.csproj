@@ -25,6 +25,7 @@
     <ProjectReference Include="..\ClassroomToolkit.Infra\ClassroomToolkit.Infra.csproj" />
     <ProjectReference Include="..\ClassroomToolkit.Services\ClassroomToolkit.Services.csproj" />
     <ProjectReference Include="..\ClassroomToolkit.Interop\ClassroomToolkit.Interop.csproj" />
+    <ProjectReference Include="..\ClassroomToolkit.FileSystem\ClassroomToolkit.FileSystem.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />

@@ -196,6 +196,44 @@ public sealed class StudentPhotoResolverTests
     }
 
     [Fact]
+    public void ResolvePhotoPath_ShouldKeepDetectingDirectoryChanges_AfterPromotingAnotherStudentPhoto()
+    {
+        var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_promote_multiple_photos");
+        var className = "ClassA";
+        var classDirectory = Path.Combine(rootPath, className);
+        Directory.CreateDirectory(classDirectory);
+        var firstPngPath = Path.Combine(classDirectory, "1001.png");
+        var secondPngPath = Path.Combine(classDirectory, "1002.png");
+        var firstJpegPath = Path.Combine(classDirectory, "1001.jpg");
+        var secondJpegPath = Path.Combine(classDirectory, "1002.jpg");
+
+        try
+        {
+            File.WriteAllBytes(firstPngPath, new byte[] { 0x01, 0x02, 0x03 });
+            File.WriteAllBytes(secondPngPath, new byte[] { 0x04, 0x05, 0x06 });
+            using var resolver = new StudentPhotoResolver(rootPath);
+
+            resolver.ResolvePhotoPath(className, "missing").Should().BeNull();
+            resolver.ResolvePhotoPath(className, "1001").Should().Be(firstPngPath);
+            resolver.ResolvePhotoPath(className, "1002").Should().Be(secondPngPath);
+
+            File.WriteAllBytes(firstJpegPath, new byte[] { 0x07, 0x08, 0x09 });
+            File.WriteAllBytes(secondJpegPath, new byte[] { 0x0A, 0x0B, 0x0C });
+            Directory.SetLastWriteTimeUtc(classDirectory, DateTime.UtcNow.AddMinutes(1));
+
+            resolver.ResolvePhotoPath(className, "1001").Should().Be(firstJpegPath);
+            resolver.ResolvePhotoPath(className, "1002").Should().Be(secondJpegPath);
+        }
+        finally
+        {
+            if (Directory.Exists(rootPath))
+            {
+                Directory.Delete(rootPath, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void ResolvePhotoPath_ShouldResolve_WhenClassNameAndStudentIdUseValidEdgeUnderscores()
     {
         var rootPath = TestPathHelper.CreateDirectory("ctool_resolver_edge_underscore");

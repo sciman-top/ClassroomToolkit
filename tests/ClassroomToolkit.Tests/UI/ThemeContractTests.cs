@@ -186,6 +186,32 @@ public sealed class ThemeContractTests
         });
     }
 
+    [Fact]
+    public void AppearanceDialog_ShouldFallbackForUndefinedNumericThemeTag()
+    {
+        WpfStaTestRunner.Run(() =>
+        {
+            WpfStaTestRunner.EnsureApplication();
+            var dialog = new ClassroomToolkit.App.Dialogs.AppearanceDialog();
+            AppTheme? selectedTheme = null;
+            dialog.ThemeSelected += theme => selectedTheme = theme;
+
+            try
+            {
+                var lightRadio = dialog.FindName("LightRadio")
+                    .Should().BeOfType<System.Windows.Controls.RadioButton>().Subject;
+                lightRadio.Tag = "999";
+                lightRadio.IsChecked = true;
+
+                selectedTheme.Should().Be(ThemePreferenceService.DefaultTheme);
+            }
+            finally
+            {
+                dialog.Close();
+            }
+        });
+    }
+
     private static void AssertActiveTheme(
         WpfApplication application,
         System.Windows.Controls.Border canvas,

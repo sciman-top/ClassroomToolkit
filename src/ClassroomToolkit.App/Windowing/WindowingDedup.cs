@@ -92,16 +92,6 @@ internal static class ExplicitForegroundRetouchStateUpdater
     }
 }
 
-internal enum ForegroundExplicitRetouchThrottleReason
-{
-    None = 0,
-    Throttled = 1
-}
-
-internal readonly record struct ForegroundExplicitRetouchThrottleDecision(
-    bool ShouldAllowRetouch,
-    ForegroundExplicitRetouchThrottleReason Reason);
-
 internal static class WindowingDedupPolicies
 {
     internal static bool IsInteractiveScene(bool overlayVisible, bool photoModeActive, bool whiteboardActive)
@@ -160,54 +150,11 @@ internal static class WindowingDedupPolicies
             minimumIntervalMs).ShouldAllow;
     }
 
-    internal static ForegroundExplicitRetouchThrottleDecision ResolveForegroundExplicitRetouchThrottle(
-        ExplicitForegroundRetouchRuntimeState state,
-        DateTime nowUtc,
-        int minimumIntervalMs)
-    {
-        return ResolveForegroundExplicitRetouchThrottle(
-            state.LastRetouchUtc,
-            nowUtc,
-            minimumIntervalMs);
-    }
-
-    internal static ForegroundExplicitRetouchThrottleDecision ResolveForegroundExplicitRetouchThrottle(
-        DateTime lastRetouchUtc,
-        DateTime nowUtc,
-        int minimumIntervalMs)
-    {
-        var shouldAllow = WindowingDedupPolicies.ShouldAllow(
-            lastRetouchUtc,
-            nowUtc,
-            minimumIntervalMs);
-        return shouldAllow
-            ? new ForegroundExplicitRetouchThrottleDecision(
-                ShouldAllowRetouch: true,
-                Reason: ForegroundExplicitRetouchThrottleReason.None)
-            : new ForegroundExplicitRetouchThrottleDecision(
-                ShouldAllowRetouch: false,
-                Reason: ForegroundExplicitRetouchThrottleReason.Throttled);
-    }
-
-    internal static bool ShouldAllowRetouch(
-        ExplicitForegroundRetouchRuntimeState state,
-        DateTime nowUtc,
-        int minimumIntervalMs)
-    {
-        return ResolveForegroundExplicitRetouchThrottle(
-            state.LastRetouchUtc,
-            nowUtc,
-            minimumIntervalMs).ShouldAllowRetouch;
-    }
-
     internal static bool ShouldAllowRetouch(
         DateTime lastRetouchUtc,
         DateTime nowUtc,
         int minimumIntervalMs)
     {
-        return ResolveForegroundExplicitRetouchThrottle(
-            lastRetouchUtc,
-            nowUtc,
-            minimumIntervalMs).ShouldAllowRetouch;
+        return ShouldAllow(lastRetouchUtc, nowUtc, minimumIntervalMs);
     }
 }

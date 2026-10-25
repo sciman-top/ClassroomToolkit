@@ -14,13 +14,17 @@ public sealed class PhotoModeTransitionCoordinatorTests
         var showCount = 0;
         var syncCount = 0;
         var surfaceCount = 0;
-        var plan = PaintWindowVisibilityPolicies.ResolvePhotoModeChange(
+        var transition = PaintWindowVisibilityPolicies.ResolvePhotoModeChange(
             photoModeActive: true,
             toolbarWindowState: System.Windows.WindowState.Minimized);
+        var shouldNormalize = PaintWindowVisibilityPolicies.ShouldNormalizeToolbarWindowState(
+            transition,
+            System.Windows.WindowState.Minimized);
 
         var result = PhotoModeTransitionCoordinator.Apply(
             active: true,
-            plan,
+            transition,
+            shouldNormalize,
             value => suppressValue = value,
             () => normalizeCount++,
             () => showCount++,
@@ -42,13 +46,14 @@ public sealed class PhotoModeTransitionCoordinatorTests
     public void Apply_ShouldSyncOwners_WhenPhotoModeBecomesInactive()
     {
         var syncCount = 0;
-        var plan = PaintWindowVisibilityPolicies.ResolvePhotoModeChange(
+        var transition = PaintWindowVisibilityPolicies.ResolvePhotoModeChange(
             photoModeActive: false,
             toolbarWindowState: System.Windows.WindowState.Normal);
 
         var result = PhotoModeTransitionCoordinator.Apply(
             active: false,
-            plan,
+            transition,
+            shouldNormalizeToolbarWindowState: false,
             _ => { },
             () => { },
             () => { },

@@ -798,23 +798,6 @@ internal static class CrossPageDisplayUpdatePolicies
             Reason: CrossPageRequestAdmissionReason.None);
     }
 
-    internal static bool ShouldAdmit(
-        bool crossPageDisplayActive,
-        bool photoLoading,
-        bool hasPhotoBackgroundSource,
-        bool overlayVisible,
-        bool overlayMinimized,
-        bool hasUsableViewport)
-    {
-        return ResolveCrossPageRequestAdmission(
-            crossPageDisplayActive,
-            photoLoading,
-            hasPhotoBackgroundSource,
-            overlayVisible,
-            overlayMinimized,
-            hasUsableViewport).ShouldAdmit;
-    }
-
     internal static bool IsReplayBaseSource(string source)
     {
         return string.Equals(source, CrossPageUpdateSources.InkVisualSyncReplay, StringComparison.Ordinal)

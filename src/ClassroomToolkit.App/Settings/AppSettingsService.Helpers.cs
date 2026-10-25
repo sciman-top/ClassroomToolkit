@@ -118,7 +118,7 @@ public sealed partial class AppSettingsService
 
     private static PaintShapeType GetShapeType(string raw)
     {
-        if (Enum.TryParse<PaintShapeType>(raw, true, out var parsed))
+        if (TryParseDefinedEnum(raw, out PaintShapeType parsed))
         {
             return parsed;
         }
@@ -127,7 +127,7 @@ public sealed partial class AppSettingsService
 
     private static PaintBrushStyle GetBrushStyle(string raw)
     {
-        if (Enum.TryParse<PaintBrushStyle>(raw, true, out var parsed))
+        if (TryParseDefinedEnum(raw, out PaintBrushStyle parsed))
         {
             if (parsed == PaintBrushStyle.Standard)
             {
@@ -140,7 +140,7 @@ public sealed partial class AppSettingsService
 
     private static InkExportScope GetInkExportScope(string raw)
     {
-        if (Enum.TryParse<InkExportScope>(raw, true, out var parsed))
+        if (TryParseDefinedEnum(raw, out InkExportScope parsed))
         {
             return parsed;
         }
@@ -151,7 +151,7 @@ public sealed partial class AppSettingsService
     {
         if (section.TryGetValue("whiteboard_preset", out var rawPreset))
         {
-            if (Enum.TryParse<WhiteboardBrushPreset>(rawPreset, true, out var parsed))
+            if (TryParseDefinedEnum(rawPreset, out WhiteboardBrushPreset parsed))
             {
                 return parsed;
             }
@@ -173,7 +173,7 @@ public sealed partial class AppSettingsService
     private static CalligraphyBrushPreset ResolveCalligraphyPreset(Dictionary<string, string> section, CalligraphyBrushPreset fallback)
     {
         if (section.TryGetValue("calligraphy_preset", out var rawPreset) &&
-            Enum.TryParse<CalligraphyBrushPreset>(rawPreset, true, out var parsed))
+            TryParseDefinedEnum(rawPreset, out CalligraphyBrushPreset parsed))
         {
             return parsed;
         }
@@ -190,12 +190,18 @@ public sealed partial class AppSettingsService
     private static ClassroomWritingMode ResolveClassroomWritingMode(Dictionary<string, string> section, ClassroomWritingMode fallback)
     {
         if (section.TryGetValue("classroom_writing_mode", out var raw) &&
-            Enum.TryParse<ClassroomWritingMode>(raw, true, out var parsed))
+            TryParseDefinedEnum(raw, out ClassroomWritingMode parsed))
         {
             return parsed;
         }
 
         return fallback;
+    }
+
+    private static bool TryParseDefinedEnum<TEnum>(string raw, out TEnum value)
+        where TEnum : struct, Enum
+    {
+        return Enum.TryParse(raw, ignoreCase: true, out value) && Enum.IsDefined(value);
     }
 
     private static string ResolveWpsInputMode(Dictionary<string, string> section, string fallback)

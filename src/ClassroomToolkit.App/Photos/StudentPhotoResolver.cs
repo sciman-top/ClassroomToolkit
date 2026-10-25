@@ -407,11 +407,11 @@ internal sealed class StudentPhotoResolver : IDisposable
         {
             [key] = path
         };
-        var updatedWriteTimeUtc = GetDirectoryWriteTimeUtcOrDefault(directory);
+        // Keep the directory timestamp from the full-index snapshot. Advancing it
+        // after one student's hit could hide changes to other students' photos.
         var updated = cached with
         {
             Timestamp = nowUtc,
-            DirectoryWriteTimeUtc = updatedWriteTimeUtc == DateTime.MinValue ? cached.DirectoryWriteTimeUtc : updatedWriteTimeUtc,
             LastMissProbeUtc = DateTime.MinValue,
             Index = updatedIndex
         };

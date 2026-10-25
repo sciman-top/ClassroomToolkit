@@ -218,11 +218,6 @@ internal static class SessionTransitionPolicies
             Reason: SessionTransitionApplyGateReason.NoZOrderAction);
     }
 
-    internal static bool ShouldApplyApplyGate(SurfaceZOrderDecision decision)
-    {
-        return ResolveApplyGate(decision).ShouldApply;
-    }
-
     internal static SessionTransitionApplyDecision ResolveApply(
         bool shouldEnsureFloating,
         bool overlayTopmostRequired,
@@ -314,11 +309,6 @@ internal static class SessionTransitionPolicies
             Reason: SessionTransitionDuplicateReason.RegressedTransitionId);
     }
 
-    internal static bool ShouldApplyDuplicate(long lastAppliedTransitionId, long currentTransitionId)
-    {
-        return ResolveDuplicate(lastAppliedTransitionId, currentTransitionId).ShouldApply;
-    }
-
     internal static SessionTransitionDuplicateResetDecision ResolveDuplicateReset(
         bool overlayWindowRewired,
         long lastAppliedTransitionId)
@@ -342,12 +332,6 @@ internal static class SessionTransitionPolicies
             Reason: SessionTransitionDuplicateResetReason.ResetRequired);
     }
 
-    internal static bool ShouldReset(
-        bool overlayWindowRewired,
-        long lastAppliedTransitionId)
-    {
-        return ResolveDuplicateReset(overlayWindowRewired, lastAppliedTransitionId).ShouldReset;
-    }
 
     internal static SessionTransitionAdmissionDecision ResolveEventAdmission(
         bool hasStateChange,
@@ -378,17 +362,6 @@ internal static class SessionTransitionPolicies
             Reason: SessionTransitionAdmissionReason.None);
     }
 
-    internal static bool ShouldProcess(
-        bool hasStateChange,
-        long lastAppliedTransitionId,
-        long currentTransitionId)
-    {
-        return ResolveEventAdmission(
-            hasStateChange,
-            lastAppliedTransitionId,
-            currentTransitionId).ShouldProcess;
-    }
-
     internal static SessionTransitionSurfaceDecision ResolveSurface(UiSessionState previous, UiSessionState current)
     {
         var shouldTouch = SessionTransitionPolicies.ShouldRetouchSurface(previous, current);
@@ -406,13 +379,12 @@ internal static class SessionTransitionPolicies
         var surfaceDecision = SessionTransitionPolicies.ResolveSurface(
             transition.Previous,
             transition.Current);
-        var floatingDecision = FloatingTopmostPolicies.ResolveRetouch(transition);
         var sceneChanged = transition.Previous.Scene != transition.Current.Scene;
         var widgetVisibility = SessionTransitionPolicies.ResolveSessionFloatingWidgetVisibility(
             transition.Previous,
             transition.Current);
         var applyDecision = SessionTransitionPolicies.ResolveApply(
-            floatingDecision.ShouldEnsureFloatingOnTransition,
+            FloatingTopmostPolicies.ShouldEnsureFloatingOnTransition(transition),
             transition.Current.OverlayTopmostRequired,
             sceneChanged,
             widgetVisibility);
@@ -432,11 +404,6 @@ internal static class SessionTransitionPolicies
             WidgetVisibilityReason: widgetVisibility.Reason,
             ApplyReason: applyDecision.Reason,
             SurfaceReason: surfaceDecision.Reason);
-    }
-
-    internal static SurfaceZOrderDecision ResolveWindowing(UiSessionTransition transition)
-    {
-        return ResolveDecision(transition).ZOrderDecision;
     }
 
     internal static SessionTransitionZOrderRetouchDecision ResolveZOrder(UiSessionState previous, UiSessionState current)

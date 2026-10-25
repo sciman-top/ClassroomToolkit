@@ -51,7 +51,7 @@ internal readonly record struct OverlayActivationRetouchExecutionResult(
 
 internal readonly record struct ExplicitForegroundRetouchExecutionResult(
     bool Applied,
-    ForegroundExplicitRetouchThrottleReason Reason);
+    string Reason);
 
 internal static class ForegroundSurfaceRetouchCoordinator
 {
@@ -111,22 +111,22 @@ internal static class ForegroundSurfaceRetouchCoordinator
         ArgumentNullException.ThrowIfNull(markRetouched);
         ArgumentNullException.ThrowIfNull(applySurfaceDecision);
 
-        var throttleDecision = WindowingDedupPolicies.ResolveForegroundExplicitRetouchThrottle(
-            state,
+        var throttleDecision = WindowingDedupPolicies.ResolveRetouchThrottle(
+            state.LastRetouchUtc,
             nowUtc,
             minimumIntervalMs);
-        if (!throttleDecision.ShouldAllowRetouch)
+        if (!throttleDecision.ShouldAllow)
         {
             return new ExplicitForegroundRetouchExecutionResult(
                 Applied: false,
-                Reason: throttleDecision.Reason);
+                Reason: throttleDecision.Reason.ToString());
         }
 
         markRetouched(nowUtc);
         applySurfaceDecision(decision);
         return new ExplicitForegroundRetouchExecutionResult(
             Applied: true,
-            Reason: throttleDecision.Reason);
+            Reason: throttleDecision.Reason.ToString());
     }
 }
 

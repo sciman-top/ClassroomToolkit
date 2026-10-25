@@ -10,8 +10,8 @@ namespace ClassroomToolkit.App.Paint.Brushes;
 
 internal partial class VariableWidthBrushRenderer
 {
-    private const int PreviewTailPointWindow = 56;
-    private const int PreviewBaseRefreshStride = 14;
+    private const int PreviewTailPointWindow = BrushPreviewDefaults.PreviewTailPointWindow;
+    private const int PreviewBaseRefreshStride = BrushPreviewDefaults.PreviewBaseRefreshStride;
     private const int PreviewFastMaxUpsampleSteps = 6;
     private const int PreviewFastMaxResampledPointCount = 1200;
     private const double PreviewFastUpsampleSpacingFactor = 1.28;

@@ -76,6 +76,10 @@ public static class LongPressBehavior
     {
         if (d is UIElement element)
         {
+            // A gesture belongs to the command that was present at press time.
+            // Rebinding or removing it must also release the pending timer.
+            StopPressTimer(element, resetTriggered: true);
+            SetTouchPressActive(element, isActive: false);
             if (d is FrameworkElement frameworkElement)
             {
                 frameworkElement.Unloaded -= OnElementUnloaded;

@@ -1,11 +1,33 @@
 using ClassroomToolkit.App.Ink;
 using AwesomeAssertions;
 using System.Globalization;
+using System.Security.AccessControl;
+using System.Security.Principal;
 
 namespace ClassroomToolkit.Tests.Ink;
 
 public sealed class InkStorageServiceTests
 {
+    [Fact]
+    public void CleanupOldRecords_ShouldPreserveRecords_WhenRetentionExceedsDateRange()
+    {
+        var rootPath = TestPathHelper.CreateDirectory("ctool_ink_long_retention");
+        try
+        {
+            var service = new InkStorageService(rootPath);
+            var date = new DateTime(2000, 1, 1);
+            service.SavePage(date, new InkPageData { PageIndex = 1, DocumentName = "lesson" });
+
+            service.CleanupOldRecords(int.MaxValue);
+
+            service.LoadPage(date, "lesson", 1).Should().NotBeNull();
+        }
+        finally
+        {
+            Directory.Delete(rootPath, recursive: true);
+        }
+    }
+
     [Fact]
     public void SavePage_AndLoadPage_ShouldRoundTrip()
     {
@@ -325,23 +347,43 @@ public sealed class InkStorageServiceTests
     }
 
     [Fact]
-    public void ListApis_ShouldUseIgnoreInaccessibleEnumerationOptions()
+    public void ListPages_ShouldReturnEmpty_WhenPagesFolderDeniesEnumeration()
     {
-        var source = File.ReadAllText(GetSourcePath());
+        var rootPath = TestPathHelper.CreateDirectory("ctool_ink_inaccessible");
+        var date = new DateTime(2026, 10, 25);
+        var documentName = "denied";
+        var documentFolder = Path.Combine(
+            rootPath,
+            date.ToString("yyyyMMdd", CultureInfo.InvariantCulture),
+            documentName);
+        var pagesFolder = Path.Combine(documentFolder, "pages");
+        Directory.CreateDirectory(pagesFolder);
+        File.WriteAllText(
+            Path.Combine(pagesFolder, "slide_001.json"),
+            """{"pageIndex":1,"documentName":"denied"}""");
 
-        source.Should().Contain("IgnoreInaccessible = true");
-        source.Should().Contain("Directory.EnumerateDirectories(_rootPath, \"*\", TopLevelIgnoreInaccessibleOptions)");
-        source.Should().Contain("Directory.EnumerateDirectories(dateFolder, \"*\", TopLevelIgnoreInaccessibleOptions)");
-        source.Should().Contain("Directory.EnumerateFiles(pagesFolder, \"slide_*.json\", TopLevelIgnoreInaccessibleOptions)");
-        source.Should().Contain("Directory.EnumerateDirectories(rootPath, \"*\", TopLevelIgnoreInaccessibleOptions)");
-    }
+        var identity = WindowsIdentity.GetCurrent().User!;
+        var accessRule = new FileSystemAccessRule(
+            identity,
+            FileSystemRights.ListDirectory,
+            InheritanceFlags.None,
+            PropagationFlags.None,
+            AccessControlType.Deny);
+        var pageInfo = new DirectoryInfo(pagesFolder);
+        var originalSecurity = pageInfo.GetAccessControl();
+        originalSecurity.AddAccessRule(accessRule);
+        pageInfo.SetAccessControl(originalSecurity);
 
-    private static string GetSourcePath()
-    {
-        return TestPathHelper.ResolveRepoPath(
-            "src",
-            "ClassroomToolkit.App",
-            "Ink",
-            "InkStorageService.cs");
+        try
+        {
+            var pages = new InkStorageService(rootPath).ListPages(date, documentName);
+
+            pages.Should().BeEmpty();
+        }
+        finally
+        {
+            originalSecurity.RemoveAccessRuleSpecific(accessRule);
+            pageInfo.SetAccessControl(originalSecurity);
+        }
     }
 }

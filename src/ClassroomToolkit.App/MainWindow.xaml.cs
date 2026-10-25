@@ -34,7 +34,7 @@ public partial class MainWindow : Window
     private RollCallWindow? _rollCallWindow;
     private Paint.PaintOverlayWindow? _overlayWindow => _paintWindowOrchestrator.OverlayWindow;
     private Paint.PaintToolbarWindow? _toolbarWindow => _paintWindowOrchestrator.ToolbarWindow;
-    private Photos.ImageManagerWindow? _imageManagerWindow;
+    private Photos.ImageManagerWindow? _imageManagerWindow => _imageManagerWindowCoordinator.CurrentWindow;
     private readonly List<ZOrderSurface> _surfaceStack = new();
     private SurfaceZOrderDecisionRuntimeState _surfaceZOrderDecisionState = SurfaceZOrderDecisionRuntimeState.Default;
     private readonly DispatcherTimer _presentationForegroundSuppressionTimer;
@@ -69,7 +69,7 @@ public partial class MainWindow : Window
     private readonly IConfigurationService _configurationService;
     private readonly IRollCallWindowFactory _rollCallWindowFactory;
     private readonly Services.IPaintWindowOrchestrator _paintWindowOrchestrator;
-    private readonly Photos.IImageManagerWindowFactory _imageManagerWindowFactory;
+    private readonly Photos.ImageManagerWindowCoordinator _imageManagerWindowCoordinator;
     private readonly IWindowOrchestrator _windowOrchestrator;
     private readonly ThemeManager _themeManager;
     private bool _paintOrchestratorEventsWired;
@@ -114,7 +114,17 @@ public partial class MainWindow : Window
         _configurationService = configurationService;
         _rollCallWindowFactory = rollCallWindowFactory;
         _paintWindowOrchestrator = paintWindowOrchestrator;
-        _imageManagerWindowFactory = imageManagerWindowFactory;
+        _imageManagerWindowCoordinator = new Photos.ImageManagerWindowCoordinator(
+            imageManagerWindowFactory,
+            settings,
+            SaveSettings,
+            new Photos.ImageManagerWindowCallbacks(
+                OnImageSelected,
+                OnImageManagerStateChanged,
+                OnImageManagerWindowActivated,
+                () => ApplyImageManagerSurfaceTransition(ImageManagerSurfaceTransitionKind.Closed),
+                () => _overlayWindow?.ResetPhotoTransformToDefault(),
+                enabled => _overlayWindow?.UpdateInkShowEnabled(enabled)));
         _windowOrchestrator = windowOrchestrator;
         _themeManager = themeManager;
         _autoExitTimer = new DispatcherTimer();

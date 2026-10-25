@@ -10,6 +10,24 @@ namespace ClassroomToolkit.Tests;
 public sealed class RollCallViewModelTimerStateTests
 {
     [Fact]
+    public void TickTimer_ShouldNotifyRunState_WhenCountdownCompletes()
+    {
+        var useCase = new RollCallWorkbookUseCase(new RollCallWorkbookStoreAdapter());
+        using var viewModel = new RollCallViewModel("unused.xlsx", useCase);
+        viewModel.SetCountdown(minutes: 0, seconds: 1);
+        viewModel.ToggleTimer();
+        var changedProperties = new List<string?>();
+        viewModel.PropertyChanged += (_, e) => changedProperties.Add(e.PropertyName);
+
+        viewModel.TickTimer(TimeSpan.FromSeconds(1));
+
+        viewModel.TimerRunning.Should().BeFalse();
+        viewModel.StartPauseLabel.Should().Be("开始");
+        changedProperties.Should().Contain(nameof(viewModel.TimerRunning));
+        changedProperties.Should().Contain(nameof(viewModel.StartPauseLabel));
+    }
+
+    [Fact]
     public void ApplyTimerState_ShouldClampSettingsValues_InsteadOfOverflowing()
     {
         // 回归：设置文件被手工编辑出超大值（timer_countdown_minutes=2000000000）时，

@@ -24,16 +24,23 @@ internal readonly record struct PaintWindowHidePlan(
     bool HideOverlay,
     bool HideToolbar);
 
-internal readonly record struct PaintVisibilityTransitionPlan(
-    bool ShowOverlay,
-    bool HideOverlay,
-    bool SyncFloatingOwnersVisible,
-    bool CaptureToolbarPosition,
-    bool NormalizeToolbarWindowState,
-    bool ShowToolbar,
-    bool TouchPhotoFullscreenSurface,
-    bool RequestZOrderApply,
-    bool ForceEnforceZOrder);
+internal enum PaintVisibilityTransition
+{
+    /// <summary>Overlay is hidden: show it, sync owners, request one z-order apply.</summary>
+    EnsureOverlayVisible = 0,
+
+    /// <summary>Overlay is visible: capture the toolbar position before hiding.</summary>
+    ToggleHidePaint = 1,
+
+    /// <summary>Overlay is hidden: show it and sync owners on toggle.</summary>
+    ToggleShowPaint = 2,
+
+    /// <summary>Entering photo teaching: normalise a minimized toolbar and touch the photo surface.</summary>
+    EnterPhotoMode = 3,
+
+    /// <summary>Leaving photo teaching: sync owners without touching the photo surface.</summary>
+    ExitPhotoMode = 4
+}
 
 internal static class PaintWindowVisibilityPolicies
 {
@@ -97,75 +104,32 @@ internal static class PaintWindowVisibilityPolicies
                && !shouldWireToolbarLifecycle;
     }
 
-    internal static PaintVisibilityTransitionPlan ResolveEnsureOverlayVisible(bool overlayVisible)
+    internal static PaintVisibilityTransition ResolveEnsureOverlayVisible(bool overlayVisible)
     {
-        return new PaintVisibilityTransitionPlan(
-            ShowOverlay: !overlayVisible,
-            HideOverlay: false,
-            SyncFloatingOwnersVisible: true,
-            CaptureToolbarPosition: false,
-            NormalizeToolbarWindowState: false,
-            ShowToolbar: false,
-            TouchPhotoFullscreenSurface: false,
-            RequestZOrderApply: true,
-            ForceEnforceZOrder: false);
+        return PaintVisibilityTransition.EnsureOverlayVisible;
     }
 
-    internal static PaintVisibilityTransitionPlan ResolvePaintToggle(bool overlayVisible)
+    internal static PaintVisibilityTransition ResolvePaintToggle(bool overlayVisible)
     {
-        if (overlayVisible)
-        {
-            return new PaintVisibilityTransitionPlan(
-                ShowOverlay: false,
-                HideOverlay: true,
-                SyncFloatingOwnersVisible: false,
-                CaptureToolbarPosition: true,
-                NormalizeToolbarWindowState: false,
-                ShowToolbar: false,
-                TouchPhotoFullscreenSurface: false,
-                RequestZOrderApply: true,
-                ForceEnforceZOrder: false);
-        }
-
-        return new PaintVisibilityTransitionPlan(
-            ShowOverlay: true,
-            HideOverlay: false,
-            SyncFloatingOwnersVisible: true,
-            CaptureToolbarPosition: false,
-            NormalizeToolbarWindowState: false,
-            ShowToolbar: false,
-            TouchPhotoFullscreenSurface: false,
-            RequestZOrderApply: true,
-            ForceEnforceZOrder: false);
+        return overlayVisible
+            ? PaintVisibilityTransition.ToggleHidePaint
+            : PaintVisibilityTransition.ToggleShowPaint;
     }
 
-    internal static PaintVisibilityTransitionPlan ResolvePhotoModeChange(
+    internal static PaintVisibilityTransition ResolvePhotoModeChange(
         bool photoModeActive,
         WindowState toolbarWindowState)
     {
-        if (photoModeActive)
-        {
-            return new PaintVisibilityTransitionPlan(
-                ShowOverlay: false,
-                HideOverlay: false,
-                SyncFloatingOwnersVisible: false,
-                CaptureToolbarPosition: false,
-                NormalizeToolbarWindowState: toolbarWindowState == WindowState.Minimized,
-                ShowToolbar: true,
-                TouchPhotoFullscreenSurface: true,
-                RequestZOrderApply: true,
-                ForceEnforceZOrder: false);
-        }
+        return photoModeActive
+            ? PaintVisibilityTransition.EnterPhotoMode
+            : PaintVisibilityTransition.ExitPhotoMode;
+    }
 
-        return new PaintVisibilityTransitionPlan(
-            ShowOverlay: false,
-            HideOverlay: false,
-            SyncFloatingOwnersVisible: true,
-            CaptureToolbarPosition: false,
-            NormalizeToolbarWindowState: false,
-            ShowToolbar: false,
-            TouchPhotoFullscreenSurface: false,
-            RequestZOrderApply: true,
-            ForceEnforceZOrder: false);
+    internal static bool ShouldNormalizeToolbarWindowState(
+        PaintVisibilityTransition transition,
+        WindowState toolbarWindowState)
+    {
+        return transition == PaintVisibilityTransition.EnterPhotoMode
+            && toolbarWindowState == WindowState.Minimized;
     }
 }

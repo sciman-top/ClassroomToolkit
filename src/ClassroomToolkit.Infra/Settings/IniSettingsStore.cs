@@ -1,5 +1,5 @@
 using System.Text;
-using ClassroomToolkit.Domain.Utilities;
+using ClassroomToolkit.IO;
 
 using ClassroomToolkit.Infra.Logging;
 
@@ -74,11 +74,7 @@ public sealed class IniSettingsStore
             {
                 continue;
             }
-            var separatorIndex = line.IndexOf('=', StringComparison.Ordinal);
-            if (separatorIndex < 0)
-            {
-                separatorIndex = line.IndexOf(':', StringComparison.Ordinal);
-            }
+            var separatorIndex = FindSeparatorIndex(line);
             if (separatorIndex <= 0)
             {
                 continue;
@@ -360,11 +356,7 @@ public sealed class IniSettingsStore
     {
         key = string.Empty;
         value = string.Empty;
-        var separatorIndex = line.IndexOf('=', StringComparison.Ordinal);
-        if (separatorIndex < 0)
-        {
-            separatorIndex = line.IndexOf(':', StringComparison.Ordinal);
-        }
+        var separatorIndex = FindSeparatorIndex(line);
         if (separatorIndex <= 0)
         {
             return false;
@@ -377,10 +369,9 @@ public sealed class IniSettingsStore
     private static int FindSeparatorIndex(string line)
     {
         var equals = line.IndexOf('=', StringComparison.Ordinal);
-        var colon = line.IndexOf(':', StringComparison.Ordinal);
-        if (equals < 0) return colon;
-        if (colon < 0) return equals;
-        return Math.Min(equals, colon);
+        // Preserve the established parser precedence for keys containing ':'.
+        // Loading and replacement must split at the same position.
+        return equals >= 0 ? equals : line.IndexOf(':', StringComparison.Ordinal);
     }
 
     private static bool TryGetSection(

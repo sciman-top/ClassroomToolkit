@@ -122,8 +122,8 @@ internal enum MarkerRenderMode
 
 internal class MarkerBrushRenderer : IBrushRenderer
 {
-    private const int PreviewTailPointWindow = 56;
-    private const int PreviewBaseRefreshStride = 14;
+    private const int PreviewTailPointWindow = BrushPreviewDefaults.PreviewTailPointWindow;
+    private const int PreviewBaseRefreshStride = BrushPreviewDefaults.PreviewBaseRefreshStride;
 
     private readonly MarkerBrushConfig _config;
     private struct MarkerPoint

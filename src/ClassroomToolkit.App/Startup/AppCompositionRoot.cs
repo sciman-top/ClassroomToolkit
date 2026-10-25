@@ -22,19 +22,29 @@ internal static class AppCompositionRoot
 {
     internal static IServiceProvider Build(WpfApplication application, string appDataDirectory)
     {
+        var services = CreateServices(application, appDataDirectory);
+        var serviceProvider = services.BuildServiceProvider();
+        WireInfraDiagnosticsSink(serviceProvider);
+        return serviceProvider;
+    }
+
+    // Registration is separate from activation so constructor dependencies can be
+    // checked without loading settings, creating windows, or starting runtime adapters.
+    internal static IServiceCollection CreateServices(WpfApplication application, string appDataDirectory)
+    {
         ArgumentNullException.ThrowIfNull(application);
         ArgumentException.ThrowIfNullOrWhiteSpace(appDataDirectory);
 
         var services = new ServiceCollection();
         AddConfigurationAndSettings(services);
-        AddBusinessStorage(services);
         AddApplicationSettings(services, application);
-        AddWindows(services);
-        AddRuntimeServices(services);
+        AddSharedInkServices(services);
+        AddRollCallFeature(services);
+        AddPaintFeature(services);
+        AddPhotoFeature(services);
+        AddShell(services);
         AddLogging(services, appDataDirectory);
-        var serviceProvider = services.BuildServiceProvider();
-        WireInfraDiagnosticsSink(serviceProvider);
-        return serviceProvider;
+        return services;
     }
 
     private static void AddConfigurationAndSettings(IServiceCollection services)
@@ -57,7 +67,7 @@ internal static class AppCompositionRoot
         });
     }
 
-    private static void AddBusinessStorage(IServiceCollection services)
+    private static void AddRollCallFeature(IServiceCollection services)
     {
         services.AddSingleton<IRollCallWorkbookStore>(_ =>
         {
@@ -69,11 +79,14 @@ internal static class AppCompositionRoot
                 $"[Storage] StudentWorkbook backend selected={selectedBackend}, preferSqlite={StorageBackendFeatureFlags.PreferSqlite}, experimentalSqlite={StorageBackendFeatureFlags.ExperimentalSqliteEnabled}");
             return store;
         });
+        services.AddSingleton<RollCallWorkbookUseCase>();
+        services.AddSingleton<ClassroomToolkit.Services.Input.GlobalHookService>();
+        services.AddSingleton<ClassroomToolkit.Services.Speech.SpeechService>();
+        services.AddSingleton<IRollCallWindowFactory, RollCallWindowFactory>();
     }
 
     private static void AddApplicationSettings(IServiceCollection services, WpfApplication application)
     {
-        services.AddSingleton<RollCallWorkbookUseCase>();
         services.AddSingleton<AppSettingsService>();
         services.AddSingleton<ThemeManager>(_ => new ThemeManager(application));
         services.AddSingleton(provider =>
@@ -103,21 +116,26 @@ internal static class AppCompositionRoot
         });
     }
 
-    private static void AddWindows(IServiceCollection services)
+    private static void AddShell(IServiceCollection services)
     {
         services.AddSingleton<ClassroomToolkit.App.ViewModels.MainViewModel>();
-        services.AddSingleton<IRollCallWindowFactory, RollCallWindowFactory>();
-        services.AddSingleton<IPaintWindowFactory, PaintWindowFactory>();
-        services.AddSingleton<Photos.IImageManagerWindowFactory, Photos.ImageManagerWindowFactory>();
         services.AddSingleton<Windowing.IWindowOrchestrator, Windowing.WindowOrchestrator>();
-        services.AddSingleton<Services.IPaintWindowOrchestrator, Services.PaintWindowOrchestrator>();
         services.AddSingleton<MainWindow>();
     }
 
-    private static void AddRuntimeServices(IServiceCollection services)
+    private static void AddPaintFeature(IServiceCollection services)
     {
-        services.AddSingleton<ClassroomToolkit.Services.Input.GlobalHookService>();
-        services.AddSingleton<ClassroomToolkit.Services.Speech.SpeechService>();
+        services.AddSingleton<IPaintWindowFactory, PaintWindowFactory>();
+        services.AddSingleton<Services.IPaintWindowOrchestrator, Services.PaintWindowOrchestrator>();
+    }
+
+    private static void AddPhotoFeature(IServiceCollection services)
+    {
+        services.AddSingleton<Photos.IImageManagerWindowFactory, Photos.ImageManagerWindowFactory>();
+    }
+
+    private static void AddSharedInkServices(IServiceCollection services)
+    {
         services.AddSingleton<Ink.InkPersistenceService>();
 
         var useInkHistorySqlite = StorageBackendFeatureFlags.PreferSqlite

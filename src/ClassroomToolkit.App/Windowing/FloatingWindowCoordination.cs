@@ -529,25 +529,6 @@ internal static class FloatingWindowCoordinationPolicies
             Reason: FloatingActivationGuardReason.None);
     }
 
-    internal static bool IsBlockedByUtilityWindows(FloatingUtilityActivitySnapshot snapshot)
-    {
-        return ResolveFloatingActivationGuard(snapshot).IsBlocked;
-    }
-
-    internal static bool IsBlockedByUtilityWindows(
-        bool toolbarActive,
-        bool rollCallActive,
-        bool imageManagerActive,
-        bool launcherActive)
-    {
-        return IsBlockedByUtilityWindows(
-            new FloatingUtilityActivitySnapshot(
-                ToolbarActive: toolbarActive,
-                RollCallActive: rollCallActive,
-                ImageManagerActive: imageManagerActive,
-                LauncherActive: launcherActive));
-    }
-
     internal static FloatingDispatchQueueDecision RequestApply(
         FloatingDispatchQueueState state,
         bool forceEnforceZOrder = false)

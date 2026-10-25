@@ -309,11 +309,9 @@ public partial class MainWindow
             return;
         }
 
-        var decision = LauncherBubblePolicies.ResolveVisibility(
-            bubbleVisible: currentVisibleState);
         FloatingZOrderApplyExecutor.Apply(
-            decision.RequestZOrderApply,
-            decision.ForceEnforceZOrder,
+            requestZOrderApply: currentVisibleState,
+            forceEnforceZOrder: currentVisibleState,
             RequestApplyZOrderPolicy);
     }
 

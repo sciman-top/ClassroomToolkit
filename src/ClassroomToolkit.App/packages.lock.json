@@ -234,11 +234,15 @@
       "classroomtoolkit.domain": {
         "type": "Project"
       },
+      "classroomtoolkit.filesystem": {
+        "type": "Project"
+      },
       "classroomtoolkit.infra": {
         "type": "Project",
         "dependencies": {
           "ClassroomToolkit.Application": "[1.0.0, )",
           "ClassroomToolkit.Domain": "[1.0.0, )",
+          "ClassroomToolkit.FileSystem": "[1.0.0, )",
           "ClosedXML": "[0.105.1, )",
           "DocumentFormat.OpenXml": "[3.5.1, )",
           "Microsoft.Data.Sqlite": "[10.0.12, )",

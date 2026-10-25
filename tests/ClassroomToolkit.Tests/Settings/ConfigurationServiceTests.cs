@@ -1,4 +1,5 @@
 using ClassroomToolkit.App.Settings;
+using ClassroomToolkit.App.Helpers;
 using AwesomeAssertions;
 
 namespace ClassroomToolkit.Tests.Settings;
@@ -321,6 +322,31 @@ public sealed class ConfigurationServiceTests
         service.BaseDirectory.Should().Be(baseline.BaseDirectory);
         service.SettingsIniPath.Should().Be(baseline.SettingsIniPath);
         service.SettingsDocumentPath.Should().Be(baseline.SettingsDocumentPath);
+    }
+
+    [Fact]
+    public void ResolveDefaultSettingsRoot_ShouldPreferPortableRuntimeRoot_OverSolutionAppRoot()
+    {
+        var portableRoot = TestPathHelper.CreateDirectory("ctool_config_portable");
+        var appRoot = Path.Combine(portableRoot, "app");
+        var runtimeRoot = Path.Combine(appRoot, "runtime");
+        Directory.CreateDirectory(runtimeRoot);
+        File.WriteAllText(Path.Combine(portableRoot, PortableRuntimeContext.MarkerFileName), "test");
+        File.WriteAllText(Path.Combine(appRoot, "ClassroomToolkit.sln"), "mock-sln");
+
+        try
+        {
+            var result = ConfigurationService.ResolveDefaultSettingsRoot(
+                appRoot,
+                portableRoot,
+                runtimeRoot);
+
+            result.Should().Be(Path.Combine(portableRoot, PortableRuntimeContext.DataFolderName));
+        }
+        finally
+        {
+            Directory.Delete(portableRoot, recursive: true);
+        }
     }
 
     private static string CreateTempDirectory()

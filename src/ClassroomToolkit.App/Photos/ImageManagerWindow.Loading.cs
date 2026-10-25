@@ -45,6 +45,7 @@ public partial class ImageManagerWindow
     private async Task LoadImagesAsync(string folder, int requestId)
     {
         var nextThumbnailCts = new CancellationTokenSource();
+        var token = nextThumbnailCts.Token;
         var previousThumbnailCts = Interlocked.Exchange(ref _thumbnailCts, nextThumbnailCts);
         if (previousThumbnailCts != null)
         {
@@ -63,9 +64,15 @@ public partial class ImageManagerWindow
             previousThumbnailCts.Dispose();
         }
 
+        // CancelAsync yields to newer folder requests and window cleanup, which
+        // may already have canceled and disposed this request's source.
+        if (token.IsCancellationRequested || _isClosing || requestId != Volatile.Read(ref _loadImagesRequestId))
+        {
+            return;
+        }
+
         ResetThumbnailPendingQueue();
         _thumbnailBackgroundQueueTimer.Stop();
-        var token = nextThumbnailCts.Token;
         ViewModel.Images.Clear();
         _navigableDirty = true;
         EmptyHintText.Visibility = Visibility.Collapsed;

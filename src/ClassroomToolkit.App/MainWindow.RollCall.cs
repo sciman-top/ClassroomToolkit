@@ -116,11 +116,8 @@ public partial class MainWindow
 
     private void UpdateToggleButtons()
     {
-        var toggleState = ViewModels.MainWindowToggleStatePolicy.Resolve(
-            overlayVisible: _overlayWindow?.IsVisible == true,
-            rollCallVisible: _rollCallWindow?.IsVisible == true);
-        _mainViewModel.IsPaintActive = toggleState.IsPaintActive;
-        _mainViewModel.IsRollCallVisible = toggleState.IsRollCallVisible;
+        _mainViewModel.IsPaintActive = _overlayWindow?.IsVisible == true;
+        _mainViewModel.IsRollCallVisible = _rollCallWindow?.IsVisible == true;
     }
 
     private void OnOpenRollCallSettings()

@@ -16,58 +16,28 @@ internal enum FloatingOwnerBindingAction
     DetachOverlay
 }
 
-internal enum FloatingOwnerBindingReason
-{
-    None = 0,
-    AttachWhenOverlayVisible = 1,
-    DetachWhenOverlayHidden = 2,
-    AlreadyAligned = 3
-}
-
-internal readonly record struct FloatingOwnerBindingDecision(
-    FloatingOwnerBindingAction Action,
-    FloatingOwnerBindingReason Reason);
-
 internal static class FloatingOwnerBindingPolicy
 {
     internal static FloatingOwnerBindingAction Resolve(FloatingOwnerBindingContext context)
     {
-        return ResolveDecision(
-            context.OverlayVisible,
-            context.OwnerAlreadyOverlay).Action;
-    }
-
-    internal static FloatingOwnerBindingDecision ResolveDecision(FloatingOwnerBindingContext context)
-    {
-        return ResolveDecision(
+        return Resolve(
             context.OverlayVisible,
             context.OwnerAlreadyOverlay);
     }
 
     internal static FloatingOwnerBindingAction Resolve(bool overlayVisible, bool ownerAlreadyOverlay)
     {
-        return ResolveDecision(overlayVisible, ownerAlreadyOverlay).Action;
-    }
-
-    internal static FloatingOwnerBindingDecision ResolveDecision(bool overlayVisible, bool ownerAlreadyOverlay)
-    {
         if (overlayVisible && !ownerAlreadyOverlay)
         {
-            return new FloatingOwnerBindingDecision(
-                Action: FloatingOwnerBindingAction.AttachOverlay,
-                Reason: FloatingOwnerBindingReason.AttachWhenOverlayVisible);
+            return FloatingOwnerBindingAction.AttachOverlay;
         }
 
         if (!overlayVisible && ownerAlreadyOverlay)
         {
-            return new FloatingOwnerBindingDecision(
-                Action: FloatingOwnerBindingAction.DetachOverlay,
-                Reason: FloatingOwnerBindingReason.DetachWhenOverlayHidden);
+            return FloatingOwnerBindingAction.DetachOverlay;
         }
 
-        return new FloatingOwnerBindingDecision(
-            Action: FloatingOwnerBindingAction.None,
-            Reason: FloatingOwnerBindingReason.AlreadyAligned);
+        return FloatingOwnerBindingAction.None;
     }
 
     internal static bool ShouldAttachOverlayOwner(bool overlayVisible, bool ownerAlreadyOverlay)

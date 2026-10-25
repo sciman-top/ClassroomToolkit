@@ -85,15 +85,15 @@ public class FileLoggerProvider : ILoggerProvider
 
     internal void EnqueueMessage(DateTime timestamp, string message)
     {
-        if (Volatile.Read(ref _disposeState) != 0
-            || _cancellationTokenSource.IsCancellationRequested
-            || _messageQueue.IsAddingCompleted)
-        {
-            return;
-        }
-
         try
         {
+            if (Volatile.Read(ref _disposeState) != 0
+                || _cancellationTokenSource.IsCancellationRequested
+                || _messageQueue.IsAddingCompleted)
+            {
+                return;
+            }
+
             if (!_messageQueue.TryAdd(new LogQueueItem(timestamp, message)))
             {
                 var dropped = Interlocked.Increment(ref _droppedMessageCount);

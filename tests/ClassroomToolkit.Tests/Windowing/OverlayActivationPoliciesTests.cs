@@ -103,18 +103,6 @@ public class OverlayActivationPolicyTests
         decision.Reason.Should().Be(OverlayActivationReason.BlockedByLauncher);
     }
 
-    [Fact]
-    public void ShouldActivate_ShouldMapResolveDecision()
-    {
-        OverlayActivationPolicies.ShouldActivateOverlayActivation(
-            overlayVisible: true,
-            overlayShouldActivate: true,
-            overlayActive: false,
-            toolbarActive: false,
-            imageManagerActive: false,
-            rollCallActive: false,
-            launcherActive: false).Should().BeTrue();
-    }
 }
 
 public sealed class OverlayActivationRetouchPolicyTests
@@ -214,23 +202,6 @@ public sealed class OverlayActivationRetouchPolicyTests
             .BeFalse();
     }
 
-    [Fact]
-    public void ShouldApply_ShouldMapResolveDecision()
-    {
-        var decision = new SurfaceZOrderDecision(
-            ShouldTouchSurface: true,
-            Surface: ZOrderSurface.PhotoFullscreen,
-            RequestZOrderApply: true,
-            ForceEnforceZOrder: false);
-
-        OverlayActivationPolicies.ShouldApply(
-                decision,
-                DateTime.UtcNow.AddMilliseconds(-200),
-                DateTime.UtcNow,
-                minimumIntervalMs: 100)
-            .Should()
-            .BeTrue();
-    }
 }
 
 public sealed class OverlayActivationSuppressionPolicyTests
@@ -253,13 +224,6 @@ public sealed class OverlayActivationSuppressionPolicyTests
         decision.Reason.Should().Be(OverlayActivationSuppressionReason.None);
     }
 
-    [Fact]
-    public void ShouldSuppress_ShouldMapResolveDecision()
-    {
-        var suppress = OverlayActivationPolicies.ShouldSuppress(true);
-
-        suppress.Should().BeTrue();
-    }
 }
 
 public sealed class OverlayActivationSurfacePolicyTests
@@ -275,11 +239,6 @@ public sealed class OverlayActivationSurfacePolicyTests
         decision.ShouldActivate.Should().Be(expected);
     }
 
-    [Fact]
-    public void ShouldActivate_ShouldMapResolveDecision()
-    {
-        OverlayActivationPolicies.ShouldActivateSurface(true, ZOrderSurface.Whiteboard).Should().BeTrue();
-    }
 }
 
 public sealed class OverlayTopmostEnforcePolicyTests

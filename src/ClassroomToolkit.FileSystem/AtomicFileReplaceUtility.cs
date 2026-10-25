@@ -1,5 +1,9 @@
-namespace ClassroomToolkit.Domain.Utilities;
+namespace ClassroomToolkit.IO;
 
+/// <summary>
+/// Writes complete temporary files and atomically replaces their targets.
+/// This shared file-system mechanism is used by both Infra adapters and App ink storage.
+/// </summary>
 public static class AtomicFileReplaceUtility
 {
     private const int TransientReplaceRetryCount = 5;
@@ -47,8 +51,8 @@ public static class AtomicFileReplaceUtility
         }
     }
 
-    // 断电/强杀场景：仅 Close 不保证数据离开 OS 缓存，File.Replace 可能替换成功而
-    // 目标内容仍是未冲刷的截断数据。替换前对临时文件强制 flush-to-disk。
+    // Flush before replacement so a completed rename does not expose file data that was
+    // still only in the OS cache when the process or machine stopped unexpectedly.
     private static void FlushTempFileToDisk(string tempPath)
     {
         try
@@ -56,9 +60,9 @@ public static class AtomicFileReplaceUtility
             using var stream = new FileStream(tempPath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
             stream.Flush(flushToDisk: true);
         }
-        catch (Exception ex) when (DomainExceptionFilterPolicy.IsNonFatal(ex))
+        catch (Exception ex) when (IsNonFatal(ex))
         {
-            // 冲刷失败不阻断替换；最坏情形等同旧行为（崩溃窗口内内容依赖 OS 缓存）。
+            // A failed flush must not block the write; this preserves the prior best-effort behavior.
         }
     }
 
@@ -67,11 +71,7 @@ public static class AtomicFileReplaceUtility
         Action<string> writeTempFile,
         Action<string, Exception>? onTempCleanupFailure = null)
     {
-        WriteAtomically(
-            targetPath,
-            ".tmp",
-            writeTempFile,
-            onTempCleanupFailure);
+        WriteAtomically(targetPath, ".tmp", writeTempFile, onTempCleanupFailure);
     }
 
     public static void WriteAtomically(
@@ -108,11 +108,25 @@ public static class AtomicFileReplaceUtility
                 {
                     File.Delete(tempPath);
                 }
-                catch (Exception ex) when (DomainExceptionFilterPolicy.IsNonFatal(ex))
+                catch (Exception ex) when (IsNonFatal(ex))
                 {
                     onTempCleanupFailure?.Invoke(tempPath, ex);
                 }
             }
         }
+    }
+
+    private static bool IsNonFatal(Exception ex)
+    {
+        ArgumentNullException.ThrowIfNull(ex);
+
+        return ex is not (
+            OutOfMemoryException
+            or AppDomainUnloadedException
+            or BadImageFormatException
+            or CannotUnloadAppDomainException
+            or InvalidProgramException
+            or StackOverflowException
+            or AccessViolationException);
     }
 }

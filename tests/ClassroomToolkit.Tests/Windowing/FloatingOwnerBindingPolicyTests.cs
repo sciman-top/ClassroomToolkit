@@ -6,109 +6,71 @@ namespace ClassroomToolkit.Tests.Windowing;
 
 public sealed class FloatingOwnerBindingPolicyTests
 {
-    [Fact]
-    public void ResolveDecision_ShouldReturnAttachReason_WhenOverlayVisible_AndOwnerNotBound()
+    private static FloatingOwnerBindingAction Resolve(bool overlayVisible, bool ownerAlreadyOverlay)
     {
-        var decision = FloatingOwnerBindingPolicy.ResolveDecision(
-            overlayVisible: true,
-            ownerAlreadyOverlay: false);
-
-        decision.Action.Should().Be(FloatingOwnerBindingAction.AttachOverlay);
-        decision.Reason.Should().Be(FloatingOwnerBindingReason.AttachWhenOverlayVisible);
+        return FloatingOwnerBindingPolicy.Resolve(overlayVisible, ownerAlreadyOverlay);
     }
 
     [Fact]
-    public void ShouldAttachOverlayOwner_ShouldReturnTrue_WhenOverlayVisible_AndOwnerNotBound()
+    public void Resolve_ReturnsAttachOverlay_WhenOverlayVisible_AndOwnerNotBound()
     {
-        var shouldAttach = FloatingOwnerBindingPolicy.ShouldAttachOverlayOwner(
-            overlayVisible: true,
-            ownerAlreadyOverlay: false);
-
-        shouldAttach.Should().BeTrue();
+        Resolve(overlayVisible: true, ownerAlreadyOverlay: false)
+            .Should()
+            .Be(FloatingOwnerBindingAction.AttachOverlay);
     }
 
     [Fact]
-    public void ShouldAttachOverlayOwner_ShouldReturnFalse_WhenOwnerAlreadyBound()
+    public void Resolve_ReturnsDetachOverlay_WhenOverlayHidden_AndOwnerBound()
     {
-        var shouldAttach = FloatingOwnerBindingPolicy.ShouldAttachOverlayOwner(
-            overlayVisible: true,
-            ownerAlreadyOverlay: true);
-
-        shouldAttach.Should().BeFalse();
+        Resolve(overlayVisible: false, ownerAlreadyOverlay: true)
+            .Should()
+            .Be(FloatingOwnerBindingAction.DetachOverlay);
     }
 
     [Fact]
-    public void ShouldDetachOverlayOwner_ShouldReturnTrue_WhenOverlayHidden_AndOwnerBound()
+    public void Resolve_ReturnsNone_WhenNoOwnerChangeIsNeeded()
     {
-        var shouldDetach = FloatingOwnerBindingPolicy.ShouldDetachOverlayOwner(
-            overlayVisible: false,
-            ownerAlreadyOverlay: true);
-
-        shouldDetach.Should().BeTrue();
+        Resolve(overlayVisible: true, ownerAlreadyOverlay: true)
+            .Should()
+            .Be(FloatingOwnerBindingAction.None);
+        Resolve(overlayVisible: false, ownerAlreadyOverlay: false)
+            .Should()
+            .Be(FloatingOwnerBindingAction.None);
     }
 
     [Fact]
-    public void ShouldDetachOverlayOwner_ShouldReturnFalse_WhenOverlayVisible()
-    {
-        var shouldDetach = FloatingOwnerBindingPolicy.ShouldDetachOverlayOwner(
-            overlayVisible: true,
-            ownerAlreadyOverlay: true);
-
-        shouldDetach.Should().BeFalse();
-    }
-
-    [Fact]
-    public void Resolve_ShouldReturnAttachOverlay_WhenOverlayVisible_AndOwnerNotBound()
-    {
-        var action = FloatingOwnerBindingPolicy.Resolve(
-            overlayVisible: true,
-            ownerAlreadyOverlay: false);
-
-        action.Should().Be(FloatingOwnerBindingAction.AttachOverlay);
-    }
-
-    [Fact]
-    public void Resolve_ShouldReturnDetachOverlay_WhenOverlayHidden_AndOwnerBound()
-    {
-        var action = FloatingOwnerBindingPolicy.Resolve(
-            overlayVisible: false,
-            ownerAlreadyOverlay: true);
-
-        action.Should().Be(FloatingOwnerBindingAction.DetachOverlay);
-    }
-
-    [Fact]
-    public void Resolve_ShouldReturnNone_WhenNoOwnerChangeIsNeeded()
-    {
-        var action = FloatingOwnerBindingPolicy.Resolve(
-            overlayVisible: true,
-            ownerAlreadyOverlay: true);
-
-        action.Should().Be(FloatingOwnerBindingAction.None);
-    }
-
-    [Fact]
-    public void Resolve_ContextOverload_ShouldReturnAttachOverlay_WhenVisibleAndNotOwned()
+    public void Resolve_ContextOverload_AgreesWithValueOverload()
     {
         var context = new FloatingOwnerBindingContext(
             OverlayVisible: true,
             OwnerAlreadyOverlay: false);
 
-        var action = FloatingOwnerBindingPolicy.Resolve(context);
-
-        action.Should().Be(FloatingOwnerBindingAction.AttachOverlay);
+        FloatingOwnerBindingPolicy
+            .Resolve(context)
+            .Should()
+            .Be(FloatingOwnerBindingPolicy.Resolve(
+                overlayVisible: true,
+                ownerAlreadyOverlay: false));
     }
 
     [Fact]
-    public void ResolveDecision_ContextOverload_ShouldReturnAttachOverlay_WhenVisibleAndNotOwned()
+    public void ShouldAttachAndDetach_MatchResolvedAction()
     {
-        var context = new FloatingOwnerBindingContext(
-            OverlayVisible: true,
-            OwnerAlreadyOverlay: false);
-
-        var decision = FloatingOwnerBindingPolicy.ResolveDecision(context);
-
-        decision.Action.Should().Be(FloatingOwnerBindingAction.AttachOverlay);
-        decision.Reason.Should().Be(FloatingOwnerBindingReason.AttachWhenOverlayVisible);
+        FloatingOwnerBindingPolicy
+            .ShouldAttachOverlayOwner(overlayVisible: true, ownerAlreadyOverlay: false)
+            .Should()
+            .BeTrue();
+        FloatingOwnerBindingPolicy
+            .ShouldAttachOverlayOwner(overlayVisible: true, ownerAlreadyOverlay: true)
+            .Should()
+            .BeFalse();
+        FloatingOwnerBindingPolicy
+            .ShouldDetachOverlayOwner(overlayVisible: false, ownerAlreadyOverlay: true)
+            .Should()
+            .BeTrue();
+        FloatingOwnerBindingPolicy
+            .ShouldDetachOverlayOwner(overlayVisible: true, ownerAlreadyOverlay: true)
+            .Should()
+            .BeFalse();
     }
 }

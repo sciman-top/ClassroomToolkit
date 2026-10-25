@@ -168,6 +168,9 @@
       },
       "classroomtoolkit.domain": {
         "type": "Project"
+      },
+      "classroomtoolkit.filesystem": {
+        "type": "Project"
       }
     }
   }

@@ -97,11 +97,6 @@ internal static class WindowInteropRetryPolicies
         };
     }
 
-    internal static bool ShouldRetryWindowPlacementInteropRetry(int attempt, int errorCode)
-    {
-        return ResolveWindowPlacementInteropRetry(attempt, errorCode).ShouldRetry;
-    }
-
     internal static WindowStyleInteropRetryDecision ResolveWindowStyleInteropRetry(int attempt, int errorCode)
     {
         var coreDecision = WindowInteropRetryPolicyCore.Resolve(attempt, errorCode);
@@ -117,11 +112,6 @@ internal static class WindowInteropRetryPolicies
                 ShouldRetry: true,
                 Reason: WindowStyleInteropRetryReason.RetryableError)
         };
-    }
-
-    internal static bool ShouldRetryWindowStyleInteropRetry(int attempt, int errorCode)
-    {
-        return ResolveWindowStyleInteropRetry(attempt, errorCode).ShouldRetry;
     }
 
     internal static WindowTopmostInteropRetryDecision ResolveWindowTopmostInteropRetry(int attempt, int errorCode)
@@ -141,8 +131,4 @@ internal static class WindowInteropRetryPolicies
         };
     }
 
-    internal static bool ShouldRetryWindowTopmostInteropRetry(int attempt, int errorCode)
-    {
-        return ResolveWindowTopmostInteropRetry(attempt, errorCode).ShouldRetry;
-    }
 }

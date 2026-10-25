@@ -28,30 +28,30 @@ public partial class MainWindow
             return;
         }
 
-        var transitionPlan = PaintWindowVisibilityPolicies.ResolvePaintToggle(overlay.IsVisible);
-        ApplyPaintToggleTransition(transitionPlan);
+        ApplyPaintToggleTransition(
+            PaintWindowVisibilityPolicies.ResolvePaintToggle(overlay.IsVisible));
         UpdateToggleButtons();
     }
 
-    private void ApplyPaintToggleTransition(PaintVisibilityTransitionPlan transitionPlan)
+    private void ApplyPaintToggleTransition(PaintVisibilityTransition transition)
     {
-        if (transitionPlan.CaptureToolbarPosition)
+        if (transition == PaintVisibilityTransition.ToggleHidePaint)
         {
             _paintWindowOrchestrator.CaptureToolbarPosition(_settings, save: true);
         }
-        if (transitionPlan.HideOverlay)
+        if (transition == PaintVisibilityTransition.ToggleHidePaint)
         {
             ExecuteLifecycleSafe("paint-toggle", "hide-paint-orchestrator", () => _paintWindowOrchestrator.Hide());
             ResetToolbarInteractionRetouchRuntime(ToolbarInteractionRetouchRuntimeResetReason.PaintHidden);
         }
-        if (transitionPlan.ShowOverlay)
+        if (transition != PaintVisibilityTransition.ToggleHidePaint)
         {
             ExecuteLifecycleSafe("paint-toggle", "show-paint-orchestrator", () => _paintWindowOrchestrator.Show());
         }
-        SyncFloatingWindowOwners(overlayVisible: transitionPlan.SyncFloatingOwnersVisible);
+        SyncFloatingWindowOwners(overlayVisible: transition == PaintVisibilityTransition.ToggleShowPaint);
         FloatingZOrderApplyExecutor.Apply(
-            transitionPlan.RequestZOrderApply,
-            transitionPlan.ForceEnforceZOrder,
+            requestZOrderApply: true,
+            forceEnforceZOrder: false,
             RequestApplyZOrderPolicy);
     }
 
@@ -416,24 +416,20 @@ public partial class MainWindow
             return;
         }
 
-        var transitionPlan = PaintWindowVisibilityPolicies.ResolveEnsureOverlayVisible(
-            overlayVisible: overlay.IsVisible);
-        ApplyEnsurePaintOverlayVisibleTransition(transitionPlan);
+        PaintWindowVisibilityPolicies.ResolveEnsureOverlayVisible(overlay.IsVisible);
+        ApplyEnsurePaintOverlayVisibleTransition();
     }
 
-    private void ApplyEnsurePaintOverlayVisibleTransition(PaintVisibilityTransitionPlan transitionPlan)
+    private void ApplyEnsurePaintOverlayVisibleTransition()
     {
-        if (transitionPlan.ShowOverlay)
+        if (_paintWindowOrchestrator.OverlayWindow?.IsVisible != true)
         {
             ExecuteLifecycleSafe("paint-ensure-overlay-visible", "show-paint-orchestrator", () => _paintWindowOrchestrator.Show());
         }
-        if (transitionPlan.SyncFloatingOwnersVisible)
-        {
-            SyncFloatingWindowOwners(overlayVisible: true);
-        }
+        SyncFloatingWindowOwners(overlayVisible: true);
         FloatingZOrderApplyExecutor.Apply(
-            transitionPlan.RequestZOrderApply,
-            transitionPlan.ForceEnforceZOrder,
+            requestZOrderApply: true,
+            forceEnforceZOrder: false,
             RequestApplyZOrderPolicy);
     }
 

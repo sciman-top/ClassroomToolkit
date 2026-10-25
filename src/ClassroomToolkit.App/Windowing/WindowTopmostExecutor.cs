@@ -1,18 +1,20 @@
 using System;
 using System.Windows;
 using System.Windows.Interop;
+using System.Threading;
 
 namespace ClassroomToolkit.App.Windowing;
 
 internal static class WindowTopmostExecutor
 {
-    private static IWindowTopmostInteropAdapter _interopAdapter = new NativeWindowTopmostInteropAdapter();
+    private static readonly IWindowTopmostInteropAdapter DefaultInteropAdapter = new NativeWindowTopmostInteropAdapter();
+    private static readonly AsyncLocal<IWindowTopmostInteropAdapter?> ScopedInteropAdapter = new();
 
     internal static IDisposable PushInteropAdapterForTest(IWindowTopmostInteropAdapter adapter)
     {
-        var previous = _interopAdapter;
-        _interopAdapter = adapter;
-        return InteropAdapterScope.Create(() => _interopAdapter = previous);
+        var previous = ScopedInteropAdapter.Value;
+        ScopedInteropAdapter.Value = adapter;
+        return InteropAdapterScope.Create(() => ScopedInteropAdapter.Value = previous);
     }
 
     internal static void ApplyNoActivate(Window? window, bool enabled, bool enforceZOrder = true)
@@ -126,7 +128,8 @@ internal static class WindowTopmostExecutor
         return WindowInteropRetryExecutor.Execute(
             _ =>
             {
-                var success = _interopAdapter.TrySetTopmostNoActivate(hwnd, enabled, out var errorCode);
+                var adapter = ScopedInteropAdapter.Value ?? DefaultInteropAdapter;
+                var success = adapter.TrySetTopmostNoActivate(hwnd, enabled, out var errorCode);
                 return (success, errorCode);
             },
             (attempt, errorCode) => WindowInteropRetryPolicies.ResolveWindowTopmostInteropRetry(attempt, errorCode).ShouldRetry);
@@ -147,7 +150,8 @@ internal static class WindowTopmostExecutor
         return WindowInteropRetryExecutor.Execute(
             _ =>
             {
-                var success = _interopAdapter.TrySetWindowBehindNoActivate(hwnd, insertAfterHwnd, out var errorCode);
+                var adapter = ScopedInteropAdapter.Value ?? DefaultInteropAdapter;
+                var success = adapter.TrySetWindowBehindNoActivate(hwnd, insertAfterHwnd, out var errorCode);
                 return (success, errorCode);
             },
             (attempt, errorCode) => WindowInteropRetryPolicies.ResolveWindowTopmostInteropRetry(attempt, errorCode).ShouldRetry);

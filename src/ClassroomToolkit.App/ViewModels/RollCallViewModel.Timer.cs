@@ -69,6 +69,7 @@ public sealed partial class RollCallViewModel
 
     internal void TickTimer(TimeSpan elapsed)
     {
+        var wasRunning = _timerEngine.Running;
         _timerEngine.Tick(elapsed);
         UpdateTimeDisplay();
         if (_timerEngine.Mode == TimerMode.Countdown)
@@ -78,6 +79,11 @@ public sealed partial class RollCallViewModel
         else if (_timerEngine.Mode == TimerMode.Stopwatch)
         {
             RaisePropertyChanged(nameof(TimerStopwatchSeconds));
+        }
+
+        if (wasRunning != _timerEngine.Running)
+        {
+            RaisePropertyChanged(nameof(TimerRunning), nameof(StartPauseLabel));
         }
     }
 

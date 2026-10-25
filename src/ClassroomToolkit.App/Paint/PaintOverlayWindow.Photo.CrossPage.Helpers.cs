@@ -202,18 +202,7 @@ public partial class PaintOverlayWindow
         if (bitmap != null)
         {
             _neighborImageCache[pageIndex] = bitmap;
-            // Limit cache size
-            if (_neighborImageCache.Count > NeighborPageCacheLimit + 2)
-            {
-                var keysToRemove = _neighborImageCache.Keys
-                    .OrderBy(k => Math.Abs(k - pageIndex))
-                    .Skip(NeighborPageCacheLimit)
-                    .ToList();
-                foreach (var k in keysToRemove)
-                {
-                    _neighborImageCache.Remove(k);
-                }
-            }
+            TrimNeighborImageCache(pageIndex);
         }
         return bitmap;
     }
@@ -315,17 +304,7 @@ public partial class PaintOverlayWindow
                     }
 
                     _neighborImageCache[pageIndex] = bitmap;
-                    if (_neighborImageCache.Count > NeighborPageCacheLimit + 2)
-                    {
-                        var keysToRemove = _neighborImageCache.Keys
-                            .OrderBy(k => Math.Abs(k - pageIndex))
-                            .Skip(NeighborPageCacheLimit)
-                            .ToList();
-                        foreach (var k in keysToRemove)
-                        {
-                            _neighborImageCache.Remove(k);
-                        }
-                    }
+                    TrimNeighborImageCache(pageIndex);
 
                     // Neighbor bitmap became available; request a prompt refresh so boundary
                     // pages can be filled without waiting for the next user input tick.
@@ -594,5 +573,26 @@ public partial class PaintOverlayWindow
         createdGroup.Children.Add(createdTranslate);
         image.RenderTransform = createdGroup;
         return (createdGroup, createdScale, createdTranslate);
+    }
+
+    /// <summary>
+    /// Keeps only the nearest <see cref="PhotoDocumentRuntimeDefaults.NeighborPageCacheLimit"/>
+    /// neighbour bitmaps around the current page, dropping the farthest pages first.
+    /// </summary>
+    private void TrimNeighborImageCache(int pageIndex)
+    {
+        if (_neighborImageCache.Count <= NeighborPageCacheLimit + 2)
+        {
+            return;
+        }
+
+        var keysToRemove = _neighborImageCache.Keys
+            .OrderBy(k => Math.Abs(k - pageIndex))
+            .Skip(NeighborPageCacheLimit)
+            .ToList();
+        foreach (var key in keysToRemove)
+        {
+            _neighborImageCache.Remove(key);
+        }
     }
 }

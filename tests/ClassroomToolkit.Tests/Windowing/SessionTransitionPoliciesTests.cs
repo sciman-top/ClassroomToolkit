@@ -125,17 +125,6 @@ public sealed class SessionTransitionApplyGatePolicyTests
         gate.Reason.Should().Be(SessionTransitionApplyGateReason.ForceEnforceRequested);
     }
 
-    [Fact]
-    public void ShouldApply_ShouldMapResolveDecision()
-    {
-        var decision = new SurfaceZOrderDecision(
-            ShouldTouchSurface: true,
-            Surface: ZOrderSurface.Whiteboard,
-            RequestZOrderApply: false,
-            ForceEnforceZOrder: false);
-
-        SessionTransitionPolicies.ShouldApplyApplyGate(decision).Should().BeTrue();
-    }
 }
 
 public sealed class SessionTransitionApplyPolicyTests
@@ -261,13 +250,6 @@ public sealed class SessionTransitionDuplicatePolicyTests
         decision.Reason.Should().Be(SessionTransitionDuplicateReason.RegressedTransitionId);
     }
 
-    [Fact]
-    public void ShouldApply_ShouldMapResolveDecision()
-    {
-        SessionTransitionPolicies.ShouldApplyDuplicate(
-            lastAppliedTransitionId: 10,
-            currentTransitionId: 11).Should().BeTrue();
-    }
 }
 
 public sealed class SessionTransitionDuplicateResetPolicyTests
@@ -305,13 +287,6 @@ public sealed class SessionTransitionDuplicateResetPolicyTests
         decision.Reason.Should().Be(SessionTransitionDuplicateResetReason.NoAppliedTransition);
     }
 
-    [Fact]
-    public void ShouldReset_ShouldMapResolveDecision()
-    {
-        SessionTransitionPolicies.ShouldReset(
-            overlayWindowRewired: true,
-            lastAppliedTransitionId: 12).Should().BeTrue();
-    }
 }
 
 public sealed class SessionTransitionEventAdmissionPolicyTests
@@ -364,14 +339,6 @@ public sealed class SessionTransitionEventAdmissionPolicyTests
         decision.Reason.Should().Be(SessionTransitionAdmissionReason.None);
     }
 
-    [Fact]
-    public void ShouldProcess_ShouldMapResolveDecision()
-    {
-        SessionTransitionPolicies.ShouldProcess(
-            hasStateChange: true,
-            lastAppliedTransitionId: 10,
-            currentTransitionId: 11).Should().BeTrue();
-    }
 }
 
 public sealed class SessionTransitionSurfacePolicyTests
@@ -593,23 +560,6 @@ public sealed class SessionTransitionWindowingPolicyTests
         decision.SurfaceReason.Should().Be(SessionTransitionSurfaceReason.NoSurfaceRetouchRequested);
     }
 
-    [Fact]
-    public void Resolve_ShouldMapResolveDecision()
-    {
-        var transition = new UiSessionTransition(
-            8,
-            DateTime.UtcNow,
-            new EnterPhotoFullscreenEvent(PhotoSourceKind.Image),
-            UiSessionState.Default,
-            UiSessionState.Default with
-            {
-                Scene = UiSceneKind.PhotoFullscreen,
-                OverlayTopmostRequired = true
-            });
-
-        var decision = SessionTransitionPolicies.ResolveWindowing(transition);
-        decision.RequestZOrderApply.Should().BeTrue();
-    }
 }
 
 public sealed class SessionTransitionZOrderPolicyTests
@@ -658,12 +608,4 @@ public sealed class SessionTransitionZOrderPolicyTests
         decision.Reason.Should().Be(SessionTransitionZOrderRetouchReason.SceneChangedToSurface);
     }
 
-    [Fact]
-    public void ShouldRetouchSurface_ShouldMapResolveDecision()
-    {
-        var previous = UiSessionState.Default;
-        var current = UiSessionReducer.Reduce(previous, new EnterPhotoFullscreenEvent(PhotoSourceKind.Image));
-
-        SessionTransitionPolicies.ShouldRetouchSurface(previous, current).Should().BeTrue();
-    }
 }

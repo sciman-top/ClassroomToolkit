@@ -5,40 +5,21 @@ using Xunit;
 
 namespace ClassroomToolkit.Tests.Windowing;
 
-public sealed class LauncherBubbleVisibilityPolicyTests
-{
-    [Fact]
-    public void Resolve_ShouldRequestForcedZOrder_WhenBubbleVisible()
-    {
-        var decision = LauncherBubblePolicies.ResolveVisibility(bubbleVisible: true);
-
-        decision.RequestZOrderApply.Should().BeTrue();
-        decision.ForceEnforceZOrder.Should().BeTrue();
-    }
-
-    [Fact]
-    public void Resolve_ShouldDoNothing_WhenBubbleHidden()
-    {
-        var decision = LauncherBubblePolicies.ResolveVisibility(bubbleVisible: false);
-
-        decision.RequestZOrderApply.Should().BeFalse();
-        decision.ForceEnforceZOrder.Should().BeFalse();
-    }
-}
-
 public sealed class LauncherBubbleVisibleChangedApplyPolicyTests
 {
     [Fact]
     public void Resolve_ShouldReturnVisibleChangedSuppressed_WhenSuppressed()
     {
-        var decision = LauncherBubblePolicies.ResolveVisibleChangedApply(
+        var gate = LauncherBubblePolicies.ResolveZOrderApplyGate(
             bubbleVisible: true,
             suppressVisibleChangedApply: true,
             suppressVisibleChangedUntilUtc: WindowDedupDefaults.UnsetTimestampUtc,
-            nowUtc: DateTime.UtcNow);
+            nowUtc: DateTime.UtcNow,
+            appClosing: false,
+            bubbleWindowExists: true);
 
-        decision.ShouldApply.Should().BeFalse();
-        decision.Reason.Should().Be(LauncherBubbleVisibleChangedApplyReason.VisibleChangedSuppressed);
+        gate.ShouldApply.Should().BeFalse();
+        gate.VisibleChangedReason.Should().Be(LauncherBubbleVisibleChangedApplyReason.VisibleChangedSuppressed);
     }
 
     [Fact]
@@ -46,14 +27,16 @@ public sealed class LauncherBubbleVisibleChangedApplyPolicyTests
     {
         var nowUtc = DateTime.UtcNow;
 
-        var decision = LauncherBubblePolicies.ResolveVisibleChangedApply(
+        var gate = LauncherBubblePolicies.ResolveZOrderApplyGate(
             bubbleVisible: true,
             suppressVisibleChangedApply: false,
             suppressVisibleChangedUntilUtc: nowUtc.AddMilliseconds(50),
-            nowUtc: nowUtc);
+            nowUtc: nowUtc,
+            appClosing: false,
+            bubbleWindowExists: true);
 
-        decision.ShouldApply.Should().BeFalse();
-        decision.Reason.Should().Be(LauncherBubbleVisibleChangedApplyReason.CooldownActive);
+        gate.ShouldApply.Should().BeFalse();
+        gate.VisibleChangedReason.Should().Be(LauncherBubbleVisibleChangedApplyReason.CooldownActive);
     }
 
     [Fact]
@@ -61,40 +44,33 @@ public sealed class LauncherBubbleVisibleChangedApplyPolicyTests
     {
         var nowUtc = DateTime.UtcNow;
 
-        var decision = LauncherBubblePolicies.ResolveVisibleChangedApply(
+        var gate = LauncherBubblePolicies.ResolveZOrderApplyGate(
             bubbleVisible: true,
             suppressVisibleChangedApply: false,
             suppressVisibleChangedUntilUtc: nowUtc.AddMilliseconds(-1),
-            nowUtc: nowUtc);
+            nowUtc: nowUtc,
+            appClosing: false,
+            bubbleWindowExists: true);
 
-        decision.ShouldApply.Should().BeTrue();
-        decision.Reason.Should().Be(LauncherBubbleVisibleChangedApplyReason.None);
+        gate.ShouldApply.Should().BeTrue();
+        gate.VisibleChangedReason.Should().Be(LauncherBubbleVisibleChangedApplyReason.None);
     }
 
     [Fact]
     public void Resolve_ShouldReturnBubbleHidden_WhenBubbleNotVisible()
     {
-        var decision = LauncherBubblePolicies.ResolveVisibleChangedApply(
+        var gate = LauncherBubblePolicies.ResolveZOrderApplyGate(
             bubbleVisible: false,
             suppressVisibleChangedApply: false,
             suppressVisibleChangedUntilUtc: WindowDedupDefaults.UnsetTimestampUtc,
-            nowUtc: DateTime.UtcNow);
+            nowUtc: DateTime.UtcNow,
+            appClosing: false,
+            bubbleWindowExists: true);
 
-        decision.ShouldApply.Should().BeFalse();
-        decision.Reason.Should().Be(LauncherBubbleVisibleChangedApplyReason.BubbleHidden);
+        gate.ShouldApply.Should().BeFalse();
+        gate.VisibleChangedReason.Should().Be(LauncherBubbleVisibleChangedApplyReason.BubbleHidden);
     }
 
-    [Fact]
-    public void ShouldApplyZOrder_ShouldMapResolveDecision()
-    {
-        var nowUtc = DateTime.UtcNow;
-
-        LauncherBubblePolicies.ShouldApplyZOrder(
-            bubbleVisible: true,
-            suppressVisibleChangedApply: false,
-            suppressVisibleChangedUntilUtc: nowUtc.AddMilliseconds(-1),
-            nowUtc: nowUtc).Should().BeTrue();
-    }
 }
 
 public sealed class LauncherBubbleVisibleChangedDedupIntervalPolicyTests
@@ -311,15 +287,4 @@ public sealed class LauncherBubbleZOrderApplyGatePolicyTests
         decision.VisibleChangedReason.Should().Be(LauncherBubbleVisibleChangedApplyReason.BubbleHidden);
     }
 
-    [Fact]
-    public void ShouldApply_ShouldMapResolveDecision()
-    {
-        LauncherBubblePolicies.ShouldApply(
-            bubbleVisible: false,
-            suppressVisibleChangedApply: false,
-            suppressVisibleChangedUntilUtc: WindowDedupDefaults.UnsetTimestampUtc,
-            nowUtc: DateTime.UtcNow,
-            appClosing: false,
-            bubbleWindowExists: true).Should().BeFalse();
-    }
 }

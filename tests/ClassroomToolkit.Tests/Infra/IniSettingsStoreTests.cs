@@ -7,6 +7,28 @@ namespace ClassroomToolkit.Tests.Infra;
 public sealed class IniSettingsStoreTests
 {
     [Fact]
+    public void Save_ShouldPreserveKeyContainingColon_WhenEqualsIsTheSeparator()
+    {
+        var path = TestPathHelper.CreateFilePath("ctool_ini_key_colon", ".ini");
+        try
+        {
+            File.WriteAllText(path, "[Future]\nprofile:theme=dark\n");
+            var store = new IniSettingsStore(path);
+            var data = store.Load();
+            data["Future"]["profile:theme"].Should().Be("dark");
+            data["Future"]["profile:theme"] = "light";
+
+            store.Save(data);
+
+            new IniSettingsStore(path).Load()["Future"]["profile:theme"].Should().Be("light");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void TryLoad_ShouldDecodeLegacyGbAnsiFile()
     {
         var path = TestPathHelper.CreateFilePath("ctool_ini_gbk", ".ini");

@@ -256,8 +256,7 @@ internal static class ToolbarInteractionRetouchPolicies
                 Reason: ToolbarInteractionRetouchDecisionReason.None);
         }
 
-        var driftDecision = FloatingTopmostPolicies.ResolveDrift(snapshot);
-        if (!driftDecision.HasDrift)
+        if (!FloatingTopmostPolicies.HasDrift(snapshot))
         {
             if (snapshot.LauncherVisible)
             {
@@ -273,11 +272,10 @@ internal static class ToolbarInteractionRetouchPolicies
                 Reason: ToolbarInteractionRetouchDecisionReason.NoTopmostDrift);
         }
 
-        var forceEnforceDecision = FloatingTopmostPolicies.ResolveForceEnforce(snapshot);
-
         return new ToolbarInteractionRetouchDecision(
             ShouldRetouch: true,
-            ForceEnforceZOrder: forceEnforceDecision.ShouldForceEnforce || ForegroundZOrderRetouchPolicy.ShouldForceOnToolbarInteraction(
+            ForceEnforceZOrder: FloatingTopmostPolicies.ShouldForceEnforce(snapshot)
+                || ForegroundZOrderRetouchPolicy.ShouldForceOnToolbarInteraction(
                 snapshot.OverlayVisible,
                 snapshot.PhotoModeActive,
                 snapshot.WhiteboardActive),
@@ -487,20 +485,4 @@ internal static class ToolbarInteractionRetouchPolicies
             Reason: ToolbarInteractionActivationSuppressionReason.None);
     }
 
-    internal static bool ShouldSuppress(
-        ToolbarInteractionRetouchTrigger trigger,
-        ToolbarInteractionRetouchSnapshot snapshot,
-        DateTime lastPreviewMouseDownUtc,
-        DateTime lastRetouchUtc,
-        DateTime nowUtc,
-        int launcherOnlySuppressionMs = ToolbarInteractionActivationSuppressionDefaults.LauncherOnlyAfterPreviewSuppressionMs)
-    {
-        return ResolveToolbarInteractionActivationSuppression(
-            trigger,
-            snapshot,
-            lastPreviewMouseDownUtc,
-            lastRetouchUtc,
-            nowUtc,
-            launcherOnlySuppressionMs).ShouldSuppress;
-    }
 }

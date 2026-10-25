@@ -10,6 +10,34 @@ namespace ClassroomToolkit.Tests.Windowing;
 public sealed class WindowTopmostExecutorTests
 {
     [Fact]
+    public async Task InteropAdapterScope_ShouldNotLeakAcrossConcurrentExecutionContexts()
+    {
+        var outer = new FakeTopmostAdapter((1, true, 0));
+        var inner = new FakeTopmostAdapter((1, true, 0));
+        using var scope = WindowTopmostExecutor.PushInteropAdapterForTest(outer);
+        var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var worker = Task.Run(async () =>
+        {
+            using var innerScope = WindowTopmostExecutor.PushInteropAdapterForTest(inner);
+            ready.SetResult();
+            await release.Task;
+        }, TestContext.Current.CancellationToken);
+        try
+        {
+            await ready.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+            WindowTopmostExecutor.TryApplyHandleNoActivate(new IntPtr(1), enabled: true).Should().BeTrue();
+            outer.CallCount.Should().Be(1);
+            inner.CallCount.Should().Be(0);
+        }
+        finally
+        {
+            release.TrySetResult();
+            await worker;
+        }
+    }
+
+    [Fact]
     public void TryApplyHandleNoActivate_ShouldRetryAndSucceed_OnRecoverableFailure()
     {
         var adapter = new FakeTopmostAdapter(

@@ -470,11 +470,6 @@ internal static class WindowExecutionPolicies
             Reason: UserInitiatedWindowActivationReason.ActivationRequired);
     }
 
-    internal static bool ShouldActivateAfterShow(bool windowVisible, bool windowActive)
-    {
-        return ResolveUserInitiatedWindowActivation(windowVisible, windowActive).ShouldActivateAfterShow;
-    }
-
     internal static WindowLifecycleSubscriptionDecision ResolveWindowLifecycleSubscription(object? previousWindow, object? currentWindow)
     {
         if (currentWindow == null)
@@ -519,14 +514,4 @@ internal static class WindowExecutionPolicies
                 Reason: WindowCursorHitTestReason.OutsideBounds);
     }
 
-    internal static bool IsInside(
-        int cursorX,
-        int cursorY,
-        int left,
-        int top,
-        int right,
-        int bottom)
-    {
-        return ResolveWindowCursorHitTest(cursorX, cursorY, left, top, right, bottom).IsInside;
-    }
 }

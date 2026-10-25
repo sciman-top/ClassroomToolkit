@@ -54,9 +54,29 @@ internal readonly record struct LauncherVisibilityTransitionPlan(
     bool HideMainWindow,
     bool ShowBubbleWindow,
     bool HideBubbleWindow,
-    bool ActivateMainWindow,
-    bool RequestZOrderApply,
-    bool ForceEnforceZOrder);
+    bool ActivateMainWindow)
+{
+    internal bool RequestZOrderApply => ShowMainWindow || HideMainWindow || ShowBubbleWindow || HideBubbleWindow;
+
+    internal bool ForceEnforceZOrder => RequestZOrderApply;
+
+    internal static LauncherVisibilityTransitionPlan Minimize(bool mainVisible, bool bubbleVisible) => new(
+        ShowMainWindow: false,
+        HideMainWindow: mainVisible,
+        ShowBubbleWindow: !bubbleVisible,
+        HideBubbleWindow: false,
+        ActivateMainWindow: false);
+
+    internal static LauncherVisibilityTransitionPlan Restore(
+        bool mainVisible,
+        bool activateMainWindow,
+        bool bubbleVisible) => new(
+        ShowMainWindow: !mainVisible,
+        HideMainWindow: false,
+        ShowBubbleWindow: false,
+        HideBubbleWindow: bubbleVisible,
+        ActivateMainWindow: activateMainWindow);
+}
 
 internal enum LauncherVisibilityMinimizeReason
 {
@@ -264,25 +284,15 @@ internal static class LauncherWindowPolicies
         bool mainVisible,
         bool bubbleVisible)
     {
-        var hideMainWindow = mainVisible;
-        var showBubbleWindow = !bubbleVisible;
-        var requestZOrderApply = hideMainWindow || showBubbleWindow;
-        var reason = hideMainWindow && showBubbleWindow
+        var reason = mainVisible && !bubbleVisible
             ? LauncherVisibilityMinimizeReason.HideMainAndShowBubble
-            : hideMainWindow
+            : mainVisible
                 ? LauncherVisibilityMinimizeReason.HideMainOnly
-                : showBubbleWindow
+                : !bubbleVisible
                     ? LauncherVisibilityMinimizeReason.ShowBubbleOnly
                     : LauncherVisibilityMinimizeReason.NoOp;
         return new LauncherVisibilityMinimizeDecision(
-            Plan: new LauncherVisibilityTransitionPlan(
-                ShowMainWindow: false,
-                HideMainWindow: hideMainWindow,
-                ShowBubbleWindow: showBubbleWindow,
-                HideBubbleWindow: false,
-                ActivateMainWindow: false,
-                RequestZOrderApply: requestZOrderApply,
-                ForceEnforceZOrder: requestZOrderApply),
+            Plan: LauncherVisibilityTransitionPlan.Minimize(mainVisible, bubbleVisible),
             Reason: reason);
     }
 
@@ -314,28 +324,21 @@ internal static class LauncherWindowPolicies
         bool mainActive,
         bool bubbleVisible)
     {
-        var showMainWindow = !mainVisible;
-        var hideBubbleWindow = bubbleVisible;
-        var requestZOrderApply = showMainWindow || hideBubbleWindow;
         var activateMainWindowDecision = WindowExecutionPolicies.ResolveUserInitiatedWindowActivation(
             windowVisible: true,
             windowActive: mainActive);
-        var reason = showMainWindow && hideBubbleWindow
+        var reason = !mainVisible && bubbleVisible
             ? LauncherVisibilityRestoreReason.ShowMainAndHideBubble
-            : showMainWindow
+            : !mainVisible
                 ? LauncherVisibilityRestoreReason.ShowMainOnly
-                : hideBubbleWindow
+                : bubbleVisible
                     ? LauncherVisibilityRestoreReason.HideBubbleOnly
                     : LauncherVisibilityRestoreReason.NoOp;
         return new LauncherVisibilityRestoreDecision(
-            Plan: new LauncherVisibilityTransitionPlan(
-                ShowMainWindow: showMainWindow,
-                HideMainWindow: false,
-                ShowBubbleWindow: false,
-                HideBubbleWindow: hideBubbleWindow,
-                ActivateMainWindow: activateMainWindowDecision.ShouldActivateAfterShow,
-                RequestZOrderApply: requestZOrderApply,
-                ForceEnforceZOrder: requestZOrderApply),
+            Plan: LauncherVisibilityTransitionPlan.Restore(
+                mainVisible,
+                activateMainWindowDecision.ShouldActivateAfterShow,
+                bubbleVisible),
             Reason: reason);
     }
 

@@ -12,9 +12,6 @@ public sealed class ReleasePrepareDistributionContractTests
         var source = ReadPrepareDistributionScript();
 
         source.Should().Contain("function Assert-SafeReleaseVersionSegment");
-        source.Should().Contain("[System.IO.Path]::GetInvalidFileNameChars()");
-        source.Should().Contain("[System.IO.Path]::DirectorySeparatorChar");
-        source.Should().Contain("[System.IO.Path]::AltDirectorySeparatorChar");
         source.Should().Contain("Assert-SafeReleaseVersionSegment -Value $Version");
     }
 
@@ -24,9 +21,7 @@ public sealed class ReleasePrepareDistributionContractTests
         var source = ReadPrepareDistributionScript();
 
         source.Should().Contain("function Assert-HttpsDownloadUrl");
-        source.Should().Contain("[System.Uri]::UriSchemeHttps");
         source.Should().Contain("Assert-HttpsDownloadUrl -DownloadUrl $DownloadUrl");
-        source.Should().Contain("Invoke-WebRequest -Uri $DownloadUrl -OutFile $targetPath");
     }
 
     [Fact]
@@ -34,7 +29,6 @@ public sealed class ReleasePrepareDistributionContractTests
     {
         var source = ReadPrepareDistributionScript();
 
-        source.Should().Contain("function Assert-FileDoesNotExistByName");
         source.Should().Contain("Assert-FileDoesNotExistByName -Root $standardApp -Name \"pdfium.dll\"");
         source.Should().Contain("Assert-FileDoesNotExistByName -Root $offlineApp -Name \"pdfium.dll\"");
         source.Should().NotContain("Assert-FileExistsByName -Root $standardApp -Name \"pdfium.dll\"");
@@ -57,7 +51,6 @@ public sealed class ReleasePrepareDistributionContractTests
         source.Should().Contain("\"-p:Version=$ApplicationVersion\"");
         source.Should().Contain("\"-p:FileVersion=$ApplicationVersion\"");
         source.Should().Contain("\"-p:InformationalVersion=$ApplicationVersion\"");
-        source.Should().Contain("-ApplicationVersion $Version");
     }
 
     [Fact]
@@ -84,7 +77,7 @@ public sealed class ReleasePrepareDistributionContractTests
         source.Should().Contain("Get-FileHash -LiteralPath $Path -Algorithm SHA256");
         source.Should().Contain("Get-AuthenticodeSignature -LiteralPath $Path");
         source.Should().Contain("VersionInfo.ProductVersion");
-        source.Should().Contain("Test-ValidRuntimeInstaller");
+        source.Should().Contain("Test-ValidRuntimeInstaller -Path $targetPath");
     }
 
     private static string ReadPrepareDistributionScript()

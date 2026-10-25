@@ -253,8 +253,14 @@ internal sealed class ConfigurationService : IConfigurationService
     }
 
     private static string ResolveDefaultSettingsRoot(string? requestedBaseDirectory, string appRootDirectory)
+        => ResolveDefaultSettingsRoot(requestedBaseDirectory, appRootDirectory, AppDomain.CurrentDomain.BaseDirectory);
+
+    internal static string ResolveDefaultSettingsRoot(
+        string? requestedBaseDirectory,
+        string appRootDirectory,
+        string runtimeBaseDirectory)
     {
-        if (PortableRuntimeContext.TryResolveRoot(appRootDirectory, out var portableRoot))
+        if (PortableRuntimeContext.TryResolveRoot(runtimeBaseDirectory, out var portableRoot))
         {
             return Path.Combine(portableRoot, PortableRuntimeContext.DataFolderName);
         }

@@ -74,7 +74,7 @@ public partial class MainWindow
 
     private void OnMainWindowVisibleChanged(object? sender, DependencyPropertyChangedEventArgs e)
     {
-        if (MainWindowVisibleChangedPolicy.ShouldEnsureVisible(IsVisible))
+        if (IsVisible)
         {
             WindowPlacementHelper.EnsureVisible(this);
         }
@@ -87,8 +87,7 @@ public partial class MainWindow
         ScheduleAutoExitTimer();
         _floatingTopmostWatchdogTimer.Start();
         ScheduleStartupWarmups();
-        var toggleAction = MainWindowLoadedToggleActionPolicy.Resolve(_settings.LauncherMinimized);
-        if (toggleAction == MainWindowLoadedToggleAction.MinimizeLauncher)
+        if (_settings.LauncherMinimized)
         {
             MinimizeLauncher(fromSettings: true);
         }
@@ -214,8 +213,7 @@ public partial class MainWindow
 
         if (exitPlan.ShouldCloseImageManagerWindow && _imageManagerWindow != null)
         {
-            var imageManagerWindow = _imageManagerWindow;
-            ExecuteLifecycleSafe(phase, "close-image-manager-window", imageManagerWindow.Close);
+            ExecuteLifecycleSafe(phase, "close-image-manager-window", _imageManagerWindowCoordinator.Close);
         }
 
         ExecuteLifecycleSafe(phase, "close-paint-window-orchestrator", _paintWindowOrchestrator.Close);

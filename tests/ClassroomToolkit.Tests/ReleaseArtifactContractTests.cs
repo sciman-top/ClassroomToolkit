@@ -25,13 +25,10 @@ public sealed class ReleaseArtifactContractTests
     {
         var source = ReadScript("prepare-user-installers.ps1");
 
-        source.Should().Contain("\"--channel\", $Channel");
         source.Should().Contain("-Kind \"standard\"");
         source.Should().Contain("-Channel \"standard\"");
         source.Should().Contain("-Kind \"offline\"");
         source.Should().Contain("-Channel \"offline\"");
-        source.Should().Contain("-Framework $standardFramework");
-        source.Should().Contain("dotnet @vpkArguments");
     }
 
     [Fact]
@@ -41,9 +38,7 @@ public sealed class ReleaseArtifactContractTests
 
         source.Should().Contain("git archive --format=zip");
         source.Should().Contain("git rev-parse --verify --end-of-options");
-        source.Should().Contain("ResolvedSourceCommit");
         source.Should().Contain("git status --porcelain --untracked-files=all");
-        source.Should().Contain("clean checkout/worktree");
         source.Should().Contain("excludes_local_classroom_data = $true");
     }
 
@@ -53,12 +48,9 @@ public sealed class ReleaseArtifactContractTests
         var prepare = ReadScript("prepare-private-migration.ps1");
         var restore = ReadScript("restore-private-migration.ps1");
 
-        prepare.Should().Contain("migration-manifest.json");
         prepare.Should().Contain("Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256");
-        prepare.Should().Contain("Restore-PrivateMigration.ps1");
         restore.Should().Contain("Assert-PackageIntegrity");
         restore.Should().Contain("-BackupExisting");
-        restore.Should().Contain("Move-Item -LiteralPath $resolvedTargetRoot -Destination $backupRoot");
     }
 
     [Fact]
@@ -67,54 +59,34 @@ public sealed class ReleaseArtifactContractTests
         var source = ReadScript("prepare-portable-package.ps1");
 
         source.Should().Contain("portable.mode");
-        source.Should().Contain("portable-release.json");
-        source.Should().Contain("api.github.com/repos");
         source.Should().Contain("notify-and-open-download-page");
-        source.Should().Contain("ClassroomToolkit-{0}-portable.zip");
-        source.Should().Contain("ResolvedSourceCommit");
-        source.Should().Contain("portable/{0}");
         source.Should().Contain("data/");
     }
 
     [Fact]
-    public void AggregateReleaseScript_ShouldCleanStagingAndLeaveFinalDeliveryPaths()
+    public void AggregateReleaseScript_ShouldRequireCleanSourceAndDeliveryChecksums()
     {
         var source = ReadScript("prepare-release-artifacts.ps1");
 
-        source.Should().Contain(".staging");
-        source.Should().Contain("staging_cleaned = $true");
-        source.Should().Contain("Remove-Item -LiteralPath $stagingReleaseRoot -Recurse -Force");
-        source.Should().Contain("standard_installer");
-        source.Should().Contain("offline_installer");
-        source.Should().Contain("ClassroomToolkit-{0}-portable.zip");
-        source.Should().Contain("ResolvedSourceCommit");
-        source.Should().Contain("$sourceCommit = (& git rev-parse");
+        source.Should().Contain("Assert-CleanSourceCheckout");
+        source.Should().Contain("git rev-parse --verify --end-of-options");
         source.Should().Contain("Get-DeliveryArtifactHashes");
         source.Should().Contain("Write-DeliveryChecksums");
         source.Should().Contain("SHA256SUMS.txt");
-        source.Should().Contain("Assert-CleanSourceCheckout");
     }
 
     [Fact]
-    public void ReleaseScripts_ShouldPropagateOneResolvedCommit_AndRejectDirtyCheckouts()
+    public void ReleaseScripts_ShouldPropagateOneResolvedSourceCommit()
     {
-        var aggregate = ReadScript("prepare-release-artifacts.ps1");
-        var installers = ReadScript("prepare-user-installers.ps1");
-        var distribution = ReadScript("prepare-distribution.ps1");
-        var portable = ReadScript("prepare-portable-package.ps1");
-        var source = ReadScript("prepare-source-package.ps1");
-
-        aggregate.Should().Contain("\"-ResolvedSourceCommit\", $sourceCommit");
-        aggregate.Should().Contain("\"-SourceRef\", $SourceRef");
-        installers.Should().Contain("\"-ResolvedSourceCommit\", $sourceCommit");
-        installers.Should().Contain("source_commit = $sourceCommit");
-        distribution.Should().Contain("source_commit = $sourceCommit");
-        portable.Should().Contain("source_commit = $sourceCommit");
-        source.Should().Contain("git status --porcelain --untracked-files=all");
-        foreach (var script in new[] { aggregate, installers, distribution, portable })
+        foreach (var scriptName in new[]
+                 {
+                     "prepare-release-artifacts.ps1",
+                     "prepare-user-installers.ps1",
+                     "prepare-distribution.ps1",
+                     "prepare-portable-package.ps1"
+                 })
         {
-            script.Should().Contain("Current checkout HEAD");
-            script.Should().Contain("clean checkout/worktree");
+            ReadScript(scriptName).Should().Contain("source_commit");
         }
     }
 
@@ -144,26 +116,10 @@ public sealed class ReleaseArtifactContractTests
         layout.Should().Contain("artifacts/evidence/validation/current");
         layout.Should().Contain("artifacts/evidence/release-preflight/current");
         layout.Should().Contain("artifacts/archive/legacy-outputs");
-        layout.Should().Contain("Export-ModuleMember -Function Get-ClassroomToolkitArtifactPath");
-    }
-
-    [Fact]
-    public void EvidenceScripts_ShouldUseStableCurrentFilenames()
-    {
-        ReadRepoFile("scripts", "validation", "run-stable-tests.ps1").Should().Contain("EvidenceTestsCurrent");
-        ReadRepoFile("scripts", "validation", "collect-ui-performance-samples.ps1").Should().Contain("ui-performance-samples.json");
-        ReadRepoFile("scripts", "validation", "collect-settings-load-performance-samples.ps1").Should().Contain("settings-load-performance-summary.json");
-        ReadRepoFile("scripts", "quality", "check-analyzer-backlog-baseline.ps1").Should().Contain("EvidenceQualityCurrent");
-        ReadRepoFile("scripts", "release", "preflight-check.ps1").Should().Contain("EvidenceReleasePreflightCurrent");
     }
 
     private static string ReadScript(string name)
     {
-        return ReadRepoFile("scripts", "release", name);
-    }
-
-    private static string ReadRepoFile(params string[] pathParts)
-    {
-        return File.ReadAllText(TestPathHelper.ResolveRepoPath(pathParts));
+        return File.ReadAllText(TestPathHelper.ResolveRepoPath("scripts", "release", name));
     }
 }

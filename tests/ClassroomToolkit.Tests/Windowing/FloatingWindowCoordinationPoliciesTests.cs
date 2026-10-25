@@ -43,15 +43,6 @@ public sealed class FloatingActivationGuardPolicyTests
         decision.Reason.Should().Be((FloatingActivationGuardReason)expectedReason);
     }
 
-    [Fact]
-    public void IsBlockedByUtilityWindows_ShouldMapResolveDecision()
-    {
-        FloatingWindowCoordinationPolicies.IsBlockedByUtilityWindows(
-            toolbarActive: false,
-            rollCallActive: false,
-            imageManagerActive: true,
-            launcherActive: false).Should().BeTrue();
-    }
 }
 
 public sealed class FloatingDispatchQueuePolicyTests

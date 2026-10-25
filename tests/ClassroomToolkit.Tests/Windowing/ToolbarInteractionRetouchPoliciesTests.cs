@@ -95,20 +95,6 @@ public sealed class ToolbarInteractionActivationSuppressionPolicyTests
         decision.Reason.Should().Be(ToolbarInteractionActivationSuppressionReason.None);
     }
 
-    [Fact]
-    public void ShouldSuppress_ShouldMapResolveDecision()
-    {
-        var nowUtc = DateTime.UtcNow;
-        var snapshot = CreateSnapshot(launcherTopmost: false);
-
-        ToolbarInteractionRetouchPolicies.ShouldSuppress(
-            trigger: ToolbarInteractionRetouchTrigger.Activated,
-            snapshot: snapshot,
-            lastPreviewMouseDownUtc: nowUtc.AddMilliseconds(-40),
-            lastRetouchUtc: WindowDedupDefaults.UnsetTimestampUtc,
-            nowUtc: nowUtc,
-            launcherOnlySuppressionMs: 90).Should().BeFalse();
-    }
 
     [Fact]
     public void Resolve_ShouldSuppressActivated_WhenPreviewAlreadyRetouchedInWindow()

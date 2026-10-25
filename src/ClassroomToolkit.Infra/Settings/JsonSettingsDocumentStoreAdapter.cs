@@ -3,7 +3,7 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using System.Security.Cryptography;
 using ClassroomToolkit.Application.Abstractions;
-using ClassroomToolkit.Domain.Utilities;
+using ClassroomToolkit.IO;
 
 using ClassroomToolkit.Infra.Logging;
 

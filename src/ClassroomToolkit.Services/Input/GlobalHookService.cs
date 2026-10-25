@@ -17,6 +17,7 @@ public class GlobalHookService : IDisposable
     private readonly object _syncRoot = new();
     private readonly List<IKeyboardHookHandle> _activeHooks = new();
     private bool _disposed;
+    private int _registrationGeneration;
 
     /// <summary>
     /// 钩子句柄工厂。生产默认创建真实 KeyboardHook；测试经 InternalsVisibleTo
@@ -83,9 +84,14 @@ public class GlobalHookService : IDisposable
         ArgumentNullException.ThrowIfNull(callback);
         ArgumentNullException.ThrowIfNull(shouldKeepActive);
 
-        if (IsDisposed())
+        int registrationGeneration;
+        lock (_syncRoot)
         {
-            return false;
+            if (_disposed)
+            {
+                return false;
+            }
+            registrationGeneration = _registrationGeneration;
         }
 
         var startedHooks = new List<IKeyboardHookHandle>();
@@ -94,7 +100,7 @@ public class GlobalHookService : IDisposable
         {
             foreach (var binding in bindings)
             {
-                if (IsDisposed() || !shouldKeepActive())
+                if (!IsRegistrationCurrent(registrationGeneration) || !shouldKeepActive())
                 {
                     CleanupHooks(startedHooks, callback);
                     return false;
@@ -118,7 +124,7 @@ public class GlobalHookService : IDisposable
                     return false;
                 }
 
-                if (IsDisposed() || !shouldKeepActive())
+                if (!IsRegistrationCurrent(registrationGeneration) || !shouldKeepActive())
                 {
                     CleanupHooks(startedHooks, callback);
                     return false;
@@ -131,13 +137,13 @@ public class GlobalHookService : IDisposable
                 }
             }
 
-            if (IsDisposed() || !shouldKeepActive())
+            if (!IsRegistrationCurrent(registrationGeneration) || !shouldKeepActive())
             {
                 CleanupHooks(startedHooks, callback);
                 return false;
             }
 
-            if (!TryTrackActiveHooks(startedHooks))
+            if (!TryTrackActiveHooks(startedHooks, registrationGeneration))
             {
                 CleanupHooks(startedHooks, callback);
                 return false;
@@ -193,19 +199,19 @@ public class GlobalHookService : IDisposable
         StopTrackedHooks("dispose");
     }
 
-    private bool IsDisposed()
+    private bool IsRegistrationCurrent(int generation)
     {
         lock (_syncRoot)
         {
-            return _disposed;
+            return !_disposed && _registrationGeneration == generation;
         }
     }
 
-    private bool TryTrackActiveHooks(List<IKeyboardHookHandle> hooks)
+    private bool TryTrackActiveHooks(List<IKeyboardHookHandle> hooks, int generation)
     {
         lock (_syncRoot)
         {
-            if (_disposed)
+            if (_disposed || _registrationGeneration != generation)
             {
                 return false;
             }
@@ -220,6 +226,9 @@ public class GlobalHookService : IDisposable
         IKeyboardHookHandle[] hooks;
         lock (_syncRoot)
         {
+            // Pending StartAsync operations are not in _activeHooks yet. Invalidate
+            // them even when the tracked list is empty so they roll back on return.
+            _registrationGeneration++;
             if (_activeHooks.Count == 0)
             {
                 return;

@@ -42,16 +42,6 @@ public sealed class PhotoCloseTransitionPolicyTests
         plan.ForceEnforceZOrder.Should().BeFalse();
     }
 
-    [Fact]
-    public void Resolve_ContextOverload_ShouldMatchOverlayVisibleBehavior()
-    {
-        var context = new PhotoCloseTransitionContext(OverlayVisible: true);
-
-        var plan = PhotoOverlayTransitionsPolicies.ResolvePhotoCloseTransition(context);
-
-        plan.RequestZOrderApply.Should().BeTrue();
-        plan.ForceEnforceZOrder.Should().BeTrue();
-    }
 }
 
 public sealed class PhotoCursorModeFocusRequestPolicyTests
@@ -82,15 +72,6 @@ public sealed class PhotoCursorModeFocusRequestPolicyTests
         decision.ShouldRequestFocus.Should().BeFalse();
     }
 
-    [Fact]
-    public void ShouldRequestFocus_ShouldMapResolveDecision()
-    {
-        var shouldRequest = PhotoOverlayTransitionsPolicies.ShouldRequestFocus(
-            photoModeActive: true,
-            mode: PaintToolMode.Cursor);
-
-        shouldRequest.Should().BeTrue();
-    }
 }
 
 public sealed class PhotoModeSurfaceTransitionPolicyTests
@@ -178,24 +159,6 @@ public sealed class PhotoModeSurfaceTransitionPolicyTests
         decision.ForceEnforceZOrder.Should().BeFalse();
     }
 
-    [Fact]
-    public void Resolve_ContextOverload_ShouldMatchPrimitiveBehavior()
-    {
-        var context = new PhotoModeSurfaceTransitionContext(
-            PhotoModeActive: true,
-            RequestZOrderApply: true,
-            ForceEnforceZOrder: false,
-            OverlayVisible: false);
-
-        var decision = PhotoOverlayTransitionsPolicies.ResolvePhotoModeSurfaceTransition(
-            PhotoModeSurfaceTransitionKind.PhotoModeChanged,
-            context);
-
-        decision.ShouldTouchSurface.Should().BeTrue();
-        decision.Surface.Should().Be(ZOrderSurface.PhotoFullscreen);
-        decision.RequestZOrderApply.Should().BeTrue();
-        decision.ForceEnforceZOrder.Should().BeFalse();
-    }
 }
 
 public sealed class PhotoOverlayEntryPolicyTests

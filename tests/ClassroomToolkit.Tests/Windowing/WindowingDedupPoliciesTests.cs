@@ -8,6 +8,44 @@ namespace ClassroomToolkit.Tests.Windowing;
 public sealed class RetouchThrottlePolicyTests
 {
     [Fact]
+    public void ResolveMs_ReturnsInteractiveWindow_WhenPhotoOrWhiteboardActive()
+    {
+        WindowingDedupPolicies
+            .ResolveMs(
+                overlayVisible: true,
+                photoModeActive: true,
+                whiteboardActive: false,
+                FloatingInteractiveDedupIntervalDefaults.DefaultMs,
+                FloatingInteractiveDedupIntervalDefaults.InteractiveMs)
+            .Should()
+            .Be(FloatingInteractiveDedupIntervalDefaults.InteractiveMs);
+
+        WindowingDedupPolicies
+            .ResolveMs(
+                overlayVisible: true,
+                photoModeActive: false,
+                whiteboardActive: true,
+                FloatingInteractiveDedupIntervalDefaults.DefaultMs,
+                FloatingInteractiveDedupIntervalDefaults.InteractiveMs)
+            .Should()
+            .Be(FloatingInteractiveDedupIntervalDefaults.InteractiveMs);
+    }
+
+    [Fact]
+    public void ResolveMs_ReturnsDefaultWindow_WhenOverlayNotInteractive()
+    {
+        WindowingDedupPolicies
+            .ResolveMs(
+                overlayVisible: false,
+                photoModeActive: true,
+                whiteboardActive: true,
+                FloatingInteractiveDedupIntervalDefaults.DefaultMs,
+                FloatingInteractiveDedupIntervalDefaults.InteractiveMs)
+            .Should()
+            .Be(FloatingInteractiveDedupIntervalDefaults.DefaultMs);
+    }
+
+    [Fact]
     public void Resolve_ShouldReturnIntervalDisabled_WhenIntervalDisabled()
     {
         var decision = WindowingDedupPolicies.ResolveRetouchThrottle(
@@ -57,16 +95,6 @@ public sealed class RetouchThrottlePolicyTests
         decision.Reason.Should().Be(RetouchThrottleReason.OutsideThrottleWindow);
     }
 
-    [Fact]
-    public void ShouldAllow_ShouldMapResolveDecision()
-    {
-        WindowingDedupPolicies.ShouldAllow(
-                DateTime.UtcNow.AddMilliseconds(-180),
-                DateTime.UtcNow,
-                minimumIntervalMs: 120)
-            .Should()
-            .BeTrue();
-    }
 }
 
 public sealed class ForegroundExplicitRetouchThrottlePolicyTests
@@ -74,77 +102,51 @@ public sealed class ForegroundExplicitRetouchThrottlePolicyTests
     [Fact]
     public void Resolve_ShouldReturnAllow_WhenIntervalDisabled()
     {
-        var decision = WindowingDedupPolicies.ResolveForegroundExplicitRetouchThrottle(
+        var decision = WindowingDedupPolicies.ResolveRetouchThrottle(
             lastRetouchUtc: DateTime.UtcNow,
             nowUtc: DateTime.UtcNow,
             minimumIntervalMs: 0);
 
-        decision.ShouldAllowRetouch.Should().BeTrue();
-        decision.Reason.Should().Be(ForegroundExplicitRetouchThrottleReason.None);
+        decision.ShouldAllow.Should().BeTrue();
+        decision.Reason.Should().Be(RetouchThrottleReason.IntervalDisabled);
     }
 
     [Fact]
     public void Resolve_ShouldReturnAllow_WhenNoPreviousRetouch()
     {
-        var decision = WindowingDedupPolicies.ResolveForegroundExplicitRetouchThrottle(
+        var decision = WindowingDedupPolicies.ResolveRetouchThrottle(
             lastRetouchUtc: WindowDedupDefaults.UnsetTimestampUtc,
             nowUtc: DateTime.UtcNow,
             minimumIntervalMs: 120);
 
-        decision.ShouldAllowRetouch.Should().BeTrue();
-        decision.Reason.Should().Be(ForegroundExplicitRetouchThrottleReason.None);
+        decision.ShouldAllow.Should().BeTrue();
+        decision.Reason.Should().Be(RetouchThrottleReason.FirstRetouch);
     }
 
     [Fact]
     public void Resolve_ShouldReturnThrottled_WhenWithinThrottleWindow()
     {
         var now = DateTime.UtcNow;
-        var decision = WindowingDedupPolicies.ResolveForegroundExplicitRetouchThrottle(
+        var decision = WindowingDedupPolicies.ResolveRetouchThrottle(
             lastRetouchUtc: now.AddMilliseconds(-50),
             nowUtc: now,
             minimumIntervalMs: 120);
 
-        decision.ShouldAllowRetouch.Should().BeFalse();
-        decision.Reason.Should().Be(ForegroundExplicitRetouchThrottleReason.Throttled);
+        decision.ShouldAllow.Should().BeFalse();
+        decision.Reason.Should().Be(RetouchThrottleReason.WithinThrottleWindow);
     }
 
     [Fact]
     public void Resolve_ShouldReturnAllow_WhenOutsideThrottleWindow()
     {
         var now = DateTime.UtcNow;
-        var decision = WindowingDedupPolicies.ResolveForegroundExplicitRetouchThrottle(
+        var decision = WindowingDedupPolicies.ResolveRetouchThrottle(
             lastRetouchUtc: now.AddMilliseconds(-180),
             nowUtc: now,
             minimumIntervalMs: 120);
 
-        decision.ShouldAllowRetouch.Should().BeTrue();
-        decision.Reason.Should().Be(ForegroundExplicitRetouchThrottleReason.None);
+        decision.ShouldAllow.Should().BeTrue();
+        decision.Reason.Should().Be(RetouchThrottleReason.OutsideThrottleWindow);
     }
 
-    [Fact]
-    public void Resolve_RuntimeStateOverload_ShouldUseLastRetouchUtc()
-    {
-        var now = DateTime.UtcNow;
-        var state = new ExplicitForegroundRetouchRuntimeState(
-            LastRetouchUtc: now.AddMilliseconds(-50));
-
-        var decision = WindowingDedupPolicies.ResolveForegroundExplicitRetouchThrottle(
-            state,
-            now,
-            minimumIntervalMs: 120);
-
-        decision.ShouldAllowRetouch.Should().BeFalse();
-        decision.Reason.Should().Be(ForegroundExplicitRetouchThrottleReason.Throttled);
-    }
-
-    [Fact]
-    public void ShouldAllowRetouch_ShouldMapResolveDecision()
-    {
-        var allowed = WindowingDedupPolicies.ShouldAllowRetouch(
-            lastRetouchUtc: DateTime.UtcNow.AddMilliseconds(-180),
-            nowUtc: DateTime.UtcNow,
-            minimumIntervalMs: 120);
-
-        allowed.Should().BeTrue();
-    }
 }

@@ -69,17 +69,14 @@ public partial class PaintOverlayWindow
             interactionState.PhotoModeActive,
             _photoFullscreen,
             _mode);
-        var downExecutionPlan = PhotoWindowPolicies.ResolvePhotoRightButtonDownExecution(
-            shouldArmPending,
-            shouldAllowPan: ResolveShouldPanPhoto(interactionState));
-        if (downExecutionPlan.ShouldArmPending)
+        if (shouldArmPending)
         {
             PhotoRightClickPendingStateUpdater.Arm(
                 ref _photoRightClickPending,
                 ref _photoRightClickStart,
                 e.GetPosition(OverlayRoot));
         }
-        if (!downExecutionPlan.ShouldTryBeginPan)
+        if (!ResolveShouldPanPhoto(interactionState))
         {
             return;
         }
@@ -134,27 +131,23 @@ public partial class PaintOverlayWindow
         System.Windows.Input.MouseButtonEventArgs e,
         InputInteractionState interactionState)
     {
-        var executionPlan = PhotoWindowPolicies.ResolvePhotoRightButtonUpExecution(
-            PhotoWindowPolicies.ShouldShowContextMenuOnUp(
-                _photoRightClickPending,
-                interactionState.PhotoModeActive,
-                _photoFullscreen,
-                _mode));
-        if (executionPlan.Action != PhotoRightButtonUpAction.ShowContextMenu)
+        var shouldShowContextMenu = PhotoWindowPolicies.ShouldShowContextMenuOnUp(
+            _photoRightClickPending,
+            interactionState.PhotoModeActive,
+            _photoFullscreen,
+            _mode);
+        if (!shouldShowContextMenu)
         {
             return false;
         }
 
-        if (executionPlan.ShouldClearPending)
-        {
-            PhotoRightClickPendingStateUpdater.Clear(ref _photoRightClickPending);
-        }
+        PhotoRightClickPendingStateUpdater.Clear(ref _photoRightClickPending);
         if (IsMousePhotoPanActive(interactionState))
         {
             EndPhotoPan(allowInertia: false);
         }
         ShowPhotoContextMenu(point);
-        e.Handled = executionPlan.ShouldMarkHandled;
+        e.Handled = true;
         return true;
     }
 

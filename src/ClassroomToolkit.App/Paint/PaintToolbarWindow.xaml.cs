@@ -318,7 +318,8 @@ public partial class PaintToolbarWindow : Window
         {
             return;
         }
-        if (!Enum.TryParse<PaintShapeType>(tag, ignoreCase: true, out var type))
+        if (!Enum.TryParse<PaintShapeType>(tag, ignoreCase: true, out var type)
+            || !Enum.IsDefined(type))
         {
             return;
         }

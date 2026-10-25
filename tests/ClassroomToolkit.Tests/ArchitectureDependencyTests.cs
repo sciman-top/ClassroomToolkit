@@ -7,13 +7,9 @@ namespace ClassroomToolkit.Tests;
 public sealed class ArchitectureDependencyTests
 {
     [Fact]
-    public void DomainProject_ShouldNotReference_App_Infra_Interop()
+    public void DomainProject_ShouldNotReferenceOtherProjects()
     {
-        var references = ReadProjectReferences("src/ClassroomToolkit.Domain/ClassroomToolkit.Domain.csproj");
-
-        references.Should().NotContain(r => r.Contains("ClassroomToolkit.App", StringComparison.OrdinalIgnoreCase));
-        references.Should().NotContain(r => r.Contains("ClassroomToolkit.Infra", StringComparison.OrdinalIgnoreCase));
-        references.Should().NotContain(r => r.Contains("ClassroomToolkit.Interop", StringComparison.OrdinalIgnoreCase));
+        AssertProjectReferences("src/ClassroomToolkit.Domain/ClassroomToolkit.Domain.csproj");
     }
 
     [Fact]
@@ -55,12 +51,13 @@ public sealed class ArchitectureDependencyTests
     }
 
     [Fact]
-    public void InfraProject_ShouldReferenceOnly_ApplicationAndDomain()
+    public void InfraProject_ShouldReferenceOnly_ApplicationDomainAndFileSystem()
     {
         AssertProjectReferences(
             "src/ClassroomToolkit.Infra/ClassroomToolkit.Infra.csproj",
             "ClassroomToolkit.Application",
-            "ClassroomToolkit.Domain");
+            "ClassroomToolkit.Domain",
+            "ClassroomToolkit.FileSystem");
     }
 
     [Fact]
@@ -87,7 +84,14 @@ public sealed class ArchitectureDependencyTests
             "ClassroomToolkit.Domain",
             "ClassroomToolkit.Infra",
             "ClassroomToolkit.Interop",
-            "ClassroomToolkit.Services");
+            "ClassroomToolkit.Services",
+            "ClassroomToolkit.FileSystem");
+    }
+
+    [Fact]
+    public void FileSystemProject_ShouldNotReferenceApplicationLayers()
+    {
+        AssertProjectReferences("src/ClassroomToolkit.FileSystem/ClassroomToolkit.FileSystem.csproj");
     }
 
     [Fact]

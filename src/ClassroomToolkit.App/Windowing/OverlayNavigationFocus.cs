@@ -1,57 +1,21 @@
 
 namespace ClassroomToolkit.App.Windowing;
 
-internal static partial class OverlayNavigationFocusPolicy
+internal static class OverlayNavigationFocusPolicy
 {
-    internal static OverlayNavigationFocusPlanDecision ResolvePlanDecision(
-        bool avoidActivate,
-        OverlayNavigationFocusSnapshot snapshot)
-    {
-        var activateDecision = ResolveActivateDecision(
-            avoidActivate,
-            snapshot.OverlayActive,
-            snapshot.UtilityActivity);
-        var keyboardFocusDecision = ResolveKeyboardFocusDecision(
-            snapshot.OverlayVisible,
-            snapshot.UtilityActivity);
-        return new OverlayNavigationFocusPlanDecision(
-            Plan: new OverlayNavigationFocusPlan(
-                ActivateOverlay: activateDecision.ShouldActivateOverlay,
-                KeyboardFocusOverlay: keyboardFocusDecision.ShouldKeyboardFocusOverlay),
-            ActivateReason: activateDecision.Reason,
-            KeyboardFocusReason: keyboardFocusDecision.Reason);
-    }
-
-    internal static OverlayNavigationFocusPlan ResolvePlan(
-        bool avoidActivate,
-        OverlayNavigationFocusSnapshot snapshot)
-    {
-        return ResolvePlanDecision(avoidActivate, snapshot).Plan;
-    }
-
-    internal static OverlayNavigationFocusPlan ResolvePlan(
-        bool avoidActivate,
-        bool overlayVisible,
-        bool overlayActive,
-        FloatingUtilityActivitySnapshot utilityActivity)
-    {
-        return ResolvePlan(
-            avoidActivate,
-            OverlayNavigationFocusSnapshotPolicy.Resolve(
-                overlayVisible,
-                overlayActive,
-                utilityActivity));
-    }
-
     internal static bool ShouldActivateOverlay(
         bool avoidActivate,
         bool overlayActive,
         FloatingUtilityActivitySnapshot utilityActivity)
     {
-        return ResolveActivateDecision(
-            avoidActivate,
-            overlayActive,
-            utilityActivity).ShouldActivateOverlay;
+        if (avoidActivate || overlayActive)
+        {
+            return false;
+        }
+
+        return !FloatingWindowCoordinationPolicies
+            .ResolveFloatingActivationGuard(utilityActivity)
+            .IsBlocked;
     }
 
     internal static bool ShouldActivateOverlay(
@@ -76,59 +40,14 @@ internal static partial class OverlayNavigationFocusPolicy
         bool overlayVisible,
         FloatingUtilityActivitySnapshot utilityActivity)
     {
-        return ResolveKeyboardFocusDecision(
-            overlayVisible,
-            utilityActivity).ShouldKeyboardFocusOverlay;
-    }
-
-    internal static OverlayNavigationActivateDecision ResolveActivateDecision(
-        bool avoidActivate,
-        bool overlayActive,
-        FloatingUtilityActivitySnapshot utilityActivity)
-    {
-        if (avoidActivate)
-        {
-            return new OverlayNavigationActivateDecision(
-                ShouldActivateOverlay: false,
-                Reason: OverlayNavigationActivateReason.AvoidActivateRequested);
-        }
-
-        if (overlayActive)
-        {
-            return new OverlayNavigationActivateDecision(
-                ShouldActivateOverlay: false,
-                Reason: OverlayNavigationActivateReason.OverlayAlreadyActive);
-        }
-
-        var guardDecision = FloatingWindowCoordinationPolicies.ResolveFloatingActivationGuard(utilityActivity);
-        return guardDecision.IsBlocked
-            ? new OverlayNavigationActivateDecision(
-                ShouldActivateOverlay: false,
-                Reason: MapBlockedActivateReason(guardDecision.Reason))
-            : new OverlayNavigationActivateDecision(
-                ShouldActivateOverlay: true,
-                Reason: OverlayNavigationActivateReason.None);
-    }
-
-    internal static OverlayNavigationKeyboardFocusDecision ResolveKeyboardFocusDecision(
-        bool overlayVisible,
-        FloatingUtilityActivitySnapshot utilityActivity)
-    {
         if (!overlayVisible)
         {
-            return new OverlayNavigationKeyboardFocusDecision(
-                ShouldKeyboardFocusOverlay: false,
-                Reason: OverlayNavigationKeyboardFocusReason.OverlayNotVisible);
+            return false;
         }
 
-        var guardDecision = FloatingWindowCoordinationPolicies.ResolveFloatingActivationGuard(utilityActivity);
-        return guardDecision.IsBlocked
-            ? new OverlayNavigationKeyboardFocusDecision(
-                ShouldKeyboardFocusOverlay: false,
-                Reason: MapBlockedKeyboardFocusReason(guardDecision.Reason))
-            : new OverlayNavigationKeyboardFocusDecision(
-                ShouldKeyboardFocusOverlay: true,
-                Reason: OverlayNavigationKeyboardFocusReason.None);
+        return !FloatingWindowCoordinationPolicies
+            .ResolveFloatingActivationGuard(utilityActivity)
+            .IsBlocked;
     }
 
     internal static bool ShouldKeyboardFocusOverlay(
@@ -148,88 +67,7 @@ internal static partial class OverlayNavigationFocusPolicy
     }
 }
 
-internal static partial class OverlayNavigationFocusPolicy
-{
-    private static OverlayNavigationActivateReason MapBlockedActivateReason(
-        FloatingActivationGuardReason reason)
-    {
-        return reason switch
-        {
-            FloatingActivationGuardReason.ToolbarActive => OverlayNavigationActivateReason.BlockedByToolbar,
-            FloatingActivationGuardReason.RollCallActive => OverlayNavigationActivateReason.BlockedByRollCall,
-            FloatingActivationGuardReason.ImageManagerActive => OverlayNavigationActivateReason.BlockedByImageManager,
-            FloatingActivationGuardReason.LauncherActive => OverlayNavigationActivateReason.BlockedByLauncher,
-            _ => OverlayNavigationActivateReason.BlockedByToolbar
-        };
-    }
-
-    private static OverlayNavigationKeyboardFocusReason MapBlockedKeyboardFocusReason(
-        FloatingActivationGuardReason reason)
-    {
-        return reason switch
-        {
-            FloatingActivationGuardReason.ToolbarActive => OverlayNavigationKeyboardFocusReason.BlockedByToolbar,
-            FloatingActivationGuardReason.RollCallActive => OverlayNavigationKeyboardFocusReason.BlockedByRollCall,
-            FloatingActivationGuardReason.ImageManagerActive => OverlayNavigationKeyboardFocusReason.BlockedByImageManager,
-            FloatingActivationGuardReason.LauncherActive => OverlayNavigationKeyboardFocusReason.BlockedByLauncher,
-            _ => OverlayNavigationKeyboardFocusReason.BlockedByToolbar
-        };
-    }
-}
-
-internal readonly record struct OverlayNavigationFocusPlan(
-    bool ActivateOverlay,
-    bool KeyboardFocusOverlay);
-
-internal readonly record struct OverlayNavigationFocusPlanDecision(
-    OverlayNavigationFocusPlan Plan,
-    OverlayNavigationActivateReason ActivateReason,
-    OverlayNavigationKeyboardFocusReason KeyboardFocusReason);
-
-internal enum OverlayNavigationActivateReason
-{
-    None = 0,
-    AvoidActivateRequested = 1,
-    OverlayAlreadyActive = 2,
-    BlockedByToolbar = 3,
-    BlockedByRollCall = 4,
-    BlockedByImageManager = 5,
-    BlockedByLauncher = 6
-}
-
-internal readonly record struct OverlayNavigationActivateDecision(
-    bool ShouldActivateOverlay,
-    OverlayNavigationActivateReason Reason);
-
-internal enum OverlayNavigationKeyboardFocusReason
-{
-    None = 0,
-    OverlayNotVisible = 1,
-    BlockedByToolbar = 2,
-    BlockedByRollCall = 3,
-    BlockedByImageManager = 4,
-    BlockedByLauncher = 5
-}
-
-internal readonly record struct OverlayNavigationKeyboardFocusDecision(
-    bool ShouldKeyboardFocusOverlay,
-    OverlayNavigationKeyboardFocusReason Reason);
-
 internal readonly record struct OverlayNavigationFocusSnapshot(
     bool OverlayVisible,
     bool OverlayActive,
     FloatingUtilityActivitySnapshot UtilityActivity);
-
-internal static class OverlayNavigationFocusSnapshotPolicy
-{
-    internal static OverlayNavigationFocusSnapshot Resolve(
-        bool overlayVisible,
-        bool overlayActive,
-        FloatingUtilityActivitySnapshot utilityActivity)
-    {
-        return new OverlayNavigationFocusSnapshot(
-            OverlayVisible: overlayVisible,
-            OverlayActive: overlayActive,
-            UtilityActivity: utilityActivity);
-    }
-}

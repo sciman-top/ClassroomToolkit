@@ -235,15 +235,13 @@ public partial class RollCallWindow
         {
             return;
         }
-        var transparencyDecision = RollCallWindowingPolicies.ResolveTransparency(
+        var allowTransparent = RollCallWindowingPolicies.ShouldEnableTransparent(
             hovering: _hovering,
             paintAllowsTransparency: PaintModeManager.Instance.ShouldAllowTransparency(isToolbar: false));
-        var allowTransparent = transparencyDecision.TransparentEnabled;
         UpdateHoverTimer(allowTransparent);
-        var styleApplyDecision = RollCallWindowingPolicies.ResolveStyleApply(
-            transparentEnabled: allowTransparent,
-            lastTransparentEnabled: _lastTransparentStyleEnabled);
-        if (!styleApplyDecision.ShouldApplyStyle)
+        if (!RollCallWindowingPolicies.ShouldApplyStyle(
+                transparentEnabled: allowTransparent,
+                lastTransparentEnabled: _lastTransparentStyleEnabled))
         {
             return;
         }
@@ -261,16 +259,14 @@ public partial class RollCallWindow
 
     private void UpdateHoverTimer(bool transparentEnabled)
     {
-        var hoverTimerDecision = RollCallWindowingPolicies.ResolveHoverTimer(
-            transparentEnabled: transparentEnabled,
-            hoverTimerEnabled: _hoverCheckTimer.IsEnabled);
-        if (hoverTimerDecision.ShouldStop)
+        var hoverTimerEnabled = _hoverCheckTimer.IsEnabled;
+        if (RollCallWindowingPolicies.ShouldStopHoverTimer(transparentEnabled, hoverTimerEnabled))
         {
             _hoverCheckTimer.Stop();
             return;
         }
 
-        if (hoverTimerDecision.ShouldStart)
+        if (RollCallWindowingPolicies.ShouldStartHoverTimer(transparentEnabled, hoverTimerEnabled))
         {
             _hoverCheckTimer.Start();
         }

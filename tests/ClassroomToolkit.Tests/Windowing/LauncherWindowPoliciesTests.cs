@@ -114,51 +114,10 @@ public sealed class LauncherVisibilityPolicyTests
         bubbleMode.Reason.Should().Be(LauncherTopmostVisibilityReason.BubbleHiddenOrMinimized);
     }
 
-    [Fact]
-    public void IsVisibleForTopmost_ShouldMapResolveDecision()
-    {
-        LauncherWindowPolicies.IsVisibleForTopmost(
-            launcherMinimized: false,
-            mainVisible: true,
-            mainMinimized: false,
-            bubbleVisible: false,
-            bubbleMinimized: false).Should().BeTrue();
-    }
 }
 
 public sealed class LauncherVisibilityTransitionPolicyTests
 {
-    [Fact]
-    public void ResolveMinimize_ContextOverload_ShouldMapToCoreDecision()
-    {
-        var decision = LauncherWindowPolicies.ResolveMinimizeDecision(
-            new LauncherMinimizeTransitionContext(
-                MainVisible: true,
-                BubbleVisible: false));
-        var plan = decision.Plan;
-
-        plan.HideMainWindow.Should().BeTrue();
-        plan.ShowBubbleWindow.Should().BeTrue();
-        plan.RequestZOrderApply.Should().BeTrue();
-        decision.Reason.Should().Be(LauncherVisibilityMinimizeReason.HideMainAndShowBubble);
-    }
-
-    [Fact]
-    public void ResolveRestore_ContextOverload_ShouldMapToCoreDecision()
-    {
-        var decision = LauncherWindowPolicies.ResolveRestoreDecision(
-            new LauncherRestoreTransitionContext(
-                MainVisible: false,
-                MainActive: false,
-                BubbleVisible: true));
-        var plan = decision.Plan;
-
-        plan.ShowMainWindow.Should().BeTrue();
-        plan.HideBubbleWindow.Should().BeTrue();
-        plan.ActivateMainWindow.Should().BeTrue();
-        plan.RequestZOrderApply.Should().BeTrue();
-        decision.Reason.Should().Be(LauncherVisibilityRestoreReason.ShowMainAndHideBubble);
-    }
 
     [Fact]
     public void ResolveMinimize_ShouldHideMain_ShowBubble_AndRequestZOrder()

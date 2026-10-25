@@ -81,7 +81,7 @@ public sealed class ForegroundSurfaceRetouchCoordinatorTests
             _ => applyCount++);
 
         result.Applied.Should().BeFalse();
-        result.Reason.Should().Be(ForegroundExplicitRetouchThrottleReason.Throttled);
+        result.Reason.Should().Be(nameof(RetouchThrottleReason.WithinThrottleWindow));
         markCount.Should().Be(0);
         applyCount.Should().Be(0);
     }
@@ -106,7 +106,7 @@ public sealed class ForegroundSurfaceRetouchCoordinatorTests
             _ => applyCount++);
 
         result.Applied.Should().BeTrue();
-        result.Reason.Should().Be(ForegroundExplicitRetouchThrottleReason.None);
+        result.Reason.Should().Be(nameof(RetouchThrottleReason.FirstRetouch));
         markedAt.Should().Be(nowUtc);
         applyCount.Should().Be(1);
     }

@@ -39,15 +39,6 @@ public sealed class UserInitiatedWindowActivationPolicyTests
         decision.Reason.Should().Be(UserInitiatedWindowActivationReason.WindowAlreadyActive);
     }
 
-    [Fact]
-    public void ShouldActivateAfterShow_ShouldMapResolveDecision()
-    {
-        var result = WindowExecutionPolicies.ShouldActivateAfterShow(
-            windowVisible: true,
-            windowActive: false);
-
-        result.Should().BeTrue();
-    }
 }
 
 public class WindowCursorHitTestPolicyTests
@@ -74,12 +65,6 @@ public class WindowCursorHitTestPolicyTests
             : WindowCursorHitTestReason.OutsideBounds);
     }
 
-    [Fact]
-    public void IsInside_ShouldMapResolveDecision()
-    {
-        var actual = WindowExecutionPolicies.IsInside(10, 10, 0, 0, 100, 100);
-        actual.Should().BeTrue();
-    }
 }
 
 public sealed class WindowLifecycleSubscriptionPolicyTests
@@ -117,9 +102,4 @@ public sealed class WindowLifecycleSubscriptionPolicyTests
         decision.Reason.Should().Be(WindowLifecycleSubscriptionReason.WindowInstanceChanged);
     }
 
-    [Fact]
-    public void ShouldWire_ShouldMapResolveDecision()
-    {
-        WindowExecutionPolicies.ShouldWire(new object(), new object()).Should().BeTrue();
-    }
 }

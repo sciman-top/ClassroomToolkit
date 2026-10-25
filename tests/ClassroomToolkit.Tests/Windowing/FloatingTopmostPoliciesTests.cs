@@ -13,14 +13,13 @@ public class FloatingTopmostApplyPolicyTests
     {
         var current = new FloatingTopmostPlan(true, true, true, false, false);
 
-        var decision = FloatingTopmostPolicies.ResolveApply(
+        var shouldEnforce = FloatingTopmostPolicies.ShouldEnforceZOrder(
             lastFrontSurface: null,
             currentFrontSurface: ZOrderSurface.PhotoFullscreen,
             lastPlan: null,
             currentPlan: current);
 
-        decision.ShouldEnforceZOrder.Should().BeTrue();
-        decision.Reason.Should().Be(FloatingTopmostPolicies.FloatingTopmostApplyReason.MissingLastState);
+        shouldEnforce.Should().BeTrue();
     }
 
     [Fact]
@@ -28,14 +27,13 @@ public class FloatingTopmostApplyPolicyTests
     {
         var plan = new FloatingTopmostPlan(true, true, true, false, false);
 
-        var decision = FloatingTopmostPolicies.ResolveApply(
+        var shouldEnforce = FloatingTopmostPolicies.ShouldEnforceZOrder(
             lastFrontSurface: ZOrderSurface.Whiteboard,
             currentFrontSurface: ZOrderSurface.PhotoFullscreen,
             lastPlan: plan,
             currentPlan: plan);
 
-        decision.ShouldEnforceZOrder.Should().BeTrue();
-        decision.Reason.Should().Be(FloatingTopmostPolicies.FloatingTopmostApplyReason.FrontSurfaceChanged);
+        shouldEnforce.Should().BeTrue();
     }
 
     [Fact]
@@ -43,14 +41,13 @@ public class FloatingTopmostApplyPolicyTests
     {
         var plan = new FloatingTopmostPlan(true, true, false, false, false);
 
-        var decision = FloatingTopmostPolicies.ResolveApply(
+        var shouldEnforce = FloatingTopmostPolicies.ShouldEnforceZOrder(
             lastFrontSurface: ZOrderSurface.PhotoFullscreen,
             currentFrontSurface: ZOrderSurface.PhotoFullscreen,
             lastPlan: plan,
             currentPlan: plan);
 
-        decision.ShouldEnforceZOrder.Should().BeFalse();
-        decision.Reason.Should().Be(FloatingTopmostPolicies.FloatingTopmostApplyReason.Unchanged);
+        shouldEnforce.Should().BeFalse();
     }
 
     [Fact]
@@ -59,14 +56,13 @@ public class FloatingTopmostApplyPolicyTests
         var lastPlan = new FloatingTopmostPlan(true, true, false, false, false);
         var currentPlan = new FloatingTopmostPlan(true, true, false, false, true);
 
-        var decision = FloatingTopmostPolicies.ResolveApply(
+        var shouldEnforce = FloatingTopmostPolicies.ShouldEnforceZOrder(
             lastFrontSurface: ZOrderSurface.PhotoFullscreen,
             currentFrontSurface: ZOrderSurface.PhotoFullscreen,
             lastPlan: lastPlan,
             currentPlan: currentPlan);
 
-        decision.ShouldEnforceZOrder.Should().BeFalse();
-        decision.Reason.Should().Be(FloatingTopmostPolicies.FloatingTopmostApplyReason.Unchanged);
+        shouldEnforce.Should().BeFalse();
     }
 
     [Theory]
@@ -76,14 +72,13 @@ public class FloatingTopmostApplyPolicyTests
     {
         var plan = new FloatingTopmostPlan(true, true, true, false, true);
 
-        var decision = FloatingTopmostPolicies.ResolveApply(
+        var shouldEnforce = FloatingTopmostPolicies.ShouldEnforceZOrder(
             lastFrontSurface: surface,
             currentFrontSurface: surface,
             lastPlan: plan,
             currentPlan: plan);
 
-        decision.ShouldEnforceZOrder.Should().BeTrue();
-        decision.Reason.Should().Be(FloatingTopmostPolicies.FloatingTopmostApplyReason.LauncherInteractiveRetouch);
+        shouldEnforce.Should().BeTrue();
     }
 
     [Fact]
@@ -91,14 +86,13 @@ public class FloatingTopmostApplyPolicyTests
     {
         var plan = new FloatingTopmostPlan(true, true, true, false, true);
 
-        var decision = FloatingTopmostPolicies.ResolveApply(
+        var shouldEnforce = FloatingTopmostPolicies.ShouldEnforceZOrder(
             lastFrontSurface: ZOrderSurface.PhotoFullscreen,
             currentFrontSurface: ZOrderSurface.PhotoFullscreen,
             lastPlan: plan,
             currentPlan: plan);
 
-        decision.ShouldEnforceZOrder.Should().BeFalse();
-        decision.Reason.Should().Be(FloatingTopmostPolicies.FloatingTopmostApplyReason.Unchanged);
+        shouldEnforce.Should().BeFalse();
     }
 
     [Fact]
@@ -106,27 +100,14 @@ public class FloatingTopmostApplyPolicyTests
     {
         var plan = new FloatingTopmostPlan(true, true, true, false, false);
 
-        var decision = FloatingTopmostPolicies.ResolveApply(
+        var shouldEnforce = FloatingTopmostPolicies.ShouldEnforceZOrder(
             lastFrontSurface: ZOrderSurface.PhotoFullscreen,
             currentFrontSurface: ZOrderSurface.PhotoFullscreen,
             lastPlan: plan,
             currentPlan: plan,
             forceEnforceZOrder: true);
 
-        decision.ShouldEnforceZOrder.Should().BeTrue();
-        decision.Reason.Should().Be(FloatingTopmostPolicies.FloatingTopmostApplyReason.ForceRequested);
-    }
-
-    [Fact]
-    public void ShouldEnforceZOrder_ShouldMapResolveDecision()
-    {
-        var plan = new FloatingTopmostPlan(true, true, true, false, false);
-
-        FloatingTopmostPolicies.ShouldEnforceZOrder(
-            lastFrontSurface: null,
-            currentFrontSurface: ZOrderSurface.PhotoFullscreen,
-            lastPlan: null,
-            currentPlan: plan).Should().BeTrue();
+        shouldEnforce.Should().BeTrue();
     }
 }
 
@@ -146,9 +127,7 @@ public sealed class FloatingTopmostDriftPolicyTests
             LauncherVisible: true,
             LauncherTopmost: false);
 
-        var decision = FloatingTopmostPolicies.ResolveDrift(snapshot);
-        decision.HasDrift.Should().BeTrue();
-        decision.Reason.Should().Be(FloatingTopmostDriftReason.LauncherDrift);
+        FloatingTopmostPolicies.HasDrift(snapshot).Should().BeTrue();
     }
 
     [Fact]
@@ -165,9 +144,7 @@ public sealed class FloatingTopmostDriftPolicyTests
             LauncherVisible: true,
             LauncherTopmost: true);
 
-        var decision = FloatingTopmostPolicies.ResolveDrift(snapshot);
-        decision.HasDrift.Should().BeFalse();
-        decision.Reason.Should().Be(FloatingTopmostDriftReason.NoDrift);
+        FloatingTopmostPolicies.HasDrift(snapshot).Should().BeFalse();
     }
 
     [Fact]
@@ -184,9 +161,7 @@ public sealed class FloatingTopmostDriftPolicyTests
             LauncherVisible: true,
             LauncherTopmost: false);
 
-        var decision = FloatingTopmostPolicies.ResolveForceEnforce(snapshot);
-        decision.ShouldForceEnforce.Should().BeFalse();
-        decision.Reason.Should().Be(FloatingTopmostForceEnforceReason.DisabledByDesign);
+        FloatingTopmostPolicies.ShouldForceEnforce(snapshot).Should().BeFalse();
     }
 
     [Fact]
@@ -203,21 +178,19 @@ public sealed class FloatingTopmostDriftPolicyTests
             LauncherVisible: false,
             LauncherTopmost: false);
 
-        var decision = FloatingTopmostPolicies.ResolveForceEnforce(snapshot);
-        decision.ShouldForceEnforce.Should().BeFalse();
-        decision.Reason.Should().Be(FloatingTopmostForceEnforceReason.DisabledByDesign);
+        FloatingTopmostPolicies.ShouldForceEnforce(snapshot).Should().BeFalse();
     }
 
     [Fact]
-    public void HasDrift_ShouldMapResolveDecision()
+    public void HasDrift_ReturnsTrue_WhenAnyVisibleWindowLacksTopmost()
     {
         var snapshot = new ToolbarInteractionRetouchSnapshot(
             OverlayVisible: true,
             PhotoModeActive: true,
             WhiteboardActive: false,
-            ToolbarVisible: true,
+            ToolbarVisible: false,
             ToolbarTopmost: false,
-            RollCallVisible: false,
+            RollCallVisible: true,
             RollCallTopmost: false,
             LauncherVisible: true,
             LauncherTopmost: true);
@@ -464,9 +437,7 @@ public sealed class FloatingTopmostRetouchPolicyTests
         var current = previous with { OverlayTopmostRequired = true };
         var transition = new UiSessionTransition(1, DateTime.UtcNow, new EnterPhotoFullscreenEvent(PhotoSourceKind.Image), previous, current);
 
-        var decision = FloatingTopmostPolicies.ResolveRetouch(transition);
-        decision.ShouldEnsureFloatingOnTransition.Should().BeTrue();
-        decision.Reason.Should().Be(FloatingTopmostRetouchReason.OverlayTopmostBecameRequired);
+        FloatingTopmostPolicies.ShouldEnsureFloatingOnTransition(transition).Should().BeTrue();
     }
 
     [Fact]
@@ -476,19 +447,7 @@ public sealed class FloatingTopmostRetouchPolicyTests
         var current = previous;
         var transition = new UiSessionTransition(2, DateTime.UtcNow, new SwitchToolModeEvent(UiToolMode.Cursor), previous, current);
 
-        var decision = FloatingTopmostPolicies.ResolveRetouch(transition);
-        decision.ShouldEnsureFloatingOnTransition.Should().BeFalse();
-        decision.Reason.Should().Be(FloatingTopmostRetouchReason.OverlayTopmostNotRising);
-    }
-
-    [Fact]
-    public void ShouldEnsureFloatingOnTransition_ShouldMapResolveDecision()
-    {
-        var previous = UiSessionState.Default with { OverlayTopmostRequired = false };
-        var current = previous with { OverlayTopmostRequired = true };
-        var transition = new UiSessionTransition(3, DateTime.UtcNow, new EnterWhiteboardEvent(), previous, current);
-
-        FloatingTopmostPolicies.ShouldEnsureFloatingOnTransition(transition).Should().BeTrue();
+        FloatingTopmostPolicies.ShouldEnsureFloatingOnTransition(transition).Should().BeFalse();
     }
 }
 

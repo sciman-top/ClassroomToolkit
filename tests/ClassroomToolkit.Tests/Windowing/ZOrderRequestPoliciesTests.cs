@@ -43,14 +43,6 @@ public sealed class ZOrderApplyReentryPolicyTests
         decision.Reason.Should().Be(ZOrderApplyReentryReason.ForcedDuringApplying);
     }
 
-    [Fact]
-    public void ShouldAcceptRequest_ShouldMapResolveDecision()
-    {
-        ZOrderRequestPolicies.ShouldAcceptRequest(
-            zOrderApplying: true,
-            applyQueued: false,
-            forceEnforceZOrder: false).Should().BeTrue();
-    }
 }
 
 public sealed class ZOrderRequestAdmissionPolicyTests

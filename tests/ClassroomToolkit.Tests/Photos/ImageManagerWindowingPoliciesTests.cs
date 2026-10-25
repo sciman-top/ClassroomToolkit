@@ -252,11 +252,6 @@ public sealed class ImageManagerTopmostPolicyTests
         decision.ShouldApply.Should().Be(expected);
     }
 
-    [Fact]
-    public void ShouldApply_ShouldMapResolveDecision()
-    {
-        ImageManagerWindowingPolicies.ShouldApply(true, ZOrderSurface.ImageManager).Should().BeTrue();
-    }
 }
 
 public sealed class ImageManagerVisibilitySurfaceDecisionPolicyTests
@@ -306,21 +301,6 @@ public sealed class ImageManagerVisibilitySurfaceDecisionPolicyTests
 
 public sealed class ImageManagerVisibilityTransitionPolicyTests
 {
-    [Fact]
-    public void ResolveOpen_ContextOverload_ShouldReturnSameAsPrimitiveOverload()
-    {
-        var context = new ImageManagerVisibilityOpenContext(
-            OverlayVisible: true,
-            ImageManagerVisible: false,
-            ImageManagerWindowState: WindowState.Minimized);
-
-        var plan = ImageManagerWindowingPolicies.ResolveOpenImageManagerVisibilityTransition(context);
-
-        plan.SyncOwnersToOverlay.Should().BeTrue();
-        plan.ShowWindow.Should().BeTrue();
-        plan.NormalizeWindowState.Should().BeTrue();
-    }
-
     [Fact]
     public void ResolveOpen_ShouldShowAndNormalize_WhenWindowIsMinimized()
     {
@@ -375,15 +355,4 @@ public sealed class ImageManagerVisibilityTransitionPolicyTests
         plan.CloseWindow.Should().BeTrue();
     }
 
-    [Fact]
-    public void ResolveCloseForPhotoSelection_ContextOverload_ShouldCloseWhenVisible()
-    {
-        var context = new ImageManagerVisibilityCloseContext(
-            ImageManagerVisible: true,
-            OwnerAlreadyOverlay: false);
-
-        var plan = ImageManagerWindowingPolicies.ResolveCloseForPhotoSelection(context);
-
-        plan.CloseWindow.Should().BeTrue();
-    }
 }

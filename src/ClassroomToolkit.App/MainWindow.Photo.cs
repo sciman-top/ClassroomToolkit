@@ -249,22 +249,26 @@ public partial class MainWindow
         {
             return;
         }
-        var transitionPlan = PaintWindowVisibilityPolicies.ResolvePhotoModeChange(
+        var transition = PaintWindowVisibilityPolicies.ResolvePhotoModeChange(
             photoModeActive: active,
             toolbarWindowState: _toolbarWindow.WindowState);
+        var shouldNormalizeToolbar = PaintWindowVisibilityPolicies.ShouldNormalizeToolbarWindowState(
+            transition,
+            _toolbarWindow.WindowState);
         var toolbarWindow = _toolbarWindow;
         PhotoModeTransitionCoordinator.Apply(
             active,
-            transitionPlan,
+            transition,
+            shouldNormalizeToolbar,
             value => _imageManagerWindow?.SetKeyboardNavigationSuppressed(value),
-            () => WindowStateNormalizationExecutor.Apply(toolbarWindow, transitionPlan.NormalizeToolbarWindowState),
+            () => WindowStateNormalizationExecutor.Apply(toolbarWindow, shouldNormalizeToolbar),
             () => ExecuteLifecycleSafe("photo-mode-changed", "show-toolbar-window", toolbarWindow.Show),
-            () => SyncFloatingWindowOwners(overlayVisible: transitionPlan.SyncFloatingOwnersVisible),
+            () => SyncFloatingWindowOwners(overlayVisible: false),
             () => ApplyPhotoModeSurfaceTransition(
                 PhotoModeSurfaceTransitionKind.PhotoModeChanged,
                 photoModeActive: active,
-                requestZOrderApply: transitionPlan.RequestZOrderApply,
-                forceEnforceZOrder: transitionPlan.ForceEnforceZOrder));
+                requestZOrderApply: true,
+                forceEnforceZOrder: false));
     }
 
     private void OnPhotoCursorModeFocusRequested()
@@ -291,19 +295,23 @@ public partial class MainWindow
                 return;
             }
 
-            var focusPlanDecision = OverlayNavigationFocusPolicy.ResolvePlanDecision(
+            var focusSnapshot = CaptureOverlayNavigationFocusSnapshot(_overlayWindow);
+            var shouldActivate = OverlayNavigationFocusPolicy.ShouldActivateOverlay(
                 avoidActivate,
-                CaptureOverlayNavigationFocusSnapshot(_overlayWindow));
-            var focusPlan = focusPlanDecision.Plan;
+                focusSnapshot.OverlayActive,
+                focusSnapshot.UtilityActivity);
+            var shouldFocusKeyboard = OverlayNavigationFocusPolicy.ShouldKeyboardFocusOverlay(
+                focusSnapshot.OverlayVisible,
+                focusSnapshot.UtilityActivity);
 
             OverlayFocusExecutionExecutor.Apply(
                 _overlayWindow,
-                focusPlan.ActivateOverlay,
-                focusPlan.KeyboardFocusOverlay);
+                shouldActivate,
+                shouldFocusKeyboard);
 
             PhotoNavigationDiagnostics.Log(
                 "MainWindow.Focus",
-                $"defer={defer}, activate={focusPlan.ActivateOverlay}, keyboard={focusPlan.KeyboardFocusOverlay}, activateReason={focusPlanDecision.ActivateReason}, keyboardReason={focusPlanDecision.KeyboardFocusReason}");
+                $"defer={defer}, activate={shouldActivate}, keyboard={shouldFocusKeyboard}");
         }
 
         if (defer)
@@ -328,10 +336,10 @@ public partial class MainWindow
     private OverlayNavigationFocusSnapshot CaptureOverlayNavigationFocusSnapshot(
         Paint.PaintOverlayWindow overlayWindow)
     {
-        return OverlayNavigationFocusSnapshotPolicy.Resolve(
-            overlayVisible: overlayWindow.IsVisible,
-            overlayActive: overlayWindow.IsActive,
-            utilityActivity: CaptureFloatingUtilityActivity());
+        return new OverlayNavigationFocusSnapshot(
+            OverlayVisible: overlayWindow.IsVisible,
+            OverlayActive: overlayWindow.IsActive,
+            UtilityActivity: CaptureFloatingUtilityActivity());
     }
 
     private void OnOverlayActivated()

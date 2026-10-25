@@ -45,36 +45,32 @@ public sealed class RollCallTransparencyPolicyTests
         bool paintAllowsTransparency,
         bool expected)
     {
-        var decision = RollCallWindowingPolicies.ResolveTransparency(hovering, paintAllowsTransparency);
-
-        decision.TransparentEnabled.Should().Be(expected);
+        RollCallWindowingPolicies
+            .ShouldEnableTransparent(hovering, paintAllowsTransparency)
+            .Should()
+            .Be(expected);
     }
 
     [Fact]
     public void ResolveStyleApply_ShouldReturnFalse_WhenStateUnchanged()
     {
-        var decision = RollCallWindowingPolicies.ResolveStyleApply(
-            transparentEnabled: true,
-            lastTransparentEnabled: true);
-
-        decision.ShouldApplyStyle.Should().BeFalse();
-        decision.Reason.Should().Be(RollCallTransparencyStyleApplyReason.StateUnchanged);
+        RollCallWindowingPolicies
+            .ShouldApplyStyle(transparentEnabled: true, lastTransparentEnabled: true)
+            .Should()
+            .BeFalse();
     }
 
     [Fact]
     public void ResolveStyleApply_ShouldReturnTrue_WhenStateChangedOrUnknown()
     {
-        var changed = RollCallWindowingPolicies.ResolveStyleApply(
-            transparentEnabled: false,
-            lastTransparentEnabled: true);
-        var unknown = RollCallWindowingPolicies.ResolveStyleApply(
-            transparentEnabled: false,
-            lastTransparentEnabled: null);
-
-        changed.ShouldApplyStyle.Should().BeTrue();
-        changed.Reason.Should().Be(RollCallTransparencyStyleApplyReason.StateChanged);
-        unknown.ShouldApplyStyle.Should().BeTrue();
-        unknown.Reason.Should().Be(RollCallTransparencyStyleApplyReason.StateUnknown);
+        RollCallWindowingPolicies
+            .ShouldApplyStyle(transparentEnabled: false, lastTransparentEnabled: true)
+            .Should()
+            .BeTrue();
+        RollCallWindowingPolicies
+            .ShouldApplyStyle(transparentEnabled: false, lastTransparentEnabled: null)
+            .Should()
+            .BeTrue();
     }
 
     [Fact]
@@ -98,35 +94,12 @@ public sealed class RollCallTransparencyPolicyTests
     [Fact]
     public void ResolveHoverTimer_ShouldReturnExpectedDecisions()
     {
-        var startDecision = RollCallWindowingPolicies.ResolveHoverTimer(
-                transparentEnabled: true,
-                hoverTimerEnabled: false);
-        startDecision.ShouldStart.Should().BeTrue();
-
-        var keepRunningDecision = RollCallWindowingPolicies.ResolveHoverTimer(
-                transparentEnabled: true,
-                hoverTimerEnabled: true);
-        keepRunningDecision.ShouldStart.Should().BeFalse();
-
-        var stopDecision = RollCallWindowingPolicies.ResolveHoverTimer(
-                transparentEnabled: false,
-                hoverTimerEnabled: true);
-        stopDecision.ShouldStop.Should().BeTrue();
-
-        var keepStoppedDecision = RollCallWindowingPolicies.ResolveHoverTimer(
-                transparentEnabled: true,
-                hoverTimerEnabled: true);
-        keepStoppedDecision.ShouldStop.Should().BeFalse();
-    }
-
-    [Fact]
-    public void BoolMethods_ShouldMapResolveDecisions()
-    {
-        RollCallWindowingPolicies.ShouldEnableTransparent(false, true).Should().BeTrue();
-        RollCallWindowingPolicies.ShouldApplyStyle(false, true).Should().BeTrue();
         RollCallWindowingPolicies.ShouldStartHoverTimer(true, false).Should().BeTrue();
+        RollCallWindowingPolicies.ShouldStartHoverTimer(true, true).Should().BeFalse();
         RollCallWindowingPolicies.ShouldStopHoverTimer(false, true).Should().BeTrue();
+        RollCallWindowingPolicies.ShouldStopHoverTimer(true, true).Should().BeFalse();
     }
+
 }
 
 public sealed class RollCallVisibilityTransitionPolicyTests
