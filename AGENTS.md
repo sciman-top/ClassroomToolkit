@@ -2,7 +2,7 @@
 **项目契约**: 2.0
 **全局规则复核**: 9.92
 **类型**: Windows WPF (.NET 10)
-**最后更新**: 2026-10-07
+**最后更新**: 2026-10-26
 
 ## 1. 当前落点与目标归宿
 - 当前落点：`ClassroomToolkit.sln` 是课堂教学工具主解决方案，现有 WPF、Interop、配置与数据兼容是运行真相。
@@ -10,7 +10,7 @@
 - 当前 issue、发布状态和课堂验收从当前代码、配置与入口文档 fresh read；根规则不固化完成数或机器状态。
 
 ## A. 仓库事实与模块边界
-- `src/ClassroomToolkit.App`：WPF UI/启动；`Application`：用例；`Domain`：规则；`Services`：桥接；`Interop`：高风险系统接口；`Infra`：配置、存储和外部资源。
+- `src/ClassroomToolkit.App`：WPF UI/启动；`Application`：用例；`Domain`：规则；`Services`：桥接；`Interop`：高风险系统接口；`Infra`：配置、存储和外部资源；`FileSystem`：Infra 与 App 共用的原子文件替换工具。
 - `tests/ClassroomToolkit.Tests` 承载回归与契约；`scripts/quality/run-local-quality-gates.ps1` 是标准聚合门禁。
 - 课堂可用性是最高不变量：不可崩溃或长时间卡死，外部依赖失败必须可降级。
 - `Win32/COM/WPS/UIAutomation` 异常不得冒泡到 UI；触屏、窗口层级、hook 生命周期与设置加载是 hotspot。

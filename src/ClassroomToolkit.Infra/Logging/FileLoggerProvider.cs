@@ -29,6 +29,7 @@ public class FileLoggerProvider : ILoggerProvider
     private int _disposeState;
     private int _queueResourcesDisposed;
     private long _droppedMessageCount;
+    private DateTime _lastRetentionCheckedDate;
 
     public FileLoggerProvider(
         string logDirectory,
@@ -57,6 +58,7 @@ public class FileLoggerProvider : ILoggerProvider
         }
         TryResetSessionLogs();
         TryApplyRetention();
+        _lastRetentionCheckedDate = ResolveRetentionReferenceTime().Date;
 
         _processQueueTask = Task.Factory.StartNew(
             ProcessQueue,
@@ -163,6 +165,8 @@ public class FileLoggerProvider : ILoggerProvider
             return;
         }
 
+        TryApplyRetentionOnDayChange(batch[0].Timestamp);
+
         var groupedLines = new Dictionary<string, StringBuilder>(
             capacity: Math.Min(batch.Count, QueueBatchSize),
             comparer: StringComparer.OrdinalIgnoreCase);
@@ -237,6 +241,27 @@ public class FileLoggerProvider : ILoggerProvider
             "app_",
             ResolveRetentionReferenceTime(),
             _retentionOptions);
+    }
+
+    private void TryApplyRetentionOnDayChange(DateTime itemTimestamp)
+    {
+        if (itemTimestamp.Date == _lastRetentionCheckedDate)
+        {
+            return;
+        }
+
+        // 保留策略原本只在启动时执行一次：整天不重启的课堂机会让当日 app_*.log
+        // 无上限增长。跨日后借写盘路径补触发一次清理（每天最多一次），历史文件的
+        // 过期/超限得以回收；失败不阻断本次写盘。
+        _lastRetentionCheckedDate = itemTimestamp.Date;
+        try
+        {
+            TryApplyRetention();
+        }
+        catch (Exception ex) when (InfraExceptionFilterPolicy.IsNonFatal(ex))
+        {
+            Debug.WriteLine($"[FileLoggerProvider] cross-day retention failed: {ex.GetType().Name} - {ex.Message}");
+        }
     }
 
     private DateTime ResolveRetentionReferenceTime()
