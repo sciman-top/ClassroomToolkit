@@ -57,9 +57,9 @@ public partial class MainWindow
             _surfaceZOrderDecisionState,
             GetCurrentUtcTimestamp(),
             minIntervalMs: dedupIntervalMs);
-        SurfaceZOrderDecisionStateUpdater.Apply(
-            ref _surfaceZOrderDecisionState,
-            dedupDecision);
+        _surfaceZOrderDecisionState = new SurfaceZOrderDecisionRuntimeState(
+            LastDecision: dedupDecision.LastDecision,
+            LastAppliedUtc: dedupDecision.LastAppliedUtc);
         if (!dedupDecision.ShouldApply)
         {
             System.Diagnostics.Debug.WriteLine(
@@ -309,10 +309,10 @@ public partial class MainWindow
             bubbleVisible: _bubbleWindow?.IsVisible == true,
             bubbleMinimized: _bubbleWindow?.WindowState == WindowState.Minimized,
             bubbleActive: _bubbleWindow?.IsActive == true);
-        LauncherTopmostVisibilityStateUpdater.ApplyResolvedTimestamp(
-            ref _lastLauncherVisibleForTopmostUtc,
-            nowUtc,
-            snapshot.VisibleForTopmost);
+        if (snapshot.VisibleForTopmost)
+        {
+            _lastLauncherVisibleForTopmostUtc = nowUtc;
+        }
         if (LauncherRuntimePolicies.ShouldLog(snapshot.SelectionReason))
         {
             System.Diagnostics.Debug.WriteLine(

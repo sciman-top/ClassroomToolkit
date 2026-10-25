@@ -3,35 +3,6 @@ using System;
 
 namespace ClassroomToolkit.App;
 
-internal static class SettingsSaveFailureNotificationStateUpdater
-{
-    internal static void MarkSaveSucceeded(ref bool saveFailedNotified)
-    {
-        saveFailedNotified = false;
-    }
-
-    internal static void ApplyNotificationPlan(
-        ref bool saveFailedNotified,
-        SettingsSaveFailureNotificationPlan plan)
-    {
-        saveFailedNotified = plan.NextNotifiedState;
-    }
-}
-
-internal readonly record struct SettingsSaveFailureNotificationPlan(
-    bool ShouldNotify,
-    bool NextNotifiedState);
-
-internal static class DialogShowResultStateUpdater
-{
-    internal static void MarkFromDialogResult(
-        ref bool result,
-        bool? dialogResult)
-    {
-        result = dialogResult == true;
-    }
-}
-
 internal readonly record struct InkStartupCleanupSummary(
     int TotalSidecars,
     int TotalComposites);
@@ -91,20 +62,6 @@ internal static class NotificationAndExitPolicies
     internal static void Reset(ref int notifiedState)
     {
         Interlocked.Exchange(ref notifiedState, 0);
-    }
-
-    internal static SettingsSaveFailureNotificationPlan Resolve(bool alreadyNotified)
-    {
-        if (alreadyNotified)
-        {
-            return new SettingsSaveFailureNotificationPlan(
-                ShouldNotify: false,
-                NextNotifiedState: true);
-        }
-
-        return new SettingsSaveFailureNotificationPlan(
-            ShouldNotify: true,
-            NextNotifiedState: true);
     }
 
     internal static bool ShouldLogDeletionSummary(InkStartupCleanupSummary summary)

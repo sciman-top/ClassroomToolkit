@@ -409,9 +409,7 @@ public partial class MainWindow
             GetCurrentUtcTimestamp(),
             MainWindowRuntimeDefaults.ExplicitForegroundRetouchMinIntervalMs,
             decision,
-            nowUtc => ExplicitForegroundRetouchStateUpdater.MarkRetouched(
-                ref _explicitForegroundRetouchState,
-                nowUtc),
+            nowUtc => _explicitForegroundRetouchState = new ExplicitForegroundRetouchRuntimeState(nowUtc),
             ApplyForegroundSurfaceDecision);
         if (!result.Applied)
         {

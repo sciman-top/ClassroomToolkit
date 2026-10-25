@@ -56,16 +56,3 @@ internal readonly record struct CrossPageInkVisualSyncRuntimeState(
         LastSyncUtc: CrossPageRuntimeDefaults.UnsetTimestampUtc,
         LastTrigger: null);
 }
-
-internal static class CrossPageInkVisualSyncStateUpdater
-{
-    internal static void MarkApplied(
-        ref CrossPageInkVisualSyncRuntimeState state,
-        DateTime nowUtc,
-        CrossPageInkVisualSyncTrigger trigger)
-    {
-        state = new CrossPageInkVisualSyncRuntimeState(
-            LastSyncUtc: nowUtc,
-            LastTrigger: trigger);
-    }
-}

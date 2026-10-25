@@ -495,16 +495,14 @@ internal sealed class PaintWindowOrchestrator : IPaintWindowOrchestrator
         try
         {
             _appSettingsService.Save(_currentSettings);
-            SettingsSaveFailureNotificationStateUpdater.MarkSaveSucceeded(ref _settingsSaveFailedNotified);
+            _settingsSaveFailedNotified = false;
         }
         catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
         {
             LogSettingsSaveFailed(_logger, ex, null);
-            var notificationPlan = NotificationAndExitPolicies.Resolve(_settingsSaveFailedNotified);
-            SettingsSaveFailureNotificationStateUpdater.ApplyNotificationPlan(
-                ref _settingsSaveFailedNotified,
-                notificationPlan);
-            if (!notificationPlan.ShouldNotify)
+            var shouldNotify = !_settingsSaveFailedNotified;
+            _settingsSaveFailedNotified = true;
+            if (!shouldNotify)
             {
                 return;
             }

@@ -182,17 +182,15 @@ public partial class RollCallWindow
             onFailure: ex => saveFailure = ex);
         if (saved)
         {
-            SettingsSaveFailureNotificationStateUpdater.MarkSaveSucceeded(ref _settingsSaveFailedNotified);
+            _settingsSaveFailedNotified = false;
             return true;
         }
 
         if (saveFailure != null)
         {
-            var notificationPlan = NotificationAndExitPolicies.Resolve(_settingsSaveFailedNotified);
-            SettingsSaveFailureNotificationStateUpdater.ApplyNotificationPlan(
-                ref _settingsSaveFailedNotified,
-                notificationPlan);
-            if (!notificationPlan.ShouldNotify)
+            var shouldNotify = !_settingsSaveFailedNotified;
+            _settingsSaveFailedNotified = true;
+            if (!shouldNotify)
             {
                 return false;
             }

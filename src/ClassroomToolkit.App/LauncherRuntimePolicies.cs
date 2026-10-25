@@ -4,20 +4,6 @@ using System;
 
 namespace ClassroomToolkit.App;
 
-internal static class LauncherTopmostVisibilityStateUpdater
-{
-    internal static void ApplyResolvedTimestamp(
-        ref DateTime lastVisibleUtc,
-        DateTime nowUtc,
-        bool visibleForTopmost)
-    {
-        lastVisibleUtc = LauncherRuntimePolicies.ResolveLastVisibleUtc(
-            lastVisibleUtc,
-            nowUtc,
-            visibleForTopmost);
-    }
-}
-
 internal readonly record struct LauncherAutoExitTimerPlan(
     bool ShouldStart,
     TimeSpan Interval);
@@ -35,14 +21,6 @@ internal static class LauncherRuntimePolicies
         bool bubbleWindowExists)
     {
         return resolvedKind == LauncherWindowKind.Bubble && bubbleWindowExists;
-    }
-
-    internal static DateTime ResolveLastVisibleUtc(
-        DateTime previousUtc,
-        DateTime nowUtc,
-        bool visibleForTopmost)
-    {
-        return visibleForTopmost ? nowUtc : previousUtc;
     }
 
     internal static LauncherAutoExitTimerPlan ResolveLauncherAutoExitTimerPlan(int autoExitSeconds)

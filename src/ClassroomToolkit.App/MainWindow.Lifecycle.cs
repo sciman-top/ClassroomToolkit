@@ -146,17 +146,15 @@ public partial class MainWindow
 
     private void RequestExit()
     {
-        var exitPlan = MainWindowExitPlanPolicy.Resolve(
-            allowClose: _allowClose,
-            backgroundTasksCancellationRequested: _backgroundTasksCancellation.IsCancellationRequested,
-            hasBubbleWindow: _bubbleWindow != null,
-            hasRollCallWindow: _rollCallWindow != null,
-            hasImageManagerWindow: _imageManagerWindow != null);
-        if (!exitPlan.ShouldExit)
+        if (_allowClose)
         {
             return;
         }
 
+        var shouldCancelBackgroundTasks = !_backgroundTasksCancellation.IsCancellationRequested;
+        var hasBubbleWindow = _bubbleWindow != null;
+        var hasRollCallWindow = _rollCallWindow != null;
+        var hasImageManagerWindow = _imageManagerWindow != null;
         _exitCoordinator.TryExit(
             saveSettings: () =>
             {
@@ -166,7 +164,11 @@ public partial class MainWindow
             confirmDiscardSettings: ConfirmExitWithoutSavingSettings,
             prepareChildWindows: discardSettings =>
                 _rollCallWindow?.TryPrepareForApplicationExit(discardSettings) ?? true,
-            shutdown: () => CompleteExit(exitPlan));
+            shutdown: () => CompleteExit(
+                shouldCancelBackgroundTasks,
+                hasBubbleWindow,
+                hasRollCallWindow,
+                hasImageManagerWindow));
     }
 
     private bool ConfirmExitWithoutSavingSettings()
@@ -183,13 +185,17 @@ public partial class MainWindow
             MessageBoxResult.No) == MessageBoxResult.Yes;
     }
 
-    private void CompleteExit(MainWindowExitPlan exitPlan)
+    private void CompleteExit(
+        bool shouldCancelBackgroundTasks,
+        bool shouldCloseBubbleWindow,
+        bool shouldCloseRollCallWindow,
+        bool shouldCloseImageManagerWindow)
     {
         const string phase = "request-exit";
 
         _allowClose = true;
 
-        if (exitPlan.ShouldCancelBackgroundTasks)
+        if (shouldCancelBackgroundTasks)
         {
             ExecuteLifecycleSafe(phase, "cancel-background-tasks", () => _backgroundTasksCancellation.Cancel());
         }
@@ -197,21 +203,21 @@ public partial class MainWindow
         ExecuteLifecycleSafe(phase, "reset-toolbar-retouch-runtime", () => ResetToolbarInteractionRetouchRuntime(ToolbarInteractionRetouchRuntimeResetReason.RequestExit));
         // 孤儿 sidecar 清理要枚举多个目录，放后台执行；退出不等它，未完成的清理由下次启动兜底。
         _ = Task.Run(TriggerInkCleanup);
-        if (exitPlan.ShouldCloseBubbleWindow && _bubbleWindow != null)
+        if (shouldCloseBubbleWindow && _bubbleWindow != null)
         {
             var bubbleWindow = _bubbleWindow;
             ExecuteLifecycleSafe(phase, "close-launcher-bubble-window", bubbleWindow.Close);
             _bubbleWindow = null;
         }
 
-        if (exitPlan.ShouldCloseRollCallWindow && _rollCallWindow != null)
+        if (shouldCloseRollCallWindow && _rollCallWindow != null)
         {
             var rollCallWindow = _rollCallWindow;
             ExecuteLifecycleSafe(phase, "close-rollcall-window", rollCallWindow.RequestClose);
             _rollCallWindow = null;
         }
 
-        if (exitPlan.ShouldCloseImageManagerWindow && _imageManagerWindow != null)
+        if (shouldCloseImageManagerWindow && _imageManagerWindow != null)
         {
             ExecuteLifecycleSafe(phase, "close-image-manager-window", _imageManagerWindowCoordinator.Close);
         }
@@ -261,7 +267,7 @@ public partial class MainWindow
         var result = false;
         using var _ = FloatingTopmostDialogSuppressionState.Enter();
         SafeActionExecutionExecutor.TryExecute(
-            () => DialogShowResultStateUpdater.MarkFromDialogResult(ref result, dialog.SafeShowDialog()),
+            () => result = dialog.SafeShowDialog() == true,
             ex => System.Diagnostics.Debug.WriteLine(
                 WindowingDiagnosticsPolicies.FormatFailureMessageDialogShowDiagnostics(
                     dialogName,
@@ -302,16 +308,14 @@ public partial class MainWindow
             }
 
             _settingsService.Save(_settings);
-            SettingsSaveFailureNotificationStateUpdater.MarkSaveSucceeded(ref _settingsSaveFailedNotified);
+            _settingsSaveFailedNotified = false;
             return true;
         }
         catch (Exception ex) when (ClassroomToolkit.App.AppGlobalExceptionHandling.IsNonFatal(ex))
         {
-            var notificationPlan = NotificationAndExitPolicies.Resolve(_settingsSaveFailedNotified);
-            SettingsSaveFailureNotificationStateUpdater.ApplyNotificationPlan(
-                ref _settingsSaveFailedNotified,
-                notificationPlan);
-            if (!notificationPlan.ShouldNotify)
+            var shouldNotify = !_settingsSaveFailedNotified;
+            _settingsSaveFailedNotified = true;
+            if (!shouldNotify)
             {
                 return false;
             }
@@ -367,17 +371,13 @@ public partial class MainWindow
 
     private void OnClosing(object? sender, CancelEventArgs e)
     {
-        var closingPlan = MainWindowOnClosingPlanPolicy.Resolve(_allowClose);
-        if (!closingPlan.ShouldCancelClose)
+        if (_allowClose)
         {
             return;
         }
 
-        e.Cancel = closingPlan.ShouldCancelClose;
-        if (closingPlan.ShouldRequestExit)
-        {
-            RequestExit();
-        }
+        e.Cancel = true;
+        RequestExit();
     }
 
     private void OnClosed(object? sender, EventArgs e)

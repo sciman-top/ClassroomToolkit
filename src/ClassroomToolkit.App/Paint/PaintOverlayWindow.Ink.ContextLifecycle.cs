@@ -152,10 +152,9 @@ public partial class PaintOverlayWindow
                 CrossPageReplayQueueDecisionFactory.VisualSync());
         }
         RequestCrossPageDisplayUpdate(source);
-        CrossPageInkVisualSyncStateUpdater.MarkApplied(
-            ref _crossPageInkVisualSyncState,
-            nowUtc,
-            trigger);
+        _crossPageInkVisualSyncState = new CrossPageInkVisualSyncRuntimeState(
+            LastSyncUtc: nowUtc,
+            LastTrigger: trigger);
     }
 
     private bool TryGetCurrentPhotoReferenceSize(out double width, out double height)
