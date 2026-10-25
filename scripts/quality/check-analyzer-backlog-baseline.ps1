@@ -52,8 +52,13 @@ function Convert-ToRepoRelativePath {
 
 function Test-IsTransientAnalyzerBuildFailure {
     param(
-        [Parameter(Mandatory = $true)][string[]]$Output
+        [Parameter(Mandatory = $true)][AllowEmptyString()][AllowEmptyCollection()][string[]]$Output
     )
+
+    # 输出为空说明 dotnet 根本没起来（启动瞬态失败），按可重试处理而非参数绑定崩溃。
+    if ($Output.Count -eq 0) {
+        return $true
+    }
 
     $outputText = [string]::Join([Environment]::NewLine, @($Output))
     $isFileLock = (Test-ContainsOrdinalIgnoreCase -Text $outputText -Value "because it is being used by another process") `
@@ -88,7 +93,9 @@ function Invoke-AnalyzerBuild {
             -p:EnableNETAnalyzers=true `
             -p:AnalysisLevel=latest-all 2>&1)
 
-        if ($LASTEXITCODE -eq 0) {
+        # dotnet build 正常必有输出；空输出即便退出码为 0 也按失败处理，
+        # 否则该项目会被静默漏扫，analyzer 门禁假绿。
+        if ($LASTEXITCODE -eq 0 -and @($output).Count -gt 0) {
             return $output
         }
 

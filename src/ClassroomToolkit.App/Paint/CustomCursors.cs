@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -43,6 +44,8 @@ internal static class CustomCursors
     /// <summary>
     /// 获取指定颜色的画笔光标
     /// </summary>
+    [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
+        Justification = "光标所有权在创建后转移给 BrushCursorCache，由容量淘汰的 ReleaseTempCursor 与进程退出清理负责释放。")]
     public static WpfCursor GetBrushCursor(MediaColor color)
     {
         if (!BrushCursorCache.TryGetValue(color, out var cursor))

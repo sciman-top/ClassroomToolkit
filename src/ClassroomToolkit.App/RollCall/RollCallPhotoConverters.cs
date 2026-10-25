@@ -10,7 +10,7 @@ namespace ClassroomToolkit.App.RollCall;
 /// 点名窗照片预览的绑定转换器：<see cref="CurrentStudentPhotoPath"/> 是路径字符串，
 /// 不能走 BooleanToVisibilityConverter（转换失败会让照片区永久 Collapsed）。
 /// </summary>
-public sealed class PhotoPathToVisibilityConverter : IValueConverter
+internal sealed class PhotoPathToVisibilityConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
@@ -28,7 +28,7 @@ public sealed class PhotoPathToVisibilityConverter : IValueConverter
 /// 照片路径 → 降采样 ImageSource。默认字符串绑定会全尺寸解码原图，
 /// 预览可见后点名切人时在 UI 线程产生明显卡顿，这里按预览尺寸解码并冻结。
 /// </summary>
-public sealed class PhotoPathToImageSourceConverter : IValueConverter
+internal sealed class PhotoPathToImageSourceConverter : IValueConverter
 {
     private const int PreviewDecodePixelWidth = 512;
 

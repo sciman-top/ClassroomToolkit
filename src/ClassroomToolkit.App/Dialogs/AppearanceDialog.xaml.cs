@@ -5,7 +5,7 @@ using ClassroomToolkit.App.Windowing;
 
 namespace ClassroomToolkit.App.Dialogs;
 
-public partial class AppearanceDialog : Window
+internal partial class AppearanceDialog : Window
 {
     private bool _suppressThemeNotification;
 
