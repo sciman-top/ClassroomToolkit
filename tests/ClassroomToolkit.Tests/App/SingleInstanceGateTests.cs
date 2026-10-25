@@ -110,6 +110,67 @@ public sealed class SingleInstanceGateTests
         }
     }
 
+    [Fact]
+    public void TryTakeOverAbandoned_ShouldAcquire_WhenPreviousOwnerThreadDied()
+    {
+        // 模拟前任持有进程崩溃但互斥体仍被句柄钉住：工作线程持有后死亡 → abandoned。
+        var name = UniqueSessionMutexName();
+        using var pin = new Mutex(initiallyOwned: false, name);
+        var worker = new Thread(() =>
+        {
+            var owned = Mutex.OpenExisting(name);
+            owned.WaitOne();
+            // 故意不 Release：线程退出后互斥体进入 abandoned 状态。
+        });
+        worker.IsBackground = true;
+        worker.Start();
+        worker.Join();
+
+        var outcome = SingleInstanceGate.TryTakeOverAbandoned(name, out var mutex);
+        try
+        {
+            outcome.Should().Be(SingleInstanceAcquireOutcome.Acquired);
+            mutex.Should().NotBeNull();
+        }
+        finally
+        {
+            mutex?.Dispose();
+        }
+    }
+
+    [Fact]
+    public void TryTakeOverAbandoned_ShouldReportAlreadyRunning_WhenHeldByLiveThread()
+    {
+        var name = UniqueSessionMutexName();
+        using var pin = new Mutex(initiallyOwned: false, name);
+        var holderAcquired = new ManualResetEventSlim(false);
+        var holderReleased = new ManualResetEventSlim(false);
+        var worker = new Thread(() =>
+        {
+            var owned = Mutex.OpenExisting(name);
+            owned.WaitOne();
+            holderAcquired.Set();
+            holderReleased.Wait();
+            owned.ReleaseMutex();
+            owned.Dispose();
+        });
+        worker.IsBackground = true;
+        worker.Start();
+        holderAcquired.Wait(5_000, TestContext.Current.CancellationToken).Should().BeTrue("worker must own the mutex before takeover is attempted");
+
+        try
+        {
+            var outcome = SingleInstanceGate.TryTakeOverAbandoned(name, out var mutex);
+            outcome.Should().Be(SingleInstanceAcquireOutcome.AlreadyRunning);
+            mutex.Should().BeNull();
+        }
+        finally
+        {
+            holderReleased.Set();
+            worker.Join();
+        }
+    }
+
     private static string UniqueSessionMutexName()
     {
         return $@"Local\ClassroomToolkit.Tests.{Guid.NewGuid():N}";
