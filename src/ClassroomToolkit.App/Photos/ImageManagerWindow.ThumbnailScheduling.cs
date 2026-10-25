@@ -17,6 +17,7 @@ public partial class ImageManagerWindow
     private const int ThumbnailVisiblePriorityBatchSize = 48;
     private const int ThumbnailBackgroundBatchSize = 24;
     private const int ThumbnailBackgroundQueueIntervalMilliseconds = 90;
+    private static readonly long FingerprintRevalidationTtlTicks = TimeSpan.FromSeconds(2).Ticks;
     private static readonly int ThumbnailWorkerConcurrency = Math.Clamp(Environment.ProcessorCount / 4, 1, 2);
 
     private readonly DispatcherTimer _thumbnailBackgroundQueueTimer;
@@ -34,6 +35,9 @@ public partial class ImageManagerWindow
         public required int PageCount { get; init; }
         public required PhotoFileFingerprint Fingerprint { get; init; }
         public required LinkedListNode<string> LruNode { get; init; }
+
+        /// <summary>UTC ticks of the last successful content validation; 0 = never.</summary>
+        public long FingerprintValidatedAtUtcTicks;
     }
 
     private void OnImageListScrollChanged(object sender, ScrollChangedEventArgs e)
@@ -330,8 +334,20 @@ public partial class ImageManagerWindow
 
         // This method is called from the thumbnail worker, not from a render callback.
         // Full content validation catches same-size/same-mtime replacements safely.
-        if (!PhotoFileFingerprintReader.TryRead(path, out var currentFingerprint)
-            || !entry.Fingerprint.Matches(currentFingerprint))
+        // Re-validation carries a short TTL: rapid scroll-back over the same visible
+        // batch otherwise re-reads and re-hashes every original file on each pass,
+        // which is severe IO/CPU amplification on USB/network media. Reuse inside the
+        // window still revalidates on the next pass beyond it.
+        var validatedAtUtcTicks = Volatile.Read(ref entry.FingerprintValidatedAtUtcTicks);
+        var isRecentlyValidated =
+            validatedAtUtcTicks != 0
+            && (ulong)(DateTime.UtcNow.Ticks - validatedAtUtcTicks) <= (ulong)FingerprintRevalidationTtlTicks;
+        if (isRecentlyValidated || PhotoFileFingerprintReader.TryRead(path, out var currentFingerprint)
+            && entry.Fingerprint.Matches(currentFingerprint))
+        {
+            Volatile.Write(ref entry.FingerprintValidatedAtUtcTicks, DateTime.UtcNow.Ticks);
+        }
+        else
         {
             lock (_thumbnailCacheLock)
             {
@@ -389,7 +405,8 @@ public partial class ImageManagerWindow
                 Thumbnail = thumbnail,
                 PageCount = pageCount,
                 Fingerprint = fingerprint,
-                LruNode = node
+                LruNode = node,
+                FingerprintValidatedAtUtcTicks = DateTime.UtcNow.Ticks
             };
 
             while (_thumbnailCache.Count > ThumbnailCacheCapacity)

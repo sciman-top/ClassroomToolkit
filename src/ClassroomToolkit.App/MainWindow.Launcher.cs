@@ -243,6 +243,14 @@ public partial class MainWindow
 
     private void EnsureWithinWorkArea()
     {
+        // 多显示器下保存的坐标可能落在副屏：只要窗口仍与虚拟屏（任意显示器）相交
+        // 就保留原位，不用主屏工作区钳制（会把副屏位置拉回主屏，且 SaveLauncherSettings
+        // 随即把钳制值回写，原始位置永久丢失）。完全脱离虚拟屏（显示器被拔）才拉回。
+        if (WindowPlacementHelper.IntersectsWithVirtualScreen(Left, Top, Width, Height))
+        {
+            return;
+        }
+
         var resolvedPosition = LauncherRuntimePolicies.ResolveLauncherWorkAreaClamp(
             Left,
             Top,

@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -31,7 +32,18 @@ public partial class ImageManagerWindow
             return;
         }
 
+        // Items.Refresh 触发集合 Reset，自定义面板会把偏移归零；大目录里教师滚动到
+        // 中部再拖大小滑杆会被拉回顶部。刷新前记录偏移，布局完成后恢复（越界自动钳制）。
+        var scrollViewer = _imageListScrollViewer ?? FindDescendant<ScrollViewer>(ImageList);
+        var previousVerticalOffset = scrollViewer?.VerticalOffset ?? 0;
         ImageList?.Items.Refresh();
+        if (scrollViewer != null && previousVerticalOffset > 0)
+        {
+            _ = Dispatcher.InvokeAsync(
+                () => scrollViewer.ScrollToVerticalOffset(previousVerticalOffset),
+                DispatcherPriority.Loaded);
+        }
+
         QueueVisibleRegionThumbnails();
     }
 
