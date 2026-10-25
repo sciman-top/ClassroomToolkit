@@ -16,6 +16,8 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <local:InverseBooleanToVisibilityConverter x:Key="InverseBoolToVis" />
+        <local:PhotoPathToVisibilityConverter x:Key="PhotoPathToVis" />
+        <local:PhotoPathToImageSourceConverter x:Key="PhotoPathToImage" />
 
         <Style x:Key="Style_RollCallBottomBarTextButton" TargetType="Button" BasedOn="{StaticResource CTK.Button.Secondary}">
             <Setter Property="Height" Value="32"/>
@@ -185,13 +187,13 @@
                     <!-- 右侧：照片展示 -->
                     <Grid Grid.Column="1" Width="176" Height="228"
                           VerticalAlignment="Center"
-                          Visibility="{Binding CurrentStudentPhotoPath, Converter={StaticResource BoolToVis}, FallbackValue=Collapsed}">
+                          Visibility="{Binding CurrentStudentPhotoPath, Converter={StaticResource PhotoPathToVis}, FallbackValue=Collapsed}">
                         <!-- 照片容器 -->
                         <Border CornerRadius="{StaticResource Radius_Shell_WorkBottomBar}" ClipToBounds="True" Background="{DynamicResource Brush_Surface_Primary}" BorderBrush="{DynamicResource Brush_Border_Subtle}" BorderThickness="1">
                             <Border.Effect>
                                 <StaticResource ResourceKey="Shadow_Card"/>
                             </Border.Effect>
-                            <Image Source="{Binding CurrentStudentPhotoPath}" Stretch="UniformToFill"/>
+                            <Image Source="{Binding CurrentStudentPhotoPath, Converter={StaticResource PhotoPathToImage}, FallbackValue={x:Null}}" Stretch="UniformToFill"/>
                         </Border>
                         
                         <!-- 姓名覆盖 (底部渐变遮罩) -->
