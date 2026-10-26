@@ -81,6 +81,16 @@
       "expires_at": "2027-01-15",
       "recovery_plan": "Upgrade Velopack in a dedicated slice together with release packaging verification, including update bootstrap behavior on a classroom machine, before removing this waiver.",
       "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"
+    },
+    {
+      "package": "dotnet-platform-servicing",
+      "package_regex": "^(Microsoft\\.(Extensions\\..+|Data\\.Sqlite(\\.Core)?|NET\\.Test\\.Sdk|CodeCoverage|TestPlatform\\..+)|System\\.(Speech|IO\\.Packaging)|SQLite)$",
+      "owner": "engineering",
+      "status": "active",
+      "reason": ".NET 10 platform servicing drift: these packages are framework-baseline transitive dependencies resolved at 10.0.12 by SDK 10.0.303 (SQLitePCLRaw 3.53.4), while NuGet published 10.0.14 / MTP 18.11 in late October 2026. They are not referenced by any csproj; upgrading them out of the SDK band requires the dedicated .NET 10 servicing-band slice. Re-reviewed 2026-10-26.",
+      "expires_at": "2027-01-15",
+      "recovery_plan": "Upgrade together with the next .NET SDK servicing band (10.0.3xx+ shipping runtime 10.0.14) in the release-prep slice, then narrow this regex or remove it once resolved versions match the SDK baseline again.",
+      "evidence_link": "docs/dependency-baseline.md"
     }
   ]
 }

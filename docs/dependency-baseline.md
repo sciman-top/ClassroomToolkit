@@ -4,10 +4,13 @@
 
 验证入口更新：2026-10-07
 
+Servicing 漂移复核：2026-10-26
+
 ## 当前事实
 
 - 目标框架：生产核心 `net10.0`，Interop/Services `net10.0-windows`，WPF App 与测试为 `net10.0-windows10.0.19041.0`，以编译期访问 Windows PDF API。
 - `global.json` 禁止 prerelease，但未固定 feature band；2026-08-17 记录的 SDK 为 `10.0.303`。
+- 2026-10-26：NuGet 发布 .NET 10.0.14 / MTP 18.11 / SQLitePCLRaw 3.54.1 servicing 版本，框架基线传递依赖（`Microsoft.Extensions.*`、`Microsoft.Data.Sqlite*`、`System.Speech`、`System.IO.Packaging`、`Microsoft.NET.Test.Sdk` 链）解析到 SDK 自带的 10.0.12/18.10.1，由此出现整链"过期"提示。这些包不由任何 csproj 直接引用，统一由 `dependency-outdated-waivers.json` 的 `dotnet-platform-servicing` regex waiver 覆盖，随下次 SDK servicing band 一并升级，不做逐包零散提升。
 - 所有解决方案项目都有 `packages.lock.json`；CI 使用 `dotnet restore ClassroomToolkit.sln --locked-mode`。
 - 本地开发可更新 lockfile，但依赖变化必须提交对应 lockfile，并运行 full profile。
 - 标准发布包通过 `aka.ms/dotnet/10.0` 下载当前 x64 Desktop Runtime，使用补丁中性文件名并校验微软 Authenticode 签名；当前实测版本为 `10.0.11.50000`。
