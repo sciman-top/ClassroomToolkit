@@ -281,6 +281,14 @@ public partial class PaintOverlayWindow
         bool uiThread = Dispatcher.CheckAccess();
         _pendingInkContextCheck = false;
 
+        // 隐藏的 overlay 没有可跟随的可见内容，放映全窗枚举纯属浪费；
+        // 重新显示后的首个刷新事件/tick 会恢复跟踪。
+        if (!IsVisible)
+        {
+            _perfMonitor.Add(monitorStart.Elapsed.TotalMilliseconds, uiThread);
+            return;
+        }
+
         var allowPresentation = _presentationOptions.AllowOffice || _presentationOptions.AllowWps;
         var photoOrBoardActive = PhotoWindowPolicies.IsPhotoOrBoardActive(
             photoModeActive: _photoModeActive,

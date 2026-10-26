@@ -142,6 +142,12 @@ internal static class WindowStyleExecutor
         return TryUpdateStyleBits(hwnd, ExtendedStyleIndex, setMask, clearMask, out updatedStyle);
     }
 
+    /// <summary>读取扩展样式当前位；失败（含句柄无效）返回 false，调用方自行决定兜底路径。</summary>
+    internal static bool TryGetExtendedStyleBits(IntPtr hwnd, out int currentStyle)
+    {
+        return TryGetStyleWithRetry(hwnd, ExtendedStyleIndex, out currentStyle);
+    }
+
     private static bool TryGetStyleWithRetry(IntPtr hwnd, int index, out int style)
     {
         return WindowInteropRetryExecutor.ExecuteWithValue(

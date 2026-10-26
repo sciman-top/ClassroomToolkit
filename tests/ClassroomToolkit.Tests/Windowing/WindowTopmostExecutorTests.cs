@@ -116,6 +116,84 @@ public sealed class WindowTopmostExecutorTests
         source.Should().Contain("hwnd = helper.EnsureHandle();");
     }
 
+    [Fact]
+    public void TryApplyHandleNoActivate_ShouldSkipSetWindowPos_WhenTopmostStyleAlreadyMatches()
+    {
+        var styleAdapter = new FakeStyleAdapter(topmostSet: true);
+        var topmostAdapter = new FakeTopmostAdapter((1, true, 0));
+
+        using var _ = ClassroomToolkit.App.Windowing.WindowStyleExecutor.PushInteropAdapterForTest(styleAdapter);
+        using var __ = WindowTopmostExecutor.PushInteropAdapterForTest(topmostAdapter);
+
+        var result = WindowTopmostExecutor.TryApplyHandleNoActivate(new IntPtr(1), enabled: true);
+
+        result.Should().BeTrue();
+        topmostAdapter.CallCount.Should().Be(0);
+    }
+
+    [Fact]
+    public void TryApplyHandleNoActivate_ShouldSkipSetWindowPos_WhenNoTopmostAlreadyMatches()
+    {
+        var styleAdapter = new FakeStyleAdapter(topmostSet: false);
+        var topmostAdapter = new FakeTopmostAdapter((1, true, 0));
+
+        using var _ = ClassroomToolkit.App.Windowing.WindowStyleExecutor.PushInteropAdapterForTest(styleAdapter);
+        using var __ = WindowTopmostExecutor.PushInteropAdapterForTest(topmostAdapter);
+
+        var result = WindowTopmostExecutor.TryApplyHandleNoActivate(new IntPtr(1), enabled: false);
+
+        result.Should().BeTrue();
+        topmostAdapter.CallCount.Should().Be(0);
+    }
+
+    [Fact]
+    public void TryApplyHandleNoActivate_ShouldStillApply_WhenStyleReadFails()
+    {
+        var styleAdapter = new FakeStyleAdapter(topmostSet: false, readSucceeds: false);
+        var topmostAdapter = new FakeTopmostAdapter((1, true, 0));
+
+        using var _ = ClassroomToolkit.App.Windowing.WindowStyleExecutor.PushInteropAdapterForTest(styleAdapter);
+        using var __ = WindowTopmostExecutor.PushInteropAdapterForTest(topmostAdapter);
+
+        var result = WindowTopmostExecutor.TryApplyHandleNoActivate(new IntPtr(1), enabled: true);
+
+        result.Should().BeTrue();
+        topmostAdapter.CallCount.Should().Be(1);
+    }
+
+    private sealed class FakeStyleAdapter : IWindowStyleInteropAdapter
+    {
+        private readonly bool _readSucceeds;
+
+        public FakeStyleAdapter(bool topmostSet, bool readSucceeds = true)
+        {
+            _readSucceeds = readSucceeds;
+            TopmostSet = topmostSet;
+        }
+
+        private bool TopmostSet { get; }
+
+        public bool TryGetWindowLong(IntPtr hwnd, int index, out int style, out int errorCode)
+        {
+            if (!_readSucceeds)
+            {
+                style = 0;
+                errorCode = 1400;
+                return false;
+            }
+
+            style = TopmostSet ? 0x00000008 : 0;
+            errorCode = 0;
+            return true;
+        }
+
+        public bool TrySetWindowLong(IntPtr hwnd, int index, int value, out int errorCode)
+        {
+            errorCode = 0;
+            return true;
+        }
+    }
+
     private sealed class FakeTopmostAdapter : IWindowTopmostInteropAdapter
     {
         private readonly (int Seq, bool Success, int Error)[] _steps;

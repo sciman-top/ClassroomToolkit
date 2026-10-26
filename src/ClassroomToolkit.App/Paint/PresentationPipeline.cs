@@ -212,9 +212,14 @@ internal static class PresentationRuntimeDefaults
 /// </summary>
 internal sealed class PresentationTargetSessionBinding
 {
+    // 全扫返回空后的冷却：放映轮询在没有可接管目标时（多数课堂时段）不必每 tick 都
+    // EnumWindows 全窗枚举；冷却由失效信号重置，保证刚启动的放映仍会被及时接管。
+    internal static readonly TimeSpan EmptyResultRescanCooldown = TimeSpan.FromMilliseconds(2000);
+
     private readonly object _sync = new();
     private PresentationTarget _wpsTarget = PresentationTarget.Empty;
     private PresentationTarget _officeTarget = PresentationTarget.Empty;
+    private DateTime _emptyResultCooldownUntilUtc = PresentationRuntimeDefaults.UnsetTimestampUtc;
 
     internal PresentationTarget Resolve(
         PresentationType type,
@@ -239,14 +244,22 @@ internal sealed class PresentationTargetSessionBinding
             }
 
             Set(type, PresentationTarget.Empty);
+            if (IsInEmptyResultCooldown()
+                && (preferredTarget == null || !preferredTarget.IsValid))
+            {
+                return PresentationTarget.Empty;
+            }
+
             var candidate = preferredTarget?.IsValid == true && isAdmitted(preferredTarget)
                 ? preferredTarget
                 : resolveCandidate();
             if (!candidate.IsValid || !isAdmitted(candidate))
             {
+                ArmEmptyResultCooldown();
                 return PresentationTarget.Empty;
             }
 
+            ClearEmptyResultCooldown();
             Set(type, candidate);
             return candidate;
         }
@@ -257,6 +270,7 @@ internal sealed class PresentationTargetSessionBinding
         lock (_sync)
         {
             Set(type, PresentationTarget.Empty);
+            ClearEmptyResultCooldown();
         }
     }
 
@@ -276,6 +290,7 @@ internal sealed class PresentationTargetSessionBinding
             }
 
             Set(type, PresentationTarget.Empty);
+            ClearEmptyResultCooldown();
             return true;
         }
     }
@@ -286,7 +301,24 @@ internal sealed class PresentationTargetSessionBinding
         {
             _wpsTarget = PresentationTarget.Empty;
             _officeTarget = PresentationTarget.Empty;
+            ClearEmptyResultCooldown();
         }
+    }
+
+    private bool IsInEmptyResultCooldown()
+    {
+        return _emptyResultCooldownUntilUtc != PresentationRuntimeDefaults.UnsetTimestampUtc
+            && DateTime.UtcNow < _emptyResultCooldownUntilUtc;
+    }
+
+    private void ArmEmptyResultCooldown()
+    {
+        _emptyResultCooldownUntilUtc = DateTime.UtcNow.Add(EmptyResultRescanCooldown);
+    }
+
+    private void ClearEmptyResultCooldown()
+    {
+        _emptyResultCooldownUntilUtc = PresentationRuntimeDefaults.UnsetTimestampUtc;
     }
 
     private PresentationTarget Get(PresentationType type)

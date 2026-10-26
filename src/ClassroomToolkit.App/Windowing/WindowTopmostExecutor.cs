@@ -7,6 +7,9 @@ namespace ClassroomToolkit.App.Windowing;
 
 internal static class WindowTopmostExecutor
 {
+    // WS_EX_TOPMOST (winuser.h)：HWND_TOPMOST/NOTOPMOST 维护的扩展样式位。
+    private const int WsExTopmost = 0x00000008;
+
     private static readonly IWindowTopmostInteropAdapter DefaultInteropAdapter = new NativeWindowTopmostInteropAdapter();
     private static readonly AsyncLocal<IWindowTopmostInteropAdapter?> ScopedInteropAdapter = new();
 
@@ -123,6 +126,15 @@ internal static class WindowTopmostExecutor
         if (WindowDragOperationState.IsActive)
         {
             return false;
+        }
+
+        // 周期性重断言（Z 序 watchdog 等）在扩展样式已处于目标层级时免一次 SetWindowPos，
+        // 消除对已达标窗口的无变化重断言及其 WM_WINDOWPOSCHANGING 副作用；
+        // 样式读取失败按未达标继续走原路径，保持兜底语义。
+        if (WindowStyleExecutor.TryGetExtendedStyleBits(hwnd, out var currentStyle)
+            && (currentStyle & WsExTopmost) == (enabled ? WsExTopmost : 0))
+        {
+            return true;
         }
 
         return WindowInteropRetryExecutor.Execute(

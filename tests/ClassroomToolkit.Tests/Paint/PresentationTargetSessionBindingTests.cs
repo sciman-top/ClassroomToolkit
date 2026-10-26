@@ -138,6 +138,74 @@ public sealed class PresentationTargetSessionBindingTests
         fallbackCalled.Should().BeFalse();
     }
 
+    [Fact]
+    public void Resolve_ShouldServeEmptyFromCooldown_WhenNoCandidateAdmitted()
+    {
+        var binding = new PresentationTargetSessionBinding();
+        var resolveCount = 0;
+
+        binding.Resolve(
+                PresentationType.Wps,
+                () =>
+                {
+                    resolveCount++;
+                    return PresentationTarget.Empty;
+                },
+                candidate => candidate.IsValid)
+            .IsValid.Should().BeFalse();
+
+        binding.Resolve(
+                PresentationType.Wps,
+                () =>
+                {
+                    resolveCount++;
+                    return PresentationTarget.Empty;
+                },
+                candidate => candidate.IsValid)
+            .IsValid.Should().BeFalse();
+        resolveCount.Should().Be(1);
+    }
+
+    [Fact]
+    public void Invalidate_ShouldClearEmptyResultCooldown_AndRescanImmediately()
+    {
+        var binding = new PresentationTargetSessionBinding();
+        var target = BuildTarget(1000);
+        var resolveCount = 0;
+
+        binding.Resolve(PresentationType.Wps, () => { resolveCount++; return PresentationTarget.Empty; }, candidate => candidate.IsValid)
+            .IsValid.Should().BeFalse();
+
+        binding.Invalidate(PresentationType.Wps);
+        binding.Resolve(PresentationType.Wps, () => { resolveCount++; return target; }, candidate => candidate.IsValid)
+            .Should().Be(target);
+        resolveCount.Should().Be(2);
+    }
+
+    [Fact]
+    public void Resolve_ShouldBypassCooldown_WhenPreferredForegroundTargetIsProvided()
+    {
+        var binding = new PresentationTargetSessionBinding();
+        var foregroundTarget = BuildTarget(1100);
+        var resolveCount = 0;
+
+        binding.Resolve(PresentationType.Wps, () => { resolveCount++; return PresentationTarget.Empty; }, candidate => candidate.IsValid)
+            .IsValid.Should().BeFalse();
+
+        binding.Resolve(
+                PresentationType.Wps,
+                () =>
+                {
+                    resolveCount++;
+                    return PresentationTarget.Empty;
+                },
+                candidate => candidate.IsValid,
+                preferredTarget: foregroundTarget)
+            .Should().Be(foregroundTarget);
+        // 冷却被前台强信号绕过，且 preferred 已达标时本就不走全扫回退。
+        resolveCount.Should().Be(1);
+    }
+
     private static PresentationTarget BuildTarget(long hwnd)
     {
         return new PresentationTarget(
