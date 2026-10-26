@@ -268,15 +268,7 @@ public partial class PaintOverlayWindow
     }
 
     private static bool IsInkMaskEligible(Geometry geometry, double brushSize)
-    {
-        if (geometry.Bounds.IsEmpty)
-        {
-            return false;
-        }
-        var bounds = geometry.Bounds;
-        double minSize = Math.Max(brushSize * 1.0, 14.0);
-        return bounds.Width >= minSize && bounds.Height >= minSize;
-    }
+        => InkMaskPainters.IsInkMaskEligible(geometry, brushSize);
 
     private bool TryResolveInkRedrawClip(
         out Int32Rect clipPixelRect,

@@ -143,7 +143,7 @@ internal sealed class InkStrokeRenderer
         var suppressOverlays = stroke.Opacity < stroke.CalligraphyOverlayOpacityThreshold;
         var coreBrush = GetCachedSolidBrush(color);
         DrawingBrush? coreMask = null;
-        if (inkMode && IsInkMaskEligible(geometry, stroke.BrushSize))
+        if (inkMode && InkMaskPainters.IsInkMaskEligible(geometry, stroke.BrushSize))
         {
             coreMask = _opacityMaskCache.GetOrCreate(
                 geometry.Bounds,
@@ -260,17 +260,6 @@ internal sealed class InkStrokeRenderer
         return a + (b - a) * t;
     }
 
-    private static bool IsInkMaskEligible(Geometry geometry, double brushSize)
-    {
-        if (geometry.Bounds.IsEmpty)
-        {
-            return false;
-        }
-        var bounds = geometry.Bounds;
-        double minSize = Math.Max(brushSize * 1.0, 14.0);
-        return bounds.Width >= minSize && bounds.Height >= minSize;
-    }
-
     /// <summary>
     /// 单笔有效干燥度：InkFlow 基线 + 起收湿感差分（越写越干的笔画获得更强纹理变化）。
     /// 湿感字段为附加式可选；旧数据（null）保持旧行为。
@@ -329,22 +318,10 @@ internal sealed class InkStrokeRenderer
             Stretch = Stretch.None,
             Opacity = Math.Clamp(0.72 + (inkFlow * 0.28), 0.6, 1.0)
         };
-        ApplyInkTextureTransform(texture, bounds, strokeDirection, dryFactor);
+        InkMaskPainters.ApplyInkTextureTransform(texture, bounds, strokeDirection, dryFactor, angleOffsetDegrees: 0, translationJitterDip: 0);
         texture.Freeze();
 
-        var centerOpacity = Math.Clamp(0.95 + (inkFlow * 0.05), 0.85, 1.0);
-        var edgeOpacity = Math.Clamp(0.72 + (inkFlow * 0.08), 0.6, 0.9);
-        var radial = new RadialGradientBrush
-        {
-            MappingMode = BrushMappingMode.Absolute,
-            Center = new WpfPoint(bounds.X + bounds.Width * 0.5, bounds.Y + bounds.Height * 0.5),
-            GradientOrigin = new WpfPoint(bounds.X + bounds.Width * 0.48, bounds.Y + bounds.Height * 0.48),
-            RadiusX = bounds.Width * 0.55,
-            RadiusY = bounds.Height * 0.55
-        };
-        radial.GradientStops.Add(new GradientStop(MediaColor.FromScRgb((float)centerOpacity, 1, 1, 1), 0.0));
-        radial.GradientStops.Add(new GradientStop(MediaColor.FromScRgb((float)edgeOpacity, 1, 1, 1), 1.0));
-        radial.Freeze();
+        var radial = InkMaskPainters.BuildRadialFalloff(bounds, inkFlow);
 
         var group = new DrawingGroup();
         group.Children.Add(new GeometryDrawing(MediaBrushes.White, null, new RectangleGeometry(bounds)));
@@ -354,27 +331,5 @@ internal sealed class InkStrokeRenderer
         return new DrawingBrush(group) { Stretch = Stretch.None };
     }
 
-    private static void ApplyInkTextureTransform(ImageBrush brush, Rect bounds, Vector strokeDirection, double dryFactor)
-    {
-        var dir = strokeDirection;
-        if (dir.LengthSquared < 0.0001)
-        {
-            dir = new Vector(1, 0);
-        }
-        else
-        {
-            dir.Normalize();
-        }
-        double angle = Math.Atan2(dir.Y, dir.X) * 180.0 / Math.PI;
-        double centerX = bounds.X + bounds.Width * 0.5;
-        double centerY = bounds.Y + bounds.Height * 0.5;
-        double stretch = Lerp(1.3, 1.8, dryFactor);
-        double squash = Lerp(0.85, 0.6, dryFactor);
-
-        var transforms = new TransformGroup();
-        transforms.Children.Add(new ScaleTransform(stretch, squash, centerX, centerY));
-        transforms.Children.Add(new RotateTransform(angle, centerX, centerY));
-        brush.Transform = transforms;
-    }
 
 }

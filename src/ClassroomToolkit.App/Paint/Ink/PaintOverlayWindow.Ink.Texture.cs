@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using WpfPoint = System.Windows.Point;
 using ClassroomToolkit.App.Ink;
 
 namespace ClassroomToolkit.App.Paint;
@@ -66,7 +65,7 @@ public partial class PaintOverlayWindow
             Stretch = Stretch.None,
             Opacity = Math.Clamp(0.58 + (safeInkFlow * 0.22) - (wetnessDrop * 0.025), 0.48, 0.92)
         };
-        ApplyInkTextureTransform(texture, bounds, strokeDirection, dryFactor, angleOffsetDegrees: 0, translationJitterDip: 0);
+        InkMaskPainters.ApplyInkTextureTransform(texture, bounds, strokeDirection, dryFactor, angleOffsetDegrees: 0, translationJitterDip: 0);
         texture.Freeze();
 
         var detailTexture = new ImageBrush(detailTile)
@@ -78,22 +77,10 @@ public partial class PaintOverlayWindow
             Opacity = Math.Clamp(0.18 + (dryFactor * 0.14) + (wetnessDrop * 0.025), 0.12, 0.39)
         };
         double detailJitter = (Math.Abs(safeSeed) % 7) - 3;
-        ApplyInkTextureTransform(detailTexture, bounds, strokeDirection, dryFactor, angleOffsetDegrees: 90, translationJitterDip: detailJitter);
+        InkMaskPainters.ApplyInkTextureTransform(detailTexture, bounds, strokeDirection, dryFactor, angleOffsetDegrees: 90, translationJitterDip: detailJitter);
         detailTexture.Freeze();
 
-        var centerOpacity = Math.Clamp(0.95 + (safeInkFlow * 0.05), 0.85, 1.0);
-        var edgeOpacity = Math.Clamp(0.72 + (safeInkFlow * 0.08), 0.6, 0.9);
-        var radial = new RadialGradientBrush
-        {
-            MappingMode = BrushMappingMode.Absolute,
-            Center = new WpfPoint(bounds.X + bounds.Width * 0.5, bounds.Y + bounds.Height * 0.5),
-            GradientOrigin = new WpfPoint(bounds.X + bounds.Width * 0.48, bounds.Y + bounds.Height * 0.48),
-            RadiusX = bounds.Width * 0.55,
-            RadiusY = bounds.Height * 0.55
-        };
-        radial.GradientStops.Add(new GradientStop(System.Windows.Media.Color.FromScRgb((float)centerOpacity, 1, 1, 1), 0.0));
-        radial.GradientStops.Add(new GradientStop(System.Windows.Media.Color.FromScRgb((float)edgeOpacity, 1, 1, 1), 1.0));
-        radial.Freeze();
+        var radial = InkMaskPainters.BuildRadialFalloff(bounds, safeInkFlow);
 
         var maskRect = new RectangleGeometry(bounds);
         if (maskRect.CanFreeze)
@@ -114,38 +101,5 @@ public partial class PaintOverlayWindow
         return mask;
     }
 
-    private static void ApplyInkTextureTransform(
-        ImageBrush brush,
-        Rect bounds,
-        Vector? strokeDirection,
-        double dryFactor,
-        double angleOffsetDegrees,
-        double translationJitterDip)
-    {
-        var dir = strokeDirection ?? new Vector(1, 0);
-        if (dir.LengthSquared < 0.0001)
-        {
-            dir = new Vector(1, 0);
-        }
-        else
-        {
-            dir.Normalize();
-        }
-
-        double angle = Math.Atan2(dir.Y, dir.X) * 180.0 / Math.PI + angleOffsetDegrees;
-        double centerX = bounds.X + bounds.Width * 0.5;
-        double centerY = bounds.Y + bounds.Height * 0.5;
-        double stretch = Lerp(1.3, 1.8, dryFactor);
-        double squash = Lerp(0.85, 0.6, dryFactor);
-
-        var transforms = new TransformGroup();
-        transforms.Children.Add(new ScaleTransform(stretch, squash, centerX, centerY));
-        transforms.Children.Add(new RotateTransform(angle, centerX, centerY));
-        if (Math.Abs(translationJitterDip) > 0.01)
-        {
-            transforms.Children.Add(new TranslateTransform(translationJitterDip, -translationJitterDip * 0.7));
-        }
-        brush.Transform = transforms;
-    }
 
 }
