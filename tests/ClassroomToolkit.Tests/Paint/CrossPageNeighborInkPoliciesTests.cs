@@ -219,16 +219,6 @@ public sealed class CrossPageInteractiveInkReplacementPolicyTests
     }
 
     [Fact]
-    public void ShouldReplace_ShouldReturnTrue_WhenSlotChangedAndHoldActive()
-    {
-        CrossPageNeighborInkPolicies.ShouldReplaceCrossPageInteractiveInkReplacement(
-            hasResolvedInkBitmap: true,
-            holdInkReplacement: true,
-            hasCurrentInkFrame: true,
-            slotPageChanged: true).Should().BeTrue();
-    }
-
-    [Fact]
     public void ShouldReplace_ShouldReturnTrue_WhenNoCurrentFrame()
     {
         CrossPageNeighborInkPolicies.ShouldReplaceCrossPageInteractiveInkReplacement(

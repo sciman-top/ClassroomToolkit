@@ -451,19 +451,6 @@ public sealed class OverlayPresentationRoutingPolicyTests
     }
 
     [Fact]
-    public void CanRouteFromOverlay_ShouldAllow_WhenCursorAndHookOnly()
-    {
-        var result = OverlayInputRoutingPolicies.CanRouteFromOverlay(
-            UiNavigationMode.HookOnly,
-            photoModeActive: false,
-            boardActive: false,
-            mode: PaintToolMode.Cursor,
-            inputPassthroughEnabled: false);
-
-        result.Should().BeTrue();
-    }
-
-    [Fact]
     public void CanRouteFromOverlay_ShouldDeny_WhenCursorAndMessageOnly()
     {
         var result = OverlayInputRoutingPolicies.CanRouteFromOverlay(

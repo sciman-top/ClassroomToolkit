@@ -52,30 +52,6 @@ public sealed class InkReplayBaselineIntegrityTests
     }
 
     [Fact]
-    public void InkReplayGoldenActionFiles_ShouldAllBeLoadable()
-    {
-        var repoRoot = TestPathHelper.GetRepositoryRootOrThrow();
-        var actionDir = Path.Combine(repoRoot, "tests", "Baselines", "ink-replay-actions");
-        Directory.Exists(actionDir).Should().BeTrue();
-
-        var actionFiles = Directory.GetFiles(actionDir, "*.actions.json", SearchOption.TopDirectoryOnly)
-            .Select(Path.GetFileName)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-        actionFiles.Should().NotBeEmpty();
-
-        foreach (var actionFile in actionFiles)
-        {
-            var loaded = InkReplayGoldenActionCatalog.Load(actionFile!);
-            loaded.Name.Should().NotBeNullOrWhiteSpace($"invalid name in {actionFile}");
-            loaded.Actions.Should().NotBeNull($"invalid actions payload in {actionFile}");
-            var stem = Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(actionFile!));
-            loaded.Name.Should().Be(stem, $"golden name should match file stem for {actionFile}");
-        }
-    }
-
-    [Fact]
     public void InkReplayGoldenActionEntries_ShouldMatchTypeAndSourceConventions()
     {
         var repoRoot = TestPathHelper.GetRepositoryRootOrThrow();

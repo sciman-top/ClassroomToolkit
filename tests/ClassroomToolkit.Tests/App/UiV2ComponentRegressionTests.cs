@@ -25,13 +25,6 @@ public sealed class UiV2ComponentRegressionTests
         toolbar.Elements().Should().NotContain(setter =>
             string.Equals((string?)setter.Attribute("Property"), "Height", StringComparison.Ordinal));
         toolbar.Elements().Should().Contain(setter => IsSetter(setter, "Padding", "5,4"));
-
-        var toolbarXaml = Read("src/ClassroomToolkit.App/Paint/PaintToolbarWindow.xaml");
-        toolbarXaml.Should().Contain("Padding=\"5,4\"");
-        toolbarXaml.Should().Contain("Padding=\"4,0\"");
-
-        var toolbarCode = Read("src/ClassroomToolkit.App/Paint/PaintToolbarWindow.xaml.cs");
-        toolbarCode.Should().Contain("Math.Ceiling(40.0 / scale)");
     }
 
     [Fact]

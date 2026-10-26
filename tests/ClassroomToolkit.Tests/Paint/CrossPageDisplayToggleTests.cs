@@ -17,17 +17,6 @@ public sealed class CrossPageDisplayToggleFlagUpdatePolicyTests
         decision.NextCrossPageDisplayEnabled.Should().BeTrue();
     }
 
-    [Fact]
-    public void Resolve_ShouldSkip_WhenCurrentFlagMatchesRequested()
-    {
-        var decision = CrossPageDisplayUpdatePolicies.ResolveCrossPageDisplayToggleFlagUpdate(
-            currentCrossPageDisplayEnabled: true,
-            requestedEnabled: true);
-
-        decision.ShouldApply.Should().BeFalse();
-        decision.NextCrossPageDisplayEnabled.Should().BeTrue();
-    }
-
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

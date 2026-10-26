@@ -1,53 +1,52 @@
-using ClassroomToolkit.App.Windowing;
 using AwesomeAssertions;
-using Xunit;
+using ClassroomToolkit.App.Windowing;
 
-namespace ClassroomToolkit.Tests.App;
+namespace ClassroomToolkit.Tests.Windowing;
 
 public sealed class SafeActionExecutionExecutorTests
 {
     [Fact]
-    public void TryExecute_ShouldReturnTrue_WhenActionSucceeds()
+    public void TryExecute_ShouldRunActionAndReturnTrue_OnSuccess()
     {
-        var invoked = false;
+        var executed = false;
 
-        var result = SafeActionExecutionExecutor.TryExecute(() => invoked = true);
+        var result = SafeActionExecutionExecutor.TryExecute(() => executed = true);
 
         result.Should().BeTrue();
-        invoked.Should().BeTrue();
+        executed.Should().BeTrue();
     }
 
     [Fact]
-    public void TryExecute_ShouldReturnFalseAndInvokeFailure_WhenActionThrows()
+    public void TryExecute_ShouldReturnFalseAndReportFailure_OnNonFatalException()
     {
-        var captured = default(Exception);
+        Exception? reported = null;
+        var failure = new InvalidOperationException("callback-failed");
 
         var result = SafeActionExecutionExecutor.TryExecute(
-            () => throw new InvalidOperationException("boom"),
-            ex => captured = ex);
+            () => throw failure,
+            ex => reported = ex);
 
         result.Should().BeFalse();
-        captured.Should().BeOfType<InvalidOperationException>();
-        captured!.Message.Should().Be("boom");
+        reported.Should().BeSameAs(failure);
     }
 
     [Fact]
-    public void TryExecute_ShouldSwallowFailureCallbackException()
+    public void TryExecute_ShouldSwallowFailureHandlerExceptions()
     {
         var result = SafeActionExecutionExecutor.TryExecute(
-            () => throw new InvalidOperationException("boom"),
-            _ => throw new ApplicationException("callback-failed"));
+            () => throw new InvalidOperationException("callback-failed"),
+            _ => throw new InvalidOperationException("handler-also-failed"));
 
         result.Should().BeFalse();
     }
 
     [Fact]
-    public void TryExecute_ShouldRethrowFatalException_WhenActionThrowsFatal()
+    public void TryExecute_ShouldPropagateFatalException()
     {
         var act = () => SafeActionExecutionExecutor.TryExecute(
-            () => throw new BadImageFormatException("fatal"));
+            () => throw new AccessViolationException());
 
-        act.Should().Throw<BadImageFormatException>();
+        act.Should().ThrowExactly<AccessViolationException>();
     }
 
     [Fact]
@@ -61,6 +60,14 @@ public sealed class SafeActionExecutionExecutorTests
     }
 
     [Fact]
+    public void TryExecute_ShouldThrowArgumentNullException_WhenActionIsNull()
+    {
+        var act = () => SafeActionExecutionExecutor.TryExecute(null!);
+
+        act.Should().ThrowExactly<ArgumentNullException>();
+    }
+
+    [Fact]
     public void TryExecuteOfT_ShouldReturnValue_WhenFuncSucceeds()
     {
         var result = SafeActionExecutionExecutor.TryExecute(() => 42, fallback: -1);
@@ -69,17 +76,17 @@ public sealed class SafeActionExecutionExecutorTests
     }
 
     [Fact]
-    public void TryExecuteOfT_ShouldReturnFallbackAndInvokeFailure_WhenFuncThrows()
+    public void TryExecuteOfT_ShouldReturnFallback_OnNonFatalException()
     {
-        var captured = default(Exception);
+        Exception? reported = null;
 
         var result = SafeActionExecutionExecutor.TryExecute(
-            () => throw new InvalidOperationException("boom"),
-            fallback: -1,
-            onFailure: ex => captured = ex);
+            () => throw new InvalidOperationException("callback-failed"),
+            fallback: 42,
+            onFailure: ex => reported = ex);
 
-        result.Should().Be(-1);
-        captured.Should().BeOfType<InvalidOperationException>();
+        result.Should().Be(42);
+        reported.Should().NotBeNull();
     }
 
     [Fact]
