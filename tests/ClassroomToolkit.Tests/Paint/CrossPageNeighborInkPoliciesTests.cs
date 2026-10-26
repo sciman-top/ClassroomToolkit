@@ -918,6 +918,16 @@ public sealed class CrossPageNeighborInkPolicyTests
             .Should()
             .BeFalse();
     }
+
+    [Fact]
+    public void ShouldKeepExistingInkFrame_ShouldReturnFalse_WhenNoExistingFrame()
+    {
+        CrossPageNeighborInkPolicies.ShouldKeepExistingInkFrame(
+                slotPageChanged: false,
+                hasExistingInkFrame: false)
+            .Should()
+            .BeFalse();
+    }
 }
 
 public sealed class CrossPageNeighborInkRenderAdmissionPolicyTests

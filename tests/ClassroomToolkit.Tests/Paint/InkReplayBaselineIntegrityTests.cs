@@ -30,6 +30,28 @@ public sealed class InkReplayBaselineIntegrityTests
     }
 
     [Fact]
+    public void InkReplayGoldenRecipes_ShouldCoverEveryBaselineActionFile()
+    {
+        var repoRoot = TestPathHelper.GetRepositoryRootOrThrow();
+        var actionDir = Path.Combine(repoRoot, "tests", "Baselines", "ink-replay-actions");
+        Directory.Exists(actionDir).Should().BeTrue();
+
+        var baselineFiles = Directory.GetFiles(actionDir, "*.actions.json", SearchOption.TopDirectoryOnly)
+            .Select(Path.GetFileName)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        baselineFiles.Should().NotBeEmpty();
+
+        var recipeFileNames = InkReplayGoldenRecipeCatalog.GetAll()
+            .Select(recipe => recipe.FileName)
+            .ToArray();
+        recipeFileNames.Should().BeEquivalentTo(
+            baselineFiles,
+            "every golden baseline should have a snapshot generation recipe");
+    }
+
+    [Fact]
     public void InkReplayGoldenActionFiles_ShouldAllBeLoadable()
     {
         var repoRoot = TestPathHelper.GetRepositoryRootOrThrow();

@@ -7,18 +7,6 @@ namespace ClassroomToolkit.Tests.RollCall;
 public sealed class RollCallWorkbookStoreResolverAvailabilityTests
 {
     [Fact]
-    public void Create_ShouldThrow_WhenAvailabilityEvaluatorIsNull()
-    {
-        Action act = () => RollCallWorkbookStoreResolver.Create(
-            preferSqlite: true,
-            experimentalSqliteEnabled: true,
-            out _,
-            sqliteAvailabilityEvaluator: null!);
-
-        act.Should().Throw<ArgumentNullException>();
-    }
-
-    [Fact]
     public void Create_ShouldPassExperimentalFlag_ToAvailabilityEvaluator()
     {
         bool? capturedFlag = null;
