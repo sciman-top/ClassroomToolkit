@@ -48,23 +48,6 @@ internal sealed class InkDirtyPageCoordinator
         }
     }
 
-    internal void MarkPersisted(string sourcePath, int pageIndex, string hash)
-    {
-        if (string.IsNullOrWhiteSpace(sourcePath) || pageIndex <= 0)
-        {
-            return;
-        }
-
-        lock (_stateGate)
-        {
-            var state = GetOrCreate(sourcePath, pageIndex);
-            state.Loaded = true;
-            state.Dirty = false;
-            state.LastKnownHash = hash;
-            state.LastSavedHash = hash;
-        }
-    }
-
     internal bool MarkPersistedIfUnchanged(string sourcePath, int pageIndex, string hash)
     {
         if (string.IsNullOrWhiteSpace(sourcePath) || pageIndex <= 0)

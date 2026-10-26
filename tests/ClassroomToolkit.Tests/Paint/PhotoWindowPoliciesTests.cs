@@ -298,17 +298,6 @@ public sealed class PhotoTouchInteractionPolicyTests
     }
 
     [Theory]
-    [InlineData(1, false)]
-    [InlineData(2, true)]
-    [InlineData(3, true)]
-    public void ShouldUseManipulationZoom_ShouldRequireTwoTouches(
-        int activeTouchCount,
-        bool expected)
-    {
-        PhotoWindowPolicies.ShouldUseManipulationZoom(activeTouchCount).Should().Be(expected);
-    }
-
-    [Theory]
     [InlineData(TabletDeviceType.Touch, true)]
     [InlineData(TabletDeviceType.Stylus, false)]
     public void ShouldIgnorePromotedTouchStylus_ShouldMatchExpected(

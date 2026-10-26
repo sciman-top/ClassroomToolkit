@@ -7,11 +7,6 @@ namespace ClassroomToolkit.App.Paint;
 
 public partial class PaintOverlayWindow
 {
-    public void SetBrushOpacity(byte opacity)
-    {
-        _brushOpacity = opacity;
-    }
-
     public void SetCalligraphyOptions(bool inkBloomEnabled, bool sealEnabled)
     {
         _calligraphyInkBloomEnabled = inkBloomEnabled;

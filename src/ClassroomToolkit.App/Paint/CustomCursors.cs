@@ -110,15 +110,6 @@ internal static class CustomCursors
             // Ignore cleanup failures; process-exit sweep will retry.
         }
     }
-
-    /// <summary>
-    /// 橡皮擦光标（兼容旧调用）
-    /// </summary>
-    public static WpfCursor Eraser
-    {
-        get => GetEraserCursor(24.0);
-    }
-
     /// <summary>
     /// 橡皮擦光标（包含可擦除范围圈）
     /// </summary>

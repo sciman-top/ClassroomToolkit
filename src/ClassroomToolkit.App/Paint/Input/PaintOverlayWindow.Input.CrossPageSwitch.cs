@@ -285,11 +285,6 @@ public partial class PaintOverlayWindow
             hideEraserPreviewWhenBlocked);
     }
 
-    public bool CanRoutePresentationInput()
-    {
-        return CanRoutePresentationInputFromOverlay();
-    }
-
     public bool CanRoutePresentationInputFromAuxWindow()
     {
         var interactionState = CaptureInputInteractionState();

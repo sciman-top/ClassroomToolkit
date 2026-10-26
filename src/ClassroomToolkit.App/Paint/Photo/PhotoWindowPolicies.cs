@@ -236,11 +236,6 @@ internal static class PhotoWindowPolicies
         return activeTouchCount >= 1;
     }
 
-    internal static bool ShouldUseManipulationZoom(int activeTouchCount)
-    {
-        return activeTouchCount >= 2;
-    }
-
     internal static bool ShouldIgnorePromotedTouchStylus(TabletDeviceType tabletDeviceType)
     {
         return tabletDeviceType == TabletDeviceType.Touch;

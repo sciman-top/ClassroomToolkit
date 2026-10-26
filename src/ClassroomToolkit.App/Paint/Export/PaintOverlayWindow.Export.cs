@@ -47,45 +47,6 @@ public partial class PaintOverlayWindow
         System.Diagnostics.Debug.WriteLine($"[InkPersist] Loaded {strokes.Count} strokes from sidecar for page {_currentPageIndex}");
         return true;
     }
-
-    /// <summary>
-    /// Check whether sidecar ink exists for the given file and prompt user.
-    /// Returns true if user chose to load ink.
-    /// </summary>
-    internal bool PromptAndLoadSidecarInk(string filePath)
-    {
-        if (_inkPersistence == null || !_inkPersistence.HasInkForFile(filePath))
-        {
-            return false;
-        }
-
-        var result = ShowExportConfirmationSafe(
-            "prompt-load-sidecar-ink",
-            "检测到该文件有笔迹，是否加载？",
-            "加载笔迹",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-
-        if (result != MessageBoxResult.Yes)
-        {
-            return false;
-        }
-
-        return SafeActionExecutionExecutor.TryExecute(
-            () =>
-            {
-                var pageIndex = _photoDocumentIsPdf ? _currentPageIndex : 1;
-                if (TryLoadSidecarPageInkToCache(filePath, pageIndex, out var currentPageStrokes, allowWhenSaveDisabled: true))
-                {
-                    ApplyInkStrokes(currentPageStrokes);
-                }
-
-                return true;
-            },
-            fallback: false,
-            onFailure: ex => System.Diagnostics.Debug.WriteLine($"[InkPersist] PromptAndLoad failed: {ex.Message}"));
-    }
-
     /// <summary>
     /// Handler for the export button click on both sidebars.
     /// </summary>

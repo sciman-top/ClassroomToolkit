@@ -85,15 +85,4 @@ internal sealed class PaintModeManager
         // 点名窗口：只有在绘图模式且正在绘图时才穿透
         return _isPaintMode && _isDrawing;
     }
-
-    /// <summary>
-    /// 判断工具条窗口是否应该允许穿透
-    /// 工具条窗口的穿透策略：只有在正在绘图时才穿透
-    /// </summary>
-    /// <returns>true 表示应该穿透，false 表示不穿透</returns>
-    public bool ShouldToolbarAllowTransparency()
-    {
-        // 只有在正在绘图时才穿透
-        return _isPaintMode && _isDrawing;
-    }
 }

@@ -13,12 +13,8 @@ public static class LongPressBehavior
             typeof(LongPressBehavior),
             new PropertyMetadata(null, OnCommandChanged));
 
-    public static readonly DependencyProperty DurationProperty =
-        DependencyProperty.RegisterAttached(
-            "Duration",
-            typeof(int),
-            typeof(LongPressBehavior),
-            new PropertyMetadata(700));
+    // 无外部设值路径（SetDuration 已删），长按时长退化为编译期常量。
+    internal const int DefaultDurationMs = 700;
 
     private static readonly DependencyProperty TimerProperty =
         DependencyProperty.RegisterAttached(
@@ -58,18 +54,6 @@ public static class LongPressBehavior
     {
         ArgumentNullException.ThrowIfNull(element);
         return element.GetValue(CommandProperty) as ICommand;
-    }
-
-    public static void SetDuration(DependencyObject element, int value)
-    {
-        ArgumentNullException.ThrowIfNull(element);
-        element.SetValue(DurationProperty, value);
-    }
-
-    public static int GetDuration(DependencyObject element)
-    {
-        ArgumentNullException.ThrowIfNull(element);
-        return (int)element.GetValue(DurationProperty);
     }
 
     private static void OnCommandChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -207,7 +191,7 @@ public static class LongPressBehavior
     {
         StopPressTimer(element);
         element.SetValue(TriggeredProperty, false);
-        var duration = Math.Max(100, GetDuration(element));
+        var duration = Math.Max(100, DefaultDurationMs);
         var timer = new DispatcherTimer
         {
             Interval = TimeSpan.FromMilliseconds(duration)

@@ -232,18 +232,6 @@ public partial class PaintOverlayWindow
                || _activeShape != null;
     }
 
-    private void CancelPendingTriangleDraft(string reason)
-    {
-        if (!HasPendingTriangleDraft())
-        {
-            return;
-        }
-
-        Debug.WriteLine($"[TriangleDraft] canceled: {reason}");
-        ClearShapePreview();
-        DiscardActiveInkOperationHistory();
-    }
-
     private bool HasPendingShapeDraft()
     {
         return _activeShape != null

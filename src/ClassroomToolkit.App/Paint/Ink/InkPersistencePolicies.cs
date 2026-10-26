@@ -326,14 +326,6 @@ internal sealed class InkRuntimeDiagnostics
         }
     }
 
-    internal void OnCrossPageFirstInputEvent(long traceId, string stage, double elapsedMs, string? details = null)
-    {
-        if (!_inkRedrawTelemetryEnabled)
-        {
-            return;
-        }
-    }
-
     internal void OnCrossPageUpdateEvent(string stage, string source, string? details = null)
     {
         if (!_inkRedrawTelemetryEnabled)

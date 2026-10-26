@@ -1,4 +1,3 @@
-using System.Threading;
 using System;
 
 namespace ClassroomToolkit.App.Paint;
@@ -230,11 +229,6 @@ internal readonly record struct CrossPageDisplayUpdateRuntimeState(
 
 internal static class CrossPageDisplayUpdatePendingStateUpdater
 {
-    internal static void MarkDirectScheduled(ref CrossPageDisplayUpdateRuntimeState state)
-    {
-        MarkDirectScheduled(ref state, DateTime.UtcNow);
-    }
-
     internal static void MarkDirectScheduled(
         ref CrossPageDisplayUpdateRuntimeState state,
         DateTime nowUtc)
@@ -244,11 +238,6 @@ internal static class CrossPageDisplayUpdatePendingStateUpdater
             Pending = true,
             PendingSinceUtc = nowUtc
         };
-    }
-
-    internal static int MarkDelayedScheduled(ref CrossPageDisplayUpdateRuntimeState state)
-    {
-        return MarkDelayedScheduled(ref state, DateTime.UtcNow);
     }
 
     internal static int MarkDelayedScheduled(
@@ -280,21 +269,6 @@ internal static class CrossPageDisplayUpdatePendingStateUpdater
         return token == state.Token;
     }
 
-    internal static void MarkDirectScheduled(ref bool pending)
-    {
-        pending = true;
-    }
-
-    internal static int MarkDelayedScheduled(ref bool pending, ref int token)
-    {
-        pending = true;
-        return Interlocked.Increment(ref token);
-    }
-
-    internal static void MarkPendingCleared(ref bool pending)
-    {
-        pending = false;
-    }
 }
 
 internal enum CrossPageDisplayUpdateDispatchMode

@@ -86,17 +86,6 @@ public partial class PaintOverlayWindow
         }
     }
 
-    private void OnRightButtonMove(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-        if (!ShouldContinueMouseInput(e))
-        {
-            return;
-        }
-        var interactionState = CaptureInputInteractionState();
-        UpdatePhotoRightClickPendingByMove(e.GetPosition(OverlayRoot));
-        TryHandleMousePhotoPanMove(e, e.GetPosition(OverlayRoot), interactionState);
-    }
-
     private void OnOverlayLostMouseCapture(object sender, System.Windows.Input.MouseEventArgs e)
     {
         HandlePointerCaptureLoss("mouse-capture-lost");

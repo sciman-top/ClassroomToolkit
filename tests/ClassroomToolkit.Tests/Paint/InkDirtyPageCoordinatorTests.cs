@@ -8,19 +8,6 @@ namespace ClassroomToolkit.Tests.Paint;
 public sealed class InkDirtyPageCoordinatorTests
 {
     [Fact]
-    public void MarkModified_ThenPersisted_ShouldToggleDirtyFlag()
-    {
-        var coordinator = new InkDirtyPageCoordinator();
-        const string source = @"E:\x\a.pdf";
-
-        coordinator.MarkModified(source, 2, "h1");
-        coordinator.IsDirty(source, 2).Should().BeTrue();
-
-        coordinator.MarkPersisted(source, 2, "h2");
-        coordinator.IsDirty(source, 2).Should().BeFalse();
-    }
-
-    [Fact]
     public void MarkModified_ThenLoaded_ShouldClearDirtyFlag()
     {
         var coordinator = new InkDirtyPageCoordinator();

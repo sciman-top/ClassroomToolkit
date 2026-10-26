@@ -18,11 +18,6 @@ public partial class PaintOverlayWindow
         TryScheduleCrossPageReplayDispatch(flushPlan.DispatchTarget);
     }
 
-    private bool HasCrossPageReplayPending()
-    {
-        return CrossPageReplayPendingStateUpdater.HasPending(_crossPageReplayState);
-    }
-
     private void TryFlushCrossPageReplayAfterPointerUp()
     {
         // Pointer-up is the earliest stable point where interaction can end.

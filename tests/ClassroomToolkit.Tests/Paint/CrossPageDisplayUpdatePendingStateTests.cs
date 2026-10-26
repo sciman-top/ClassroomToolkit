@@ -77,37 +77,4 @@ public class CrossPageDisplayUpdatePendingStateUpdaterTests
         CrossPageDisplayUpdatePendingStateUpdater.IsTokenMatched(state, 3).Should().BeTrue();
         CrossPageDisplayUpdatePendingStateUpdater.IsTokenMatched(state, 2).Should().BeFalse();
     }
-
-    [Fact]
-    public void MarkDelayedScheduled_ShouldSetPendingAndIncrementToken()
-    {
-        var pending = false;
-        var token = 0;
-
-        var next = CrossPageDisplayUpdatePendingStateUpdater.MarkDelayedScheduled(ref pending, ref token);
-
-        pending.Should().BeTrue();
-        token.Should().Be(1);
-        next.Should().Be(1);
-    }
-
-    [Fact]
-    public void MarkDirectScheduled_ShouldSetPending()
-    {
-        var pending = false;
-
-        CrossPageDisplayUpdatePendingStateUpdater.MarkDirectScheduled(ref pending);
-
-        pending.Should().BeTrue();
-    }
-
-    [Fact]
-    public void MarkPendingCleared_ShouldResetPending()
-    {
-        var pending = true;
-
-        CrossPageDisplayUpdatePendingStateUpdater.MarkPendingCleared(ref pending);
-
-        pending.Should().BeFalse();
-    }
 }

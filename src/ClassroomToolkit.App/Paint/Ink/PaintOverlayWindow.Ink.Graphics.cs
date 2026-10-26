@@ -53,16 +53,6 @@ public partial class PaintOverlayWindow
             _children = new VisualCollection(this);
         }
 
-        public void AddVisual(Visual visual)
-        {
-            _children.Add(visual);
-        }
-
-        public void RemoveVisual(Visual visual)
-        {
-            _children.Remove(visual);
-        }
-
         public void Clear()
         {
             _children.Clear();

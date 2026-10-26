@@ -136,12 +136,6 @@ public partial class PaintOverlayWindow
         }
     }
 
-    public void LoadInkPage(int pageIndex)
-    {
-        _ = _inkShowEnabled;
-        // Ink history view is removed; keep for compatibility.
-    }
-
     public void UpdateCrossPageDisplayEnabled(bool enabled)
     {
         CrossPageDisplayToggleTransitionCoordinator.Apply(

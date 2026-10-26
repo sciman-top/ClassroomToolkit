@@ -104,17 +104,6 @@ public partial class PaintOverlayWindow
             _photoTranslate.Y);
     }
 
-    private Matrix GetPhotoMatrix()
-    {
-        return PhotoInkCoordinateMapper.CreateForwardMatrix(
-            _photoPageScale.ScaleX,
-            _photoPageScale.ScaleY,
-            _photoScale.ScaleX,
-            _photoScale.ScaleY,
-            _photoTranslate.X,
-            _photoTranslate.Y);
-    }
-
     private Matrix GetPhotoInverseMatrix()
     {
         if (PhotoInkCoordinateMapper.TryCreateInverseMatrix(

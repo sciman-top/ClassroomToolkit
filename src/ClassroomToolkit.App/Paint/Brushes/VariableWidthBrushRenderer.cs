@@ -769,32 +769,6 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         _lastStrokeDirection = dir;
     }
 
-    private Vector ResolvePointDirection(int index)
-    {
-        if (_points.Count == 0)
-        {
-            return new Vector(1, 0);
-        }
-
-        var current = _points[index].Position;
-        var prev = index > 0 ? _points[index - 1].Position : current;
-        var next = index < _points.Count - 1 ? _points[index + 1].Position : current;
-        var dir = next - prev;
-
-        if (dir.LengthSquared < 0.0001)
-        {
-            dir = _lastStrokeDirection;
-        }
-
-        if (dir.LengthSquared < 0.0001)
-        {
-            return new Vector(1, 0);
-        }
-
-        dir.Normalize();
-        return dir;
-    }
-
     private double ResolveEffectiveBrushAngle(BrushInputSample input)
     {
         double fallback = double.IsFinite(_config.BrushAngleDegrees)

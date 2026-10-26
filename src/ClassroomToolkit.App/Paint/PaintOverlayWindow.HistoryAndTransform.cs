@@ -210,20 +210,4 @@ public partial class PaintOverlayWindow
         }
     }
 
-    public bool TryGetPhotoUnifiedTransformState(out double scaleX, out double scaleY, out double translateX, out double translateY)
-    {
-        if (!_photoUnifiedTransformReady)
-        {
-            scaleX = PhotoTransformViewportDefaults.DefaultScale;
-            scaleY = PhotoTransformViewportDefaults.DefaultScale;
-            translateX = PhotoUnifiedTransformDefaults.DefaultTranslateDip;
-            translateY = PhotoUnifiedTransformDefaults.DefaultTranslateDip;
-            return false;
-        }
-        scaleX = PhotoUnifiedTransformDefaults.NormalizeScale(_lastPhotoScaleX);
-        scaleY = PhotoUnifiedTransformDefaults.NormalizeScale(_lastPhotoScaleY);
-        translateX = PhotoUnifiedTransformDefaults.NormalizeTranslation(_lastPhotoTranslateX);
-        translateY = PhotoUnifiedTransformDefaults.NormalizeTranslation(_lastPhotoTranslateY);
-        return true;
-    }
 }
