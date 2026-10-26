@@ -96,9 +96,11 @@ public partial class PaintOverlayWindow
 
                 var removedCount = 0;
                 var keptCount = 0;
+                // 循环内复用本次整册加载结果：LoadInkPageForFile 每页一次全文件指纹+整册克隆，
+                // N 页文档会把单次 purge 放大成 N+1 次全量读取。
                 foreach (var page in inkDoc.Pages.ToList())
                 {
-                    if (PurgePersistedInkForHiddenPageIfNeeded(sourcePath, page.PageIndex))
+                    if (PurgePersistedInkForHiddenPageFromSnapshot(sourcePath, page.PageIndex, page.Strokes))
                     {
                         removedCount++;
                     }
@@ -136,29 +138,60 @@ public partial class PaintOverlayWindow
                     return false;
                 }
 
-                if (!_inkPersistence.SaveInkForFile(sourcePath, pageIndex, new List<InkStrokeData>()))
-                {
-                    System.Diagnostics.Debug.WriteLine(
-                        $"[InkPersist] Hidden-page purge skipped because sidecar clear was not durable: source={sourcePath}, page={pageIndex}");
-                    return false;
-                }
-
-                _inkExport?.RemoveCompositeOutputsForPage(sourcePath, pageIndex);
-                MarkInkPageLoaded(sourcePath, pageIndex, Array.Empty<InkStrokeData>());
-
-                var cacheKey = BuildPhotoModeCacheKey(sourcePath, pageIndex, IsPdfFile(sourcePath));
-                if (!string.IsNullOrWhiteSpace(cacheKey))
-                {
-                    _photoCache.Remove(cacheKey);
-                    InvalidateNeighborInkCache(cacheKey);
-                }
-
-                System.Diagnostics.Debug.WriteLine($"[InkPersist] Hidden-page purge: source={sourcePath}, page={pageIndex}");
-                return true;
+                return ClearPersistedInkForHiddenPage(sourcePath, pageIndex);
             },
             fallback: false,
             onFailure: ex => System.Diagnostics.Debug.WriteLine(
                 $"[InkPersist] Hidden-page purge failed: source={sourcePath}, page={pageIndex}, error={ex.Message}"));
+    }
+
+    // 源级 purge 聚合路径：页面笔画来自调用方已持有的整册快照，免去逐页重载；
+    // 语义与单页版一致（会话内修改过或页空则不清）。
+    private bool PurgePersistedInkForHiddenPageFromSnapshot(string sourcePath, int pageIndex, List<InkStrokeData>? snapshotStrokes)
+    {
+        if (!_inkSaveEnabled || _inkShowEnabled || _inkPersistence == null || string.IsNullOrWhiteSpace(sourcePath) || pageIndex <= 0)
+        {
+            return false;
+        }
+
+        if (WasPageModifiedInSession(sourcePath, pageIndex))
+        {
+            return false;
+        }
+
+        if (snapshotStrokes == null || snapshotStrokes.Count == 0)
+        {
+            return false;
+        }
+
+        return SafeActionExecutionExecutor.TryExecute(
+            () => ClearPersistedInkForHiddenPage(sourcePath, pageIndex),
+            fallback: false,
+            onFailure: ex => System.Diagnostics.Debug.WriteLine(
+                $"[InkPersist] Hidden-page purge failed: source={sourcePath}, page={pageIndex}, error={ex.Message}"));
+    }
+
+    private bool ClearPersistedInkForHiddenPage(string sourcePath, int pageIndex)
+    {
+        if (!_inkPersistence!.SaveInkForFile(sourcePath, pageIndex, new List<InkStrokeData>()))
+        {
+            System.Diagnostics.Debug.WriteLine(
+                $"[InkPersist] Hidden-page purge skipped because sidecar clear was not durable: source={sourcePath}, page={pageIndex}");
+            return false;
+        }
+
+        _inkExport?.RemoveCompositeOutputsForPage(sourcePath, pageIndex);
+        MarkInkPageLoaded(sourcePath, pageIndex, Array.Empty<InkStrokeData>());
+
+        var cacheKey = BuildPhotoModeCacheKey(sourcePath, pageIndex, IsPdfFile(sourcePath));
+        if (!string.IsNullOrWhiteSpace(cacheKey))
+        {
+            _photoCache.Remove(cacheKey);
+            InvalidateNeighborInkCache(cacheKey);
+        }
+
+        System.Diagnostics.Debug.WriteLine($"[InkPersist] Hidden-page purge: source={sourcePath}, page={pageIndex}");
+        return true;
     }
 
     private void ApplyInkStrokes(IReadOnlyList<InkStrokeData> strokes, bool preferInteractiveFastPath = false)
