@@ -20,9 +20,7 @@ namespace ClassroomToolkit.App.Paint;
 /// </summary>
 public partial class PaintOverlayWindow
 {
-    private static readonly JsonSerializerOptions InkHistoryJsonOptions = CreateInkHistoryJsonOptions();
     private InkPersistenceService? _inkPersistence;
-    private IInkHistorySnapshotStore? _inkHistorySnapshotStore;
     private InkExportService? _inkExport;
     private InkExportOptions _inkExportOptions = new();
     private string _sessionCaptureExportDirectory = string.Empty;

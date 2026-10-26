@@ -10,7 +10,7 @@ Servicing 漂移复核：2026-10-26
 
 - 目标框架：生产核心 `net10.0`，Interop/Services `net10.0-windows`，WPF App 与测试为 `net10.0-windows10.0.19041.0`，以编译期访问 Windows PDF API。
 - `global.json` 禁止 prerelease，但未固定 feature band；2026-08-17 记录的 SDK 为 `10.0.303`。
-- 2026-10-26：NuGet 发布 .NET 10.0.14 / MTP 18.11 / SQLitePCLRaw 3.54.1 servicing 版本，框架基线传递依赖（`Microsoft.Extensions.*`、`Microsoft.Data.Sqlite*`、`System.Speech`、`System.IO.Packaging`、`Microsoft.NET.Test.Sdk` 链）解析到 SDK 自带的 10.0.12/18.10.1，由此出现整链"过期"提示。这些包不由任何 csproj 直接引用，统一由 `dependency-outdated-waivers.json` 的 `dotnet-platform-servicing` regex waiver 覆盖，随下次 SDK servicing band 一并升级，不做逐包零散提升。
+- 2026-10-26：NuGet 发布 .NET 10.0.14 / MTP 18.11 servicing 版本，框架基线传递依赖（`Microsoft.Extensions.*`、`System.Speech`、`System.IO.Packaging`、`Microsoft.NET.Test.Sdk` 链）解析到 SDK 自带的 10.0.12/18.10.1，由此出现整链"过期"提示。这些包不由任何 csproj 直接引用，统一由 `dependency-outdated-waivers.json` 的 `dotnet-platform-servicing` regex waiver 覆盖，随下次 SDK servicing band 一并升级，不做逐包零散提升。同日 `Microsoft.Data.Sqlite`/`SQLitePCLRaw.bundle_e_sqlite3` 随 SQLite 实验栈退役从 Infra 移除。
 - 所有解决方案项目都有 `packages.lock.json`；CI 使用 `dotnet restore ClassroomToolkit.sln --locked-mode`。
 - 本地开发可更新 lockfile，但依赖变化必须提交对应 lockfile，并运行 full profile。
 - 标准发布包通过 `aka.ms/dotnet/10.0` 下载当前 x64 Desktop Runtime，使用补丁中性文件名并校验微软 Authenticode 签名；当前实测版本为 `10.0.11.50000`。
@@ -18,11 +18,11 @@ Servicing 漂移复核：2026-10-26
 生产直接依赖按职责保留：
 
 - App：Microsoft DI/Logging、System.Speech；PDF 渲染使用 Windows 随系统提供的 `Windows.Data.Pdf`，不再携带第三方 PDF NuGet/native runtime。
-- Infra：ClosedXML、OpenXML/Fonts/Packaging 补丁版本固定、Microsoft.Data.Sqlite/SQLitePCL、Logging。
+- Infra：ClosedXML、OpenXML/Fonts/Packaging 补丁版本固定、Logging。
 - Services：System.Speech。
 - Domain、Application、Interop：无第三方包。
 
-测试项目只直接引用测试框架、覆盖率和其源码真正使用的 ClosedXML；生产项目已提供的包不再在测试项目重复固定。未使用的 `SourceGear.sqlite3` native SQLite 实现已删除，SQLite 统一由 `Microsoft.Data.Sqlite + SQLitePCLRaw.bundle_e_sqlite3` 提供。
+测试项目只直接引用测试框架、覆盖率和其源码真正使用的 ClosedXML；生产项目已提供的包不再在测试项目重复固定。`SourceGear.sqlite3` 与 2026-10-26 退役的 `Microsoft.Data.Sqlite + SQLitePCLRaw.bundle_e_sqlite3` SQLite 实现均已删除。
 
 ## 验证
 

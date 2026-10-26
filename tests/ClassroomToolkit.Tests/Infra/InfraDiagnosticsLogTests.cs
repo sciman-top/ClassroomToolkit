@@ -42,7 +42,7 @@ public sealed class InfraDiagnosticsLogTests
     public void Write_ShouldNotThrow_WhenSinkUnset()
     {
         InfraDiagnosticsLog.SetSink(null);
-        var act = () => InfraDiagnosticsLog.Write("[StudentWorkbookSqlite] snapshot write failed");
+        var act = () => InfraDiagnosticsLog.Write("[InfraDiagnostics] sample write");
 
         act.Should().NotThrow();
     }

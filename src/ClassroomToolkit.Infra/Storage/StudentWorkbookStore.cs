@@ -14,7 +14,7 @@ public sealed record StudentWorkbookLoadResult(
     string? RollStateJson,
     bool OverwriteBlocked = false);
 
-/// <summary>工作簿拒绝覆盖（此前读取失败或加载后被外部修改）；SQLite 降级链路据此保留快照出路。</summary>
+/// <summary>工作簿拒绝覆盖（此前读取失败或加载后被外部修改）；调用方据此进入只读降级。</summary>
 public sealed class StudentWorkbookOverwriteRefusedException : InvalidOperationException
 {
     public StudentWorkbookOverwriteRefusedException()

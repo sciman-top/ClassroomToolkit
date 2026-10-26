@@ -324,14 +324,12 @@ internal sealed class PaintWindowFactory : IPaintWindowFactory
     private readonly InkExportService _export;
     private readonly InkExportOptions _exportOptions;
     private readonly ILogger<PaintOverlayWindow> _overlayLogger;
-    private readonly IInkHistorySnapshotStore? _inkHistorySnapshotStore;
 
     public PaintWindowFactory(
         InkPersistenceService persistence,
         InkExportService export,
         InkExportOptions exportOptions,
-        ILogger<PaintOverlayWindow> overlayLogger,
-        IInkHistorySnapshotStore? inkHistorySnapshotStore = null)
+        ILogger<PaintOverlayWindow> overlayLogger)
     {
         ArgumentNullException.ThrowIfNull(persistence);
         ArgumentNullException.ThrowIfNull(export);
@@ -342,15 +340,12 @@ internal sealed class PaintWindowFactory : IPaintWindowFactory
         _export = export;
         _exportOptions = exportOptions;
         _overlayLogger = overlayLogger;
-        _inkHistorySnapshotStore = inkHistorySnapshotStore;
     }
 
     public (PaintOverlayWindow overlay, PaintToolbarWindow toolbar) Create()
     {
         var overlay = new PaintOverlayWindow(_overlayLogger);
-        Debug.WriteLine(
-            $"[Storage] InkHistory backend selected={(_inkHistorySnapshotStore != null ? "Sqlite" : "Sidecar")}");
-        overlay.SetInkPersistenceServices(_persistence, _export, _exportOptions, _inkHistorySnapshotStore);
+        overlay.SetInkPersistenceServices(_persistence, _export, _exportOptions);
         return (overlay, new PaintToolbarWindow());
     }
 }

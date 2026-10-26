@@ -100,18 +100,8 @@ public partial class PaintOverlayWindow
         return TryLoadSidecarPageInkToCache(sourcePath, 1, out _);
     }
 
-    private static JsonSerializerOptions CreateInkHistoryJsonOptions()
-    {
-        var options = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = false
-        };
-        options.Converters.Add(new JsonStringEnumConverter());
-        return options;
-    }
 
-    private bool PersistInkHistorySnapshot(
+    private static bool PersistInkHistorySnapshot(
         string sourcePath,
         int pageIndex,
         List<InkStrokeData> strokes,
@@ -126,58 +116,15 @@ public partial class PaintOverlayWindow
             {
                 return false;
             }
-            var historyAdapter = _inkHistorySnapshotStore;
-            if (historyAdapter == null)
-            {
-                return persistence.SaveInkForFile(sourcePath, pageIndex, strokes);
-            }
-
-            var strokesJson = SerializeInkStrokes(strokes);
-            return historyAdapter.Save(sourcePath, pageIndex, strokesJson);
+            return persistence.SaveInkForFile(sourcePath, pageIndex, strokes);
         });
     }
 
-    private List<InkStrokeData> LoadInkHistorySnapshot(
+    private static List<InkStrokeData> LoadInkHistorySnapshot(
         string sourcePath,
         int pageIndex,
         InkPersistenceService persistence)
     {
-        var historyAdapter = _inkHistorySnapshotStore;
-        if (historyAdapter == null)
-        {
-            return persistence.LoadInkPageForFile(sourcePath, pageIndex) ?? new List<InkStrokeData>();
-        }
-
-        var result = historyAdapter.LoadOrCreate(sourcePath, pageIndex, writeSnapshot: _inkSaveEnabled);
-        return DeserializeInkStrokes(result.StrokesJson);
-    }
-
-    private static string? SerializeInkStrokes(List<InkStrokeData> strokes)
-    {
-        var normalizedStrokes = InkPayloadNormalizer.NormalizeStrokes(strokes);
-        if (normalizedStrokes.Count == 0)
-        {
-            return null;
-        }
-
-        return JsonSerializer.Serialize(normalizedStrokes, InkHistoryJsonOptions);
-    }
-
-    private static List<InkStrokeData> DeserializeInkStrokes(string? strokesJson)
-    {
-        if (string.IsNullOrWhiteSpace(strokesJson))
-        {
-            return new List<InkStrokeData>();
-        }
-
-        try
-        {
-            var strokes = JsonSerializer.Deserialize<List<InkStrokeData>>(strokesJson, InkHistoryJsonOptions);
-            return InkPayloadNormalizer.NormalizeStrokes(strokes);
-        }
-        catch (JsonException)
-        {
-            return new List<InkStrokeData>();
-        }
+        return persistence.LoadInkPageForFile(sourcePath, pageIndex) ?? new List<InkStrokeData>();
     }
 }

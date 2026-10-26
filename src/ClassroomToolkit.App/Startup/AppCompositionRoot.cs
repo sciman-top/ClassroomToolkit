@@ -70,16 +70,7 @@ internal static class AppCompositionRoot
 
     private static void AddRollCallFeature(IServiceCollection services)
     {
-        services.AddSingleton<IRollCallWorkbookStore>(_ =>
-        {
-            var store = RollCallWorkbookStoreResolver.Create(
-                StorageBackendFeatureFlags.PreferSqlite,
-                StorageBackendFeatureFlags.ExperimentalSqliteEnabled,
-                out var selectedBackend);
-            Debug.WriteLine(
-                $"[Storage] StudentWorkbook backend selected={selectedBackend}, preferSqlite={StorageBackendFeatureFlags.PreferSqlite}, experimentalSqlite={StorageBackendFeatureFlags.ExperimentalSqliteEnabled}");
-            return store;
-        });
+        services.AddSingleton<IRollCallWorkbookStore>(_ => new RollCallWorkbookStoreAdapter());
         services.AddSingleton<RollCallWorkbookUseCase>();
         services.AddSingleton<ClassroomToolkit.Services.Input.GlobalHookService>();
         services.AddSingleton<ClassroomToolkit.Services.Speech.SpeechService>();
@@ -138,21 +129,6 @@ internal static class AppCompositionRoot
     private static void AddSharedInkServices(IServiceCollection services)
     {
         services.AddSingleton<Ink.InkPersistenceService>();
-
-        var useInkHistorySqlite = StorageBackendFeatureFlags.PreferSqlite
-            && BusinessStorageBackendCapabilityPolicy.IsSqliteAvailable(StorageBackendFeatureFlags.ExperimentalSqliteEnabled);
-        Debug.WriteLine(
-            $"[Storage] InkHistory backend selected={(useInkHistorySqlite ? "Sqlite" : "Sidecar")}, preferSqlite={StorageBackendFeatureFlags.PreferSqlite}, experimentalSqlite={StorageBackendFeatureFlags.ExperimentalSqliteEnabled}");
-        if (useInkHistorySqlite)
-        {
-            services.AddSingleton<IInkHistorySnapshotStore>(provider =>
-            {
-                var persistence = provider.GetRequiredService<Ink.InkPersistenceService>();
-                var bridge = new Ink.InkHistoryPersistenceBridge(persistence);
-                var sqliteAdapter = new InkHistorySqliteStoreAdapter(bridge);
-                return sqliteAdapter;
-            });
-        }
 
         services.AddSingleton<Ink.InkExportOptions>();
         services.AddSingleton<Ink.InkExportService>();

@@ -1,24 +1,28 @@
 {
-  "generated_at_utc": "2026-10-26T00:13:33.5720887Z",
+  "generated_at_utc": "2026-10-26T14:55:43.7257325Z",
   "configuration": "Release",
   "scope": "src-projects",
   "analysis_level": "latest-all",
-  "diagnostics_total": 17,
+  "diagnostics_total": 48,
   "project_counts": [
     {
       "project": "ClassroomToolkit.App.csproj",
-      "count": 12
+      "count": 23
     },
     {
       "project": "ClassroomToolkit.Interop.csproj",
-      "count": 2
+      "count": 12
     },
     {
       "project": "ClassroomToolkit.Services.csproj",
-      "count": 3
+      "count": 13
     }
   ],
   "rule_counts": [
+    {
+      "rule": "CA1002",
+      "count": 15
+    },
     {
       "rule": "CA1515",
       "count": 3
@@ -29,7 +33,11 @@
     },
     {
       "rule": "CA2213",
-      "count": 1
+      "count": 2
+    },
+    {
+      "rule": "CA2227",
+      "count": 15
     },
     {
       "rule": "CA5394",
@@ -81,6 +89,13 @@
     },
     {
       "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.App/RollCall/RollCallViewModel.cs",
+      "line": 57,
+      "column": 36,
+      "rule": "CA2213"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
       "file": "src/ClassroomToolkit.App/UI/Themes/AppTheme.cs",
       "line": 3,
       "column": 13,
@@ -109,6 +124,76 @@
     },
     {
       "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 9,
+      "column": 26,
+      "rule": "CA1002"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 9,
+      "column": 26,
+      "rule": "CA2227"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 11,
+      "column": 26,
+      "rule": "CA1002"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 11,
+      "column": 26,
+      "rule": "CA2227"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 13,
+      "column": 26,
+      "rule": "CA1002"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 13,
+      "column": 26,
+      "rule": "CA2227"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 15,
+      "column": 26,
+      "rule": "CA1002"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 15,
+      "column": 26,
+      "rule": "CA2227"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 17,
+      "column": 26,
+      "rule": "CA1002"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 17,
+      "column": 26,
+      "rule": "CA2227"
+    },
+    {
+      "project": "ClassroomToolkit.App.csproj",
       "file": "src/ClassroomToolkit.Interop/Presentation/WpsSlideshowNavigationHook.Lifecycle.cs",
       "line": 79,
       "column": 23,
@@ -117,7 +202,7 @@
     {
       "project": "ClassroomToolkit.App.csproj",
       "file": "src/ClassroomToolkit.Services/Input/GlobalHookService.cs",
-      "line": 118,
+      "line": 119,
       "column": 27,
       "rule": "CA2007"
     },
@@ -127,6 +212,76 @@
       "line": 44,
       "column": 23,
       "rule": "CA2007"
+    },
+    {
+      "project": "ClassroomToolkit.Interop.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 9,
+      "column": 26,
+      "rule": "CA1002"
+    },
+    {
+      "project": "ClassroomToolkit.Interop.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 9,
+      "column": 26,
+      "rule": "CA2227"
+    },
+    {
+      "project": "ClassroomToolkit.Interop.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 11,
+      "column": 26,
+      "rule": "CA1002"
+    },
+    {
+      "project": "ClassroomToolkit.Interop.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 11,
+      "column": 26,
+      "rule": "CA2227"
+    },
+    {
+      "project": "ClassroomToolkit.Interop.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 13,
+      "column": 26,
+      "rule": "CA1002"
+    },
+    {
+      "project": "ClassroomToolkit.Interop.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 13,
+      "column": 26,
+      "rule": "CA2227"
+    },
+    {
+      "project": "ClassroomToolkit.Interop.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 15,
+      "column": 26,
+      "rule": "CA1002"
+    },
+    {
+      "project": "ClassroomToolkit.Interop.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 15,
+      "column": 26,
+      "rule": "CA2227"
+    },
+    {
+      "project": "ClassroomToolkit.Interop.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 17,
+      "column": 26,
+      "rule": "CA1002"
+    },
+    {
+      "project": "ClassroomToolkit.Interop.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 17,
+      "column": 26,
+      "rule": "CA2227"
     },
     {
       "project": "ClassroomToolkit.Interop.csproj",
@@ -141,6 +296,76 @@
       "line": 44,
       "column": 23,
       "rule": "CA2007"
+    },
+    {
+      "project": "ClassroomToolkit.Services.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 9,
+      "column": 26,
+      "rule": "CA1002"
+    },
+    {
+      "project": "ClassroomToolkit.Services.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 9,
+      "column": 26,
+      "rule": "CA2227"
+    },
+    {
+      "project": "ClassroomToolkit.Services.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 11,
+      "column": 26,
+      "rule": "CA1002"
+    },
+    {
+      "project": "ClassroomToolkit.Services.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 11,
+      "column": 26,
+      "rule": "CA2227"
+    },
+    {
+      "project": "ClassroomToolkit.Services.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 13,
+      "column": 26,
+      "rule": "CA1002"
+    },
+    {
+      "project": "ClassroomToolkit.Services.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 13,
+      "column": 26,
+      "rule": "CA2227"
+    },
+    {
+      "project": "ClassroomToolkit.Services.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 15,
+      "column": 26,
+      "rule": "CA1002"
+    },
+    {
+      "project": "ClassroomToolkit.Services.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 15,
+      "column": 26,
+      "rule": "CA2227"
+    },
+    {
+      "project": "ClassroomToolkit.Services.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 17,
+      "column": 26,
+      "rule": "CA1002"
+    },
+    {
+      "project": "ClassroomToolkit.Services.csproj",
+      "file": "src/ClassroomToolkit.Interop/Presentation/PresentationClassifierOverridesDocument.cs",
+      "line": 17,
+      "column": 26,
+      "rule": "CA2227"
     },
     {
       "project": "ClassroomToolkit.Services.csproj",
@@ -152,10 +377,10 @@
     {
       "project": "ClassroomToolkit.Services.csproj",
       "file": "src/ClassroomToolkit.Services/Input/GlobalHookService.cs",
-      "line": 118,
+      "line": 119,
       "column": 27,
       "rule": "CA2007"
     }
   ],
-  "notes": "豁免理由(2026-10-26 复核): CA2007=KeyboardHook/WpsSlideshowNavigationHook/GlobalHookService 的异步续接位于 Win32 hook 与 COM STA 路径, ConfigureAwait(false) 会破坏线程亲和性,故意不加; CA5394=InkNoiseTileCache 用 System.Random 生成墨迹噪点纹理,非安全敏感随机; CA1515=UI/Themes 三个类被 WPF XAML/DynamicResource 引用,public 为 WPF 加载要求; CA2213=RollCallViewModel._disposeCancellation 有意不释放在途异步持有的 Token(见 Dispose 内注释)。 同一共享源码文件被编译进多个项目时按项目重复计数。"
+  "notes": "豁免理由(2026-10-26 复核): CA2007=KeyboardHook/WpsSlideshowNavigationHook/GlobalHookService 的异步续接位于 Win32 hook 与 COM STA 路径, ConfigureAwait(false) 会破坏线程亲和性,故意不加; CA5394=InkNoiseTileCache 用 System.Random 生成墨迹噪点纹理,非安全敏感随机; CA1515=UI/Themes 三个类被 WPF XAML/DynamicResource 引用,public 为 WPF 加载要求; CA2213=RollCallViewModel._disposeCancellation 有意不释放在途异步持有的 Token(见 Dispose 内注释)。 同一共享源码文件被编译进多个项目时按项目重复计数。 CA1002/CA2227=PresentationClassifierOverridesDocument 序列化 DTO 的 List<T> 属性是 System.Text.Json 反序列化契约（三胞胎收敛后由 3 个 src 项目共享源码按项目重复计数，序列化字节序由契约测试钉定，改 IReadOnlyList 会破坏反序列化）； CA2213=RollCallViewModel._workbookSaveGate 与 _disposeCancellation 同理：在途保存任务仍会 Wait/Release，Dispose 故意不释放（源码 106 行注释）。2026-10-26 随 SQLite 实验栈退役批次刷新（17→48），新增项均源于基线时点落后于 bb623a6 分类器收敛与 d5f5a0a 保存门批次，非本批引入。"
 }

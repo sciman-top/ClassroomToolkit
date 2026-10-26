@@ -14,7 +14,6 @@
 
 - 课堂阻断故障：崩溃、卡死、放映控制失效、输入链路失效。
 - 高风险主链出现无法在当前批次内自愈的窗口层级 / 激活 / 焦点回归。
-- SQLite 实验开关导致主路径不稳定。
 
 ## 3. 回滚手段优先级
 
@@ -27,20 +26,10 @@
    - 高风险批次再执行：
      - `dotnet test tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj -c Release`
 
-### 3.2 次选：关闭仍然有效的实验开关
+### 3.2 （已退役）SQLite 实验开关
 
-- 业务存储：
-  - `CTOOLKIT_USE_SQLITE_BUSINESS_STORE=0`
-  - `CTOOLKIT_ENABLE_EXPERIMENTAL_SQLITE_BACKEND=0`
-说明：
-
-- 以上开关当前仍有实际作用。
-- 当前已选定并闭环的下一 SQLite 业务域是学生名册（student workbook / class roster）；该域已具备 bridge 失败时回读 SQLite snapshot 的兜底路径，回滚口径保持“先回退当前批次代码，再必要时关闭 SQLite 实验开关”不变。
-- 学生名册之后的历史向业务域 Ink 历史快照（ink stroke history snapshot，含按文档/页索引的笔迹历史）在两个实验开关同时启用后走 SQLite 与 sidecar bridge 双写仲裁、失败时兼容回读（默认关闭，主路径仍为 sidecar）；当前回滚顺序为“先回退当批代码，再按需关闭 SQLite 实验开关”，并保留 bridge/source 失败时的兼容回读。
-- 两个环境变量都默认关闭，必须同时为真且 SQLite 运行时可用才选择 SQLite adapter；由启动组合根在进程内读取。关闭后仅改变后端路由，不会清理 `.studentworkbook.sqlite3` 或 `.inkhistory.sqlite3` 数据文件。
-- 学生名册 bridge 成功时仍以 `students.xlsx` 为权威来源，SQLite 文件保存恢复快照；Ink SQLite adapter 保留 sidecar bridge，跨两侧仲裁版本，保存不完整时调用方继续保留重试状态。
-- 这些文件仍是数据恢复入口。删除 adapter/flag 前先单独完成现存文件盘点、数据权威迁移、兼容读取和可执行回滚方案。
-- 关闭后需补跑对应定向验证与全量 Debug。
+- SQLite 业务存储实验栈已于 2026-10-26 整体退役（ADR-004 裁决），`CTOOLKIT_USE_SQLITE_BUSINESS_STORE` 与 `CTOOLKIT_ENABLE_EXPERIMENTAL_SQLITE_BACKEND` 不再存在，本节不再是可用回滚手段。
+- 存储相关回滚统一走 3.1 代码回退；退役与回滚细节见 `docs/change-evidence/20261026-sqlite-experimental-stack-retirement.md`。
 
 ### 3.3 最后手段：回退到上一稳定发布标签
 

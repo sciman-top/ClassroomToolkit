@@ -390,7 +390,6 @@ if ($buildStandard) {
     Write-StandardBootstrap -Root $standardRoot -AppExeName $appExeName -RuntimeMajor $runtimeRequiredMajor -RuntimeInstallerFileName $runtimeInstallerFileName
     Write-StandardBootstrap -Root $standardApp -AppExeName $appExeName -RuntimeMajor $runtimeRequiredMajor -RuntimeInstallerFileName $runtimeInstallerFileName -AppDirectory "."
     Assert-FileExistsByName -Root $standardApp -Name "*.runtimeconfig.json"
-    Assert-FileExistsByName -Root $standardApp -Name "e_sqlite3.dll"
     Assert-FileDoesNotExistByName -Root $standardApp -Name "pdfium.dll"
     Write-FileSha256 -Root $standardRoot
 
@@ -416,7 +415,6 @@ if ($buildOffline) {
     Assert-FileExists -Path (Join-Path $offlineApp "hostfxr.dll") -Label "hostfxr.dll"
     Assert-FileExists -Path (Join-Path $offlineApp "coreclr.dll") -Label "coreclr.dll"
     Assert-FileExists -Path (Join-Path $offlineApp "vcruntime140_cor3.dll") -Label "vcruntime140_cor3.dll"
-    Assert-FileExistsByName -Root $offlineApp -Name "e_sqlite3.dll"
     Assert-FileDoesNotExistByName -Root $offlineApp -Name "pdfium.dll"
     Write-FileSha256 -Root $offlineRoot
 

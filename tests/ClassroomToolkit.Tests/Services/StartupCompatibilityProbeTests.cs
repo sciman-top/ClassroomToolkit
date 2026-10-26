@@ -59,53 +59,6 @@ public sealed class StartupCompatibilityProbeTests
     }
 
     [Fact]
-    public void TryProbeNativeLibraryLoad_ShouldReturnFalse_WhenLibraryCanBeLoaded()
-    {
-        var windowsDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-        var kernel32Path = Path.Combine(windowsDirectory, "System32", "kernel32.dll");
-
-        var failed = StartupCompatibilityProbe.TryProbeNativeLibraryLoad(kernel32Path, out var error);
-
-        failed.Should().BeFalse();
-        error.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void TryProbeNativeLibraryLoad_ShouldReturnTrue_WhenFileIsNotNativeLibrary()
-    {
-        var filePath = Path.Combine(Path.GetTempPath(), $"ctoolkit-{Guid.NewGuid():N}.txt");
-        File.WriteAllText(filePath, "not-a-native-library");
-        try
-        {
-            var failed = StartupCompatibilityProbe.TryProbeNativeLibraryLoad(filePath, out var error);
-
-            failed.Should().BeTrue();
-            error.Should().NotBeNullOrWhiteSpace();
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
-    }
-
-    [Fact]
-    public void ResolveNativeDependencyPath_ShouldFindSqliteUnderRidNativeFolder()
-    {
-        var root = TestPathHelper.CreateDirectory("startup-native");
-        var ridFolder = Path.Combine(root, "runtimes", "win-x64", "native");
-        Directory.CreateDirectory(ridFolder);
-        var sqlitePath = Path.Combine(ridFolder, "e_sqlite3.dll");
-        File.WriteAllText(sqlitePath, "placeholder");
-
-        var resolved = StartupCompatibilityProbe.ResolveNativeDependencyPath(
-            root,
-            "e_sqlite3.dll",
-            Architecture.X64);
-
-        resolved.Should().Be(sqlitePath);
-    }
-
-    [Fact]
     public void Collect_ShouldNotRequireArchivedPdfiumNativeDependency()
     {
         var report = StartupCompatibilityProbe.Collect(settingsPath: string.Empty);

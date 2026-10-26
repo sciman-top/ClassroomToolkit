@@ -13,7 +13,7 @@
 - `Domain`：纯规则与模型，不依赖外层；不承担文件系统实现。
 - `Application`：用例与外部能力 interface，只依赖 `Domain`。
 - `FileSystem`：无上层项目依赖的通用原子文件写入能力，由 Infra 与 App 的 Ink 存储共用。
-- `Infra`：配置、工作簿、SQLite、日志等 adapter，依赖 `Application/Domain/FileSystem`。`StudentWorkbookStore` 负责工作簿文件的原子写入、外部变更检测与备份；`StudentWorkbookSpreadsheetCodec` 负责 `students.xlsx` 的读取、规范化和写入格式。
+- `Infra`：配置、工作簿、日志等 adapter，依赖 `Application/Domain/FileSystem`。`StudentWorkbookStore` 负责工作簿文件的原子写入、外部变更检测与备份；`StudentWorkbookSpreadsheetCodec` 负责 `students.xlsx` 的读取、规范化和写入格式。
 - `Interop`：Win32/COM/WPS 等高风险外部接入，保持独立。
 - `Services`：Presentation、Input、Speech 等运行时 adapter，依赖 `Domain/Interop`。
 - `App`：WPF 生命周期、Session 与 Windowing；`App.xaml.cs` 与 `Startup/AppCompositionRoot.cs` 共同构成组合根，Infra 只在组合根接入；App 的 Ink sidecar 通过低层 FileSystem 共享原子写入，不依赖 Infra 实现。`Windowing` 负责系统窗口 Interop，`Paint` 仅在 Presentation seam 显式消费 Presentation Interop；`PaintPresentationRuntimeFactory` 集中装配 Paint 的 Presentation 运行时。
@@ -40,7 +40,7 @@
 | 点名 | `AddRollCallFeature` | `RollCallWindowFactory`、`RollCallViewModel`、`RollCallWorkbookUseCase` | Settings、Input/Speech、Domain 规则 |
 | 画笔与放映 | `AddPaintFeature` | `IPaintWindowOrchestrator`、`PaintWindowFactory`、`PaintPresentationRuntimeFactory` | Ink、Settings、Session、Windowing |
 | 图片管理 | `AddPhotoFeature` | `ImageManagerWindowFactory`、`ImageManagerWindowCoordinator`、`MainWindow.Photo.ImageManager.cs` | Ink、Settings、画笔照片模式、Windowing |
-| 共享墨迹能力 | `AddSharedInkServices` | `InkPersistenceService`、`InkExportService` | sidecar / 可选 SQLite bridge |
+| 共享墨迹能力 | `AddSharedInkServices` | `InkPersistenceService`、`InkExportService` | sidecar |
 | 设置、主题、日志、启动器 | `AddConfigurationAndSettings`、`AddApplicationSettings`、`AddLogging`、`AddShell` | `App`、`StartupOrchestrator`、`MainWindow` | 配置适配器与窗口协调 |
 
 新增或移除功能时，先定位对应注册组，再核对 shell 命令、事件订阅/解绑、退出顺序和持久化兼容。注册组提供依赖的集中入口；当前各功能仍静态编译在 WPF App 中，删除注册组本身不能完成整项功能移除。图片管理与画笔共用墨迹能力，删除一侧时必须保留另一侧需要的共享服务。
@@ -56,12 +56,10 @@
 - 功能边界：图片管理生命周期由 `Photos/ImageManagerWindowCoordinator` 所有。MainWindow 通过回调衔接画笔照片模式、键盘导航和 Windowing/z-order；这些是当前功能间真实交互点，行为归属分别留在 Photos、Paint 和通用 Windowing 模块。
 - 验收边界：架构契约与 DI 构造图校验覆盖依赖约束；不能证明反射/工厂内部装配、真实窗口显示、触控、COM 或课堂设备行为。课堂现场路径仍需对应环境验收。
 
-## 当前可选存储路径
+## 存储路径
 
-- `students.xlsx` 仍是名册读取成功时的权威来源。启用 SQLite 时，`StudentWorkbookSqliteStoreAdapter` 保留 SQLite 快照，以便工作簿 bridge 失败时恢复会话；不能只按“已有 SQLite 文件”判断名册迁移已完成。
-- Ink 历史启用 SQLite adapter 时仍保留 sidecar bridge；读取会仲裁两侧版本，保存要求两侧都成功。关闭 SQLite 路由会回到 sidecar 路径，不会删除现有 SQLite 文件。
-- `CTOOLKIT_USE_SQLITE_BUSINESS_STORE` 与 `CTOOLKIT_ENABLE_EXPERIMENTAL_SQLITE_BACKEND` 都必须启用且运行时 SQLite 可用，才选择 SQLite 路由；这两个进程级开关由 `Startup/StorageBackendFeatureFlags` 在组合时读取。
-- 删除 SQLite adapter、开关或快照兼容前，须先完成数据权威迁移、旧数据库处置与回滚验证；日常模块整理不得承担这项迁移。
+- `students.xlsx` 是名册读取成功时的权威来源，Ink 历史走 sidecar JSON；两者是仅有的持久化路径。
+- SQLite 业务存储实验栈已于 2026-10-26 整体退役（ADR-004 裁决，证据见 `docs/change-evidence/20261026-sqlite-experimental-stack-retirement.md`）；历史遗留 `.sqlite3` 文件为惰性孤儿，无代码读写。
 
 ## 演进顺序
 

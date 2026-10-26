@@ -69,9 +69,9 @@ public sealed class StartupCompatibilityAutoRemediationPolicyTests
             new[]
             {
                 new StartupCompatibilityIssue(
-                    "native-sqlite-missing",
-                    "missing sqlite",
-                    "reinstall package",
+                    "future-unknown-warning",
+                    "unrelated warning",
+                    "no action",
                     false)
             });
         var settings = new AppSettings

@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using Microsoft.Win32;
 using System.Runtime.InteropServices;
@@ -107,9 +106,6 @@ public static class StartupCompatibilityProbe
     };
 
     private readonly record struct PresentationProcessSnapshot(string Label, int? ProcessId);
-    private readonly record struct NativeLoadProbeResult(bool Failed, string Error);
-    private static readonly ConcurrentDictionary<string, NativeLoadProbeResult> NativeLoadProbeCache =
-        new(StringComparer.OrdinalIgnoreCase);
 
     public static StartupCompatibilityReport Collect(
         string settingsPath,
@@ -120,7 +116,6 @@ public static class StartupCompatibilityProbe
         EvaluatePlatform(issues);
         EvaluateSettingsPath(settingsPath, issues);
         EvaluateVcppRuntime(issues);
-        EvaluateNativeDependencies(issues);
         var presentationProcessTokens = BuildPresentationProcessTokens(presentationClassifierOverridesJson);
         var presentationProcesses = BuildPresentationProcessSnapshots(presentationProcessTokens);
         EvaluatePresentationPrivilegeConsistency(
@@ -192,111 +187,6 @@ public static class StartupCompatibilityProbe
         }
     }
 
-    private static void EvaluateNativeDependencies(List<StartupCompatibilityIssue> issues)
-    {
-        var baseDirectory = AppContext.BaseDirectory;
-        if (string.IsNullOrWhiteSpace(baseDirectory) || !Directory.Exists(baseDirectory))
-        {
-            return;
-        }
-
-        var sqlitePath = ResolveNativeDependencyPath(
-            baseDirectory,
-            "e_sqlite3.dll",
-            RuntimeInformation.ProcessArchitecture);
-        if (string.IsNullOrWhiteSpace(sqlitePath))
-        {
-            issues.Add(new StartupCompatibilityIssue(
-                Code: "native-sqlite-missing",
-                Message: $"缺少本地依赖：{Path.Combine(baseDirectory, "e_sqlite3.dll")}",
-                Suggestion: "请重新解压完整发布包，避免手动删减 DLL；必要时重新执行安装。",
-                IsBlocking: false));
-        }
-        else if (TryProbeNativeLibraryLoad(sqlitePath, out var sqliteLoadError))
-        {
-            issues.Add(new StartupCompatibilityIssue(
-                Code: "native-sqlite-load-failed",
-                Message: $"本地依赖加载失败：{sqlitePath}（{sqliteLoadError}）",
-                Suggestion: "请安装/修复 VC++ 运行库（x64），并确认杀毒软件未拦截本地 DLL。",
-                IsBlocking: false));
-        }
-
-    }
-
-    internal static string? ResolveNativeDependencyPath(
-        string baseDirectory,
-        string fileName,
-        Architecture processArchitecture)
-    {
-        if (string.IsNullOrWhiteSpace(baseDirectory)
-            || string.IsNullOrWhiteSpace(fileName)
-            || !Directory.Exists(baseDirectory))
-        {
-            return null;
-        }
-
-        foreach (var candidate in EnumerateNativeDependencyCandidates(baseDirectory, fileName, processArchitecture))
-        {
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        return null;
-    }
-
-    private static IEnumerable<string> EnumerateNativeDependencyCandidates(
-        string baseDirectory,
-        string fileName,
-        Architecture processArchitecture)
-    {
-        yield return Path.Combine(baseDirectory, fileName);
-
-        foreach (var runtimeId in BuildPreferredWindowsRuntimeIds(processArchitecture))
-        {
-            yield return Path.Combine(baseDirectory, "runtimes", runtimeId, "native", fileName);
-        }
-    }
-
-    private static List<string> BuildPreferredWindowsRuntimeIds(Architecture processArchitecture)
-    {
-        var runtimeIds = new List<string>();
-        void Add(string runtimeId)
-        {
-            if (!runtimeIds.Contains(runtimeId, StringComparer.OrdinalIgnoreCase))
-            {
-                runtimeIds.Add(runtimeId);
-            }
-        }
-
-        switch (processArchitecture)
-        {
-            case Architecture.X64:
-                Add("win-x64");
-                Add("win-x86");
-                break;
-            case Architecture.X86:
-                Add("win-x86");
-                Add("win-x64");
-                break;
-            case Architecture.Arm64:
-                Add("win-arm64");
-                Add("win-x64");
-                break;
-            case Architecture.Arm:
-                Add("win-arm");
-                Add("win-arm64");
-                break;
-        }
-
-        Add("win-x64");
-        Add("win-x86");
-        Add("win-arm64");
-        Add("win-arm");
-        return runtimeIds;
-    }
-
     private static void EvaluateVcppRuntime(List<StartupCompatibilityIssue> issues)
     {
         if (!TryGetVcppRuntimeVersion(out var version, out var error))
@@ -316,64 +206,6 @@ public static class StartupCompatibilityProbe
                 Message: "未检测到 Visual C++ Redistributable 2015-2022（x64）。",
                 Suggestion: "请安装/修复 VC++ 2015-2022 x64 运行库后重试。",
                 IsBlocking: false));
-        }
-    }
-
-    internal static bool TryProbeNativeLibraryLoad(string libraryPath, out string error)
-    {
-        error = string.Empty;
-        if (string.IsNullOrWhiteSpace(libraryPath))
-        {
-            error = "path-empty";
-            return true;
-        }
-
-        if (NativeLoadProbeCache.TryGetValue(libraryPath, out var cached))
-        {
-            error = cached.Error;
-            return cached.Failed;
-        }
-
-        var failed = TryProbeNativeLibraryLoadUncached(libraryPath, out error);
-        if (!failed)
-        {
-            NativeLoadProbeCache[libraryPath] = new NativeLoadProbeResult(failed, error);
-        }
-
-        return failed;
-    }
-
-    private static bool TryProbeNativeLibraryLoadUncached(string libraryPath, out string error)
-    {
-        error = string.Empty;
-        if (string.IsNullOrWhiteSpace(libraryPath))
-        {
-            error = "path-empty";
-            return true;
-        }
-
-        IntPtr handle = IntPtr.Zero;
-        try
-        {
-            if (NativeLibrary.TryLoad(libraryPath, out handle))
-            {
-                return false;
-            }
-
-            error = $"load-failed:{Marshal.GetLastPInvokeError()}";
-            return true;
-        }
-        catch (Exception ex) when (IsNonFatal(ex))
-        {
-            error = ex.Message;
-            return true;
-        }
-        finally
-        {
-            if (handle != IntPtr.Zero)
-            {
-                NativeLibrary.Free(handle);
-            }
         }
     }
 

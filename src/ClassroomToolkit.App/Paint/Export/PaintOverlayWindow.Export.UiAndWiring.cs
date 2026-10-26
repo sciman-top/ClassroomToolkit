@@ -63,14 +63,12 @@ public partial class PaintOverlayWindow
     public void SetInkPersistenceServices(
         InkPersistenceService persistence,
         InkExportService export,
-        InkExportOptions? exportOptions = null,
-        IInkHistorySnapshotStore? inkHistorySnapshotStore = null)
+        InkExportOptions? exportOptions = null)
     {
         ArgumentNullException.ThrowIfNull(persistence);
         ArgumentNullException.ThrowIfNull(export);
 
         _inkPersistence = persistence;
-        _inkHistorySnapshotStore = inkHistorySnapshotStore;
         _inkExport = export;
         if (exportOptions != null)
         {

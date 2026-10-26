@@ -186,7 +186,7 @@ src/ClassroomToolkit.App          WPF 组合根、界面视图、窗口拓扑与
 src/ClassroomToolkit.Application  应用层用例编排、端口定义与跨领域调度
 src/ClassroomToolkit.Domain       领域实体、点名算法、数据契约与不变量
 src/ClassroomToolkit.Services     运行时桥接、输入法适配、TTS 语音引擎
-src/ClassroomToolkit.Infra        工作簿编解码、配置持久化、SQLite 适配器
+src/ClassroomToolkit.Infra        工作簿编解码、配置持久化
 src/ClassroomToolkit.Interop      Win32 / COM / WPS 演示状态分类与故障降级
 tests/ClassroomToolkit.Tests      3000+ 自动化回归测试与架构依赖契约
 ```
