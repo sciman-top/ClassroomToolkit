@@ -13,6 +13,8 @@ internal sealed class ConfigurationService : IConfigurationService
     private const string SolutionFileName = "ClassroomToolkit.sln";
 
     private readonly string _defaultSettingsRoot;
+    private readonly JsonElement _appSettingsRoot;
+    private readonly bool _hasAppSettings;
 
     public ConfigurationService()
         : this(null)
@@ -23,8 +25,45 @@ internal sealed class ConfigurationService : IConfigurationService
     {
         BaseDirectory = ResolveAppRootDirectory(baseDirectory);
         _defaultSettingsRoot = ResolveDefaultSettingsRoot(baseDirectory, BaseDirectory);
+        // appsettings.json 只解析一次：SettingsIniPath 与 SettingsDocument 此前各自
+        // File.Exists+OpenRead+Parse 同一文件（每实例双解析）。
+        (_hasAppSettings, _appSettingsRoot) = TryParseAppSettingsRoot(BaseDirectory);
         SettingsIniPath = ResolveSettingsIniPath();
         (SettingsDocumentFormat, SettingsDocumentPath) = ResolveSettingsDocument();
+    }
+
+    private static (bool HasRoot, JsonElement Root) TryParseAppSettingsRoot(string baseDirectory)
+    {
+        var appSettingsPath = Path.Combine(baseDirectory, AppSettingsFileName);
+        if (!File.Exists(appSettingsPath))
+        {
+            return (false, default);
+        }
+
+        try
+        {
+            using var stream = File.OpenRead(appSettingsPath);
+            using var document = JsonDocument.Parse(stream);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return (false, default);
+            }
+
+            // Clone 脱离 document 生命周期；实例常驻进程，无需显式释放。
+            return (true, document.RootElement.Clone());
+        }
+        catch (JsonException)
+        {
+            return (false, default);
+        }
+        catch (IOException)
+        {
+            return (false, default);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return (false, default);
+        }
     }
 
     public string BaseDirectory { get; }
@@ -37,44 +76,21 @@ internal sealed class ConfigurationService : IConfigurationService
 
     private string ResolveSettingsIniPath()
     {
-        var appSettingsPath = Path.Combine(BaseDirectory, AppSettingsFileName);
-        if (!File.Exists(appSettingsPath))
+        if (!_hasAppSettings)
         {
             return GetDefaultSettingsIniPath();
         }
 
-        try
+        var root = _appSettingsRoot;
+        if (TryReadSettingPath(root, "SettingsIniPath", out var direct))
         {
-            using var stream = File.OpenRead(appSettingsPath);
-            using var document = JsonDocument.Parse(stream);
-            var root = document.RootElement;
-            if (root.ValueKind != JsonValueKind.Object)
-            {
-                return GetDefaultSettingsIniPath();
-            }
+            return direct;
+        }
 
-            if (TryReadSettingPath(root, "SettingsIniPath", out var direct))
-            {
-                return direct;
-            }
-
-            if (root.TryGetProperty("Paths", out var pathsNode)
-                && TryReadSettingPath(pathsNode, "SettingsIni", out var nested))
-            {
-                return nested;
-            }
-        }
-        catch (JsonException)
+        if (root.TryGetProperty("Paths", out var pathsNode)
+            && TryReadSettingPath(pathsNode, "SettingsIni", out var nested))
         {
-            // Fall back to default settings.ini when appsettings.json is malformed.
-        }
-        catch (IOException)
-        {
-            // Fall back to default settings.ini when appsettings.json cannot be read.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Fall back to default settings.ini when appsettings.json cannot be accessed.
+            return nested;
         }
 
         return GetDefaultSettingsIniPath();
@@ -129,71 +145,47 @@ internal sealed class ConfigurationService : IConfigurationService
 
     private (SettingsDocumentFormat format, string path) ResolveSettingsDocument()
     {
-        var appSettingsPath = Path.Combine(BaseDirectory, AppSettingsFileName);
-        if (!File.Exists(appSettingsPath))
+        if (!_hasAppSettings)
         {
             return (SettingsDocumentFormat.Json, GetDefaultSettingsJsonPath());
         }
 
-        try
+        var root = _appSettingsRoot;
+        var hasPathsNode = root.TryGetProperty("Paths", out var pathsNode);
+
+        var configuredFormat = TryReadDocumentFormat(root, "SettingsDocumentFormat")
+            ?? (hasPathsNode
+                ? TryReadDocumentFormat(pathsNode, "SettingsDocumentFormat")
+                : null);
+
+        var configuredPath = TryReadSettingPath(root, "SettingsDocumentPath", out var directPath)
+            ? directPath
+            : hasPathsNode
+                && (TryReadSettingPath(pathsNode, "SettingsDocument", out var nestedPath)
+                    || TryReadSettingPath(pathsNode, "SettingsJson", out nestedPath))
+                    ? nestedPath
+                    : string.Empty;
+
+        if (configuredFormat == null && !string.IsNullOrWhiteSpace(configuredPath))
         {
-            using var stream = File.OpenRead(appSettingsPath);
-            using var document = JsonDocument.Parse(stream);
-            var root = document.RootElement;
-            if (root.ValueKind != JsonValueKind.Object)
+            configuredFormat = Path.GetExtension(configuredPath).Equals(".json", StringComparison.OrdinalIgnoreCase)
+                ? SettingsDocumentFormat.Json
+                : SettingsDocumentFormat.Ini;
+        }
+
+        // Compatibility default: when appsettings.json exists but does not configure
+        // settings document keys, keep legacy INI document mode.
+        var format = configuredFormat ?? SettingsDocumentFormat.Ini;
+        if (string.IsNullOrWhiteSpace(configuredPath))
+        {
+            return format switch
             {
-                return (SettingsDocumentFormat.Json, GetDefaultSettingsJsonPath());
-            }
-            var hasPathsNode = root.TryGetProperty("Paths", out var pathsNode);
-
-            var configuredFormat = TryReadDocumentFormat(root, "SettingsDocumentFormat")
-                ?? (hasPathsNode
-                    ? TryReadDocumentFormat(pathsNode, "SettingsDocumentFormat")
-                    : null);
-
-            var configuredPath = TryReadSettingPath(root, "SettingsDocumentPath", out var directPath)
-                ? directPath
-                : hasPathsNode
-                    && (TryReadSettingPath(pathsNode, "SettingsDocument", out var nestedPath)
-                        || TryReadSettingPath(pathsNode, "SettingsJson", out nestedPath))
-                        ? nestedPath
-                        : string.Empty;
-
-            if (configuredFormat == null && !string.IsNullOrWhiteSpace(configuredPath))
-            {
-                configuredFormat = Path.GetExtension(configuredPath).Equals(".json", StringComparison.OrdinalIgnoreCase)
-                    ? SettingsDocumentFormat.Json
-                    : SettingsDocumentFormat.Ini;
-            }
-
-            // Compatibility default: when appsettings.json exists but does not configure
-            // settings document keys, keep legacy INI document mode.
-            var format = configuredFormat ?? SettingsDocumentFormat.Ini;
-            if (string.IsNullOrWhiteSpace(configuredPath))
-            {
-                return format switch
-                {
-                    SettingsDocumentFormat.Json => (format, GetDefaultSettingsJsonPath()),
-                    _ => (SettingsDocumentFormat.Ini, SettingsIniPath)
-                };
-            }
-
-            return (format, configuredPath);
-        }
-        catch (JsonException)
-        {
-            // Fall back to default JSON document path when appsettings.json is malformed.
-        }
-        catch (IOException)
-        {
-            // Fall back to default JSON document path when appsettings.json cannot be read.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Fall back to default JSON document path when appsettings.json cannot be accessed.
+                SettingsDocumentFormat.Json => (format, GetDefaultSettingsJsonPath()),
+                _ => (SettingsDocumentFormat.Ini, SettingsIniPath)
+            };
         }
 
-        return (SettingsDocumentFormat.Json, GetDefaultSettingsJsonPath());
+        return (format, configuredPath);
     }
 
     private static SettingsDocumentFormat? TryReadDocumentFormat(JsonElement element, string key)

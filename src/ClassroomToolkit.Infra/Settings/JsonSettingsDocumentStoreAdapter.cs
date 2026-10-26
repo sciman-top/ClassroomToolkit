@@ -114,15 +114,24 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
             Indented = true
         };
 
+        // 单次构建合并根：写盘 payload 与 _rawRoot 基线复用同一 JsonObject，
+        // 写后哈希直接对内存 payload 计算，省去一次全文档深拷贝与一次全文件读。
+        var mergedRoot = BuildMergedRoot(data);
+        byte[] payload;
+        using (var buffer = new MemoryStream())
+        {
+            using (var writer = new Utf8JsonWriter(buffer, options))
+            {
+                mergedRoot.WriteTo(writer);
+                writer.Flush();
+            }
+
+            payload = buffer.ToArray();
+        }
+
         AtomicFileReplaceUtility.WriteAtomically(
             _path,
-            tempPath =>
-            {
-                using var stream = File.Open(tempPath, FileMode.Create, FileAccess.Write, FileShare.None);
-                using var writer = new Utf8JsonWriter(stream, options);
-                BuildMergedRoot(data).WriteTo(writer);
-                writer.Flush();
-            },
+            tempPath => File.WriteAllBytes(tempPath, payload),
             onTempCleanupFailure: static (tempPath, ex) =>
             {
                 InfraDiagnosticsLog.Write(
@@ -132,8 +141,8 @@ public sealed class JsonSettingsDocumentStoreAdapter : ISettingsDocumentStore
         Interlocked.Exchange(ref _hasValidatedExistingFileState, 1);
         Interlocked.Exchange(ref _overwriteBlockedAfterLoadFailure, 0);
         Interlocked.Exchange(ref _lastValidatedWriteTimeUtcTicks, GetCurrentWriteTimeUtcTicks());
-        _lastValidatedContentHash = GetCurrentContentHash();
-        _rawRoot = BuildMergedRoot(data);
+        _lastValidatedContentHash = Convert.ToHexString(SHA256.HashData(payload));
+        _rawRoot = mergedRoot;
     }
 
     public static long OversizedSettingsRejectCount => Interlocked.Read(ref _oversizedSettingsRejectCount);
