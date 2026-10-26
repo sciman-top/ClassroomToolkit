@@ -140,33 +140,9 @@ public partial class PaintOverlayWindow
         return Fnv1a(hash, (int)value);
     }
 
-    private static uint Fnv1a(uint hash, string value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return Fnv1a(hash, 0);
-        }
+    private static uint Fnv1a(uint hash, string value) => InkSeedHash.Combine(hash, value);
 
-        unchecked
-        {
-            for (int i = 0; i < value.Length; i++)
-            {
-                hash ^= value[i];
-                hash *= 16777619u;
-            }
-        }
-        return hash;
-    }
-
-    private static uint Fnv1a(uint hash, int value)
-    {
-        unchecked
-        {
-            hash ^= (uint)value;
-            hash *= 16777619u;
-        }
-        return hash;
-    }
+    private static uint Fnv1a(uint hash, int value) => InkSeedHash.Combine(hash, value);
 
     private static int Quantize(double value, double scale)
     {

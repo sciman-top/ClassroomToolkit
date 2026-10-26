@@ -38,8 +38,6 @@ internal readonly record struct CrossPageReplayDispatchExecutionResult(
 
 internal static class CrossPageReplayDispatchCoordinator
 {
-    internal delegate bool TryBeginInvokeDelegate(Action action, DispatcherPriority priority);
-
     internal static CrossPageReplayDispatchExecutionResult Apply(
         ref CrossPageReplayRuntimeState state,
         CrossPageReplayDispatchTarget target,

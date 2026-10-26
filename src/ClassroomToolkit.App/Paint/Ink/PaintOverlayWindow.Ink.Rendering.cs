@@ -255,16 +255,7 @@ public partial class PaintOverlayWindow
         return seed == 0 ? 17 : seed;
     }
 
-    private static uint Fnv1aMask(uint hash, int value)
-    {
-        unchecked
-        {
-            hash ^= (uint)value;
-            hash *= 16777619u;
-        }
-
-        return hash;
-    }
+    private static uint Fnv1aMask(uint hash, int value) => InkSeedHash.Combine(hash, value);
 
     private static int QuantizeMask(double value, double scale)
     {

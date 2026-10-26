@@ -1126,16 +1126,7 @@ internal partial class VariableWidthBrushRenderer : IBrushRenderer
         return (Math.Abs(seed) % 100000) / 97.0;
     }
 
-    private static uint Fnv1a(uint hash, int value)
-    {
-        unchecked
-        {
-            hash ^= (uint)value;
-            hash *= 16777619u;
-        }
-
-        return hash;
-    }
+    private static uint Fnv1a(uint hash, int value) => InkSeedHash.Combine(hash, value);
 
     private static int Quantize(double value, double scale)
     {

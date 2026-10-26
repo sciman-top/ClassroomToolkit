@@ -4,6 +4,10 @@ using System;
 
 namespace ClassroomToolkit.App.Paint;
 
+internal delegate bool TryBeginInvokeDelegate(Action action, DispatcherPriority priority);
+
+internal delegate void DiagnosticsDelegate(string action, string source, string detail);
+
 internal static class CrossPageDeferredDiagnosticReason
 {
     internal const string Inactive = "inactive";
@@ -24,8 +28,6 @@ internal readonly record struct CrossPageDeferredRefreshExecutionResult(
 internal static class CrossPageDeferredRefreshCoordinator
 {
     internal delegate bool TryAcquirePostInputRefreshSlotDelegate(out long pointerUpSequence);
-    internal delegate bool TryBeginInvokeDelegate(Action action, DispatcherPriority priority);
-    internal delegate void DiagnosticsDelegate(string action, string source, string detail);
 
     internal static async Task<CrossPageDeferredRefreshExecutionResult> ScheduleAsync(
         string source,
@@ -303,9 +305,6 @@ internal readonly record struct CrossPageMissingNeighborRefreshExecutionResult(
 
 internal static class CrossPageMissingNeighborRefreshCoordinator
 {
-    internal delegate bool TryBeginInvokeDelegate(Action action, DispatcherPriority priority);
-    internal delegate void DiagnosticsDelegate(string action, string source, string detail);
-
     internal static async Task<CrossPageMissingNeighborRefreshExecutionResult> ScheduleAsync(
         int missingCount,
         bool photoModeActive,
