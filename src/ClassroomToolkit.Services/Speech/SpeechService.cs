@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Speech.Synthesis;
+using ClassroomToolkit.Domain;
 using System.Threading.Tasks;
 
 namespace ClassroomToolkit.Services.Speech;
@@ -198,15 +199,5 @@ public class SpeechService : IDisposable
         return $"[SpeechService] {operation} failed: {ex.GetType().Name} - {ex.Message}";
     }
 
-    private static bool IsNonFatal(Exception ex)
-    {
-        return ex is not (
-            OutOfMemoryException
-            or AppDomainUnloadedException
-            or BadImageFormatException
-            or CannotUnloadAppDomainException
-            or InvalidProgramException
-            or StackOverflowException
-            or AccessViolationException);
-    }
+    private static bool IsNonFatal(Exception ex) => DomainExceptionFilterPolicy.IsNonFatal(ex);
 }

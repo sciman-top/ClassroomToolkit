@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using ClassroomToolkit.Domain;
 using ClassroomToolkit.Interop.Presentation;
 using ClassroomToolkit.Services.Input;
 
@@ -302,17 +303,7 @@ public class GlobalHookService : IDisposable
         }
     }
 
-    private static bool IsNonFatal(Exception ex)
-    {
-        return ex is not (
-            OutOfMemoryException
-            or AppDomainUnloadedException
-            or BadImageFormatException
-            or CannotUnloadAppDomainException
-            or InvalidProgramException
-            or StackOverflowException
-            or AccessViolationException);
-    }
+    private static bool IsNonFatal(Exception ex) => DomainExceptionFilterPolicy.IsNonFatal(ex);
 
     private static void TryInvokeBindingCallback(Action callback)
     {

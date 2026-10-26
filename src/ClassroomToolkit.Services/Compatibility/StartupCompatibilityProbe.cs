@@ -4,6 +4,7 @@ using Microsoft.Win32;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text.Json;
+using ClassroomToolkit.Domain;
 using ClassroomToolkit.Interop.Presentation;
 
 namespace ClassroomToolkit.Services.Compatibility;
@@ -922,17 +923,7 @@ public static class StartupCompatibilityProbe
         return fallback;
     }
 
-    private static bool IsNonFatal(Exception ex)
-    {
-        return ex is not (
-            OutOfMemoryException
-            or AppDomainUnloadedException
-            or BadImageFormatException
-            or CannotUnloadAppDomainException
-            or InvalidProgramException
-            or StackOverflowException
-            or AccessViolationException);
-    }
+    private static bool IsNonFatal(Exception ex) => DomainExceptionFilterPolicy.IsNonFatal(ex);
 
     private enum TokenInformationClass
     {
