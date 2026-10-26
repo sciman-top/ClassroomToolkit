@@ -32,7 +32,7 @@
 - fixed order：`build -> test -> contract/invariant -> hotspot`。
 - build：`dotnet build ClassroomToolkit.sln -c Debug`
 - test：standard 排除墙钟性能微基准并在同一次执行内纳入下述 contract（过滤即 `Gate!=Performance`）；full 纳入性能预算；quick 仅跑高风险精选回归。
-- contract/invariant：运行标记为 `Gate=CoreContract` 的 5 组架构与 Interop 生命周期契约；quick/full 与 CI 分步执行，standard 已并入同一次测试执行。
+- contract/invariant：运行标记为 `Gate=CoreContract` 的 5 组架构与 Interop 生命周期契约；quick 与 CI 分步执行，standard/full 已并入同一次测试执行。
 - hotspot：`pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/quality/check-hotspot-line-budgets.ps1`
 - focused：低风险切片运行受影响测试与 build；不要求为普通文案、样式或局部实现重复整套门禁。
 - 全面深审与独立复审只在阶段收口（发布、依赖变化、高风险批次交付）或出现具体失败证据时启动；普通切片不默认发起全仓审计，已验证收据可直接复用。

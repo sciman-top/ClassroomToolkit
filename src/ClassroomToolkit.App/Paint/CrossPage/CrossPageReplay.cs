@@ -251,35 +251,6 @@ internal static class CrossPageReplayPendingStateUpdater
     {
         state = CrossPageReplayRuntimeState.Default;
     }
-
-    internal static void ApplyQueueDecision(
-        ref bool visualSyncReplayPending,
-        ref bool interactionReplayPending,
-        CrossPageReplayQueueDecision decision)
-    {
-        visualSyncReplayPending |= decision.QueueVisualSyncReplay;
-        interactionReplayPending |= decision.QueueInteractionReplay;
-    }
-
-    internal static void MarkDispatchFailed(
-        ref bool visualSyncReplayPending,
-        ref bool interactionReplayPending,
-        CrossPageReplayDispatchTarget target)
-    {
-        var decision = CrossPageReplayPolicies.ResolveDispatchFailure(target);
-        ApplyQueueDecision(
-            ref visualSyncReplayPending,
-            ref interactionReplayPending,
-            decision);
-    }
-
-    internal static void Reset(
-        ref bool visualSyncReplayPending,
-        ref bool interactionReplayPending)
-    {
-        visualSyncReplayPending = false;
-        interactionReplayPending = false;
-    }
 }
 
 internal static class CrossPageReplayQueueDecisionFactory

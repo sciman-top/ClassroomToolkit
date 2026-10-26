@@ -145,6 +145,12 @@ internal static class CrossPageSwitchBitmapResolver
 
 internal static class CrossPageNeighborInkPolicies
 {
+    // 邻页预取的序列边界判定（页索引从 1 起）：同步前置与异步闭包复验共用同一谓词。
+    internal static bool IsNeighborPrefetchPageOutOfRange(int pageIndex, int pathCount)
+        => pathCount == 0
+           || pageIndex < 1
+           || pageIndex > pathCount;
+
     internal static int ResolveMs(
         int visibleNeighborPages,
         PaintToolMode mode = PaintToolMode.Cursor,

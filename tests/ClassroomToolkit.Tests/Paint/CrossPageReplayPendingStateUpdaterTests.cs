@@ -108,49 +108,4 @@ public sealed class CrossPageReplayPendingStateUpdaterTests
         state.VisualSyncReplayPending.Should().BeTrue();
         state.InteractionReplayPending.Should().BeFalse();
     }
-
-    [Fact]
-    public void ApplyQueueDecision_ShouldMergeReplayFlags()
-    {
-        var visual = false;
-        var interaction = false;
-        var decision = new CrossPageReplayQueueDecision(
-            QueueVisualSyncReplay: true,
-            QueueInteractionReplay: false);
-
-        CrossPageReplayPendingStateUpdater.ApplyQueueDecision(
-            ref visual,
-            ref interaction,
-            decision);
-
-        visual.Should().BeTrue();
-        interaction.Should().BeFalse();
-    }
-
-    [Fact]
-    public void MarkDispatchFailed_ShouldSetTargetFlag()
-    {
-        var visual = false;
-        var interaction = false;
-
-        CrossPageReplayPendingStateUpdater.MarkDispatchFailed(
-            ref visual,
-            ref interaction,
-            CrossPageReplayDispatchTarget.Interaction);
-
-        visual.Should().BeFalse();
-        interaction.Should().BeTrue();
-    }
-
-    [Fact]
-    public void Reset_ShouldClearBothFlags()
-    {
-        var visual = true;
-        var interaction = true;
-
-        CrossPageReplayPendingStateUpdater.Reset(ref visual, ref interaction);
-
-        visual.Should().BeFalse();
-        interaction.Should().BeFalse();
-    }
 }

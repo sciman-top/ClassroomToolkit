@@ -25,12 +25,25 @@ public sealed class CrossPageDisplayLifecycleContractTests
     }
 
     [Fact]
-    public void ScheduleNeighborImagePrefetch_ShouldRevalidateSequenceBounds_InsideAsyncCallback()
+    public void NeighborPrefetchPageBounds_ShouldGuardSequenceAccess()
     {
+        CrossPageNeighborInkPolicies.IsNeighborPrefetchPageOutOfRange(pageIndex: 0, pathCount: 5).Should().BeTrue();
+        CrossPageNeighborInkPolicies.IsNeighborPrefetchPageOutOfRange(pageIndex: -1, pathCount: 5).Should().BeTrue();
+        CrossPageNeighborInkPolicies.IsNeighborPrefetchPageOutOfRange(pageIndex: 6, pathCount: 5).Should().BeTrue();
+        CrossPageNeighborInkPolicies.IsNeighborPrefetchPageOutOfRange(pageIndex: 1, pathCount: 0).Should().BeTrue();
+        CrossPageNeighborInkPolicies.IsNeighborPrefetchPageOutOfRange(pageIndex: 1, pathCount: 5).Should().BeFalse();
+        CrossPageNeighborInkPolicies.IsNeighborPrefetchPageOutOfRange(pageIndex: 5, pathCount: 5).Should().BeFalse();
+    }
+
+    [Fact]
+    public void ScheduleNeighborImagePrefetch_ShouldRouteBoundsChecksThroughSharedPredicate()
+    {
+        // 弱化接线断言：同步前置与异步闭包复验都必须经由共享谓词，防止复验被绕开；
+        // 不再冻结格式化文本，表达式与排版的改动不破契约。
         var source = File.ReadAllText(GetHelpersSourcePath());
 
-        source.Should().Contain("_photoSequencePaths.Count == 0 || pageIndex < 1 || pageIndex > _photoSequencePaths.Count");
-        source.Should().Contain("var path = _photoSequencePaths[pageIndex - 1];");
+        var occurrences = source.Split("IsNeighborPrefetchPageOutOfRange").Length - 1;
+        occurrences.Should().BeGreaterThanOrEqualTo(2);
     }
 
     [Fact]

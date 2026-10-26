@@ -1,46 +1,11 @@
 {
   "waivers": [
     {
-      "package": "Microsoft.ApplicationInsights",
+      "package": "MTP chain (ApplicationInsights + Microsoft.Testing.*)",
+      "package_regex": "^(Microsoft\\.ApplicationInsights|Microsoft\\.Testing\\.(Extensions\\.Telemetry|Extensions\\.TrxReport\\.Abstractions|Platform|Platform\\.MSBuild))$",
       "owner": "engineering",
       "status": "active",
-      "reason": "Pinned transitively by the current xunit.v3 3.2.x MTP chain (1.9.1); MTP 2.5.0 stable exists but its compatibility with xunit.v3 3.2.2 is unverified, so the chain moves only as part of the dedicated xUnit 4 migration slice. Re-reviewed 2026-10-07.",
-      "expires_at": "2027-01-15",
-      "recovery_plan": "Upgrade the whole MTP chain together with the xUnit 4 migration slice; verify discovery counts, filters, CI artifacts, and full quality gates before removing this waiver.",
-      "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"
-    },
-    {
-      "package": "Microsoft.Testing.Extensions.Telemetry",
-      "owner": "engineering",
-      "status": "active",
-      "reason": "Pinned transitively by the current xunit.v3 3.2.x MTP chain (1.9.1); MTP 2.5.0 stable exists but its compatibility with xunit.v3 3.2.2 is unverified, so the chain moves only as part of the dedicated xUnit 4 migration slice. Re-reviewed 2026-10-07.",
-      "expires_at": "2027-01-15",
-      "recovery_plan": "Upgrade the whole MTP chain together with the xUnit 4 migration slice; verify discovery counts, filters, CI artifacts, and full quality gates before removing this waiver.",
-      "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"
-    },
-    {
-      "package": "Microsoft.Testing.Extensions.TrxReport.Abstractions",
-      "owner": "engineering",
-      "status": "active",
-      "reason": "Pinned transitively by the current xunit.v3 3.2.x MTP chain (1.9.1); MTP 2.5.0 stable exists but its compatibility with xunit.v3 3.2.2 is unverified, so the chain moves only as part of the dedicated xUnit 4 migration slice. Re-reviewed 2026-10-07.",
-      "expires_at": "2027-01-15",
-      "recovery_plan": "Upgrade the whole MTP chain together with the xUnit 4 migration slice; verify discovery counts, filters, CI artifacts, and full quality gates before removing this waiver.",
-      "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"
-    },
-    {
-      "package": "Microsoft.Testing.Platform",
-      "owner": "engineering",
-      "status": "active",
-      "reason": "Pinned transitively by the current xunit.v3 3.2.x MTP chain (1.9.1); MTP 2.5.0 stable exists but its compatibility with xunit.v3 3.2.2 is unverified, so the chain moves only as part of the dedicated xUnit 4 migration slice. Re-reviewed 2026-10-07.",
-      "expires_at": "2027-01-15",
-      "recovery_plan": "Upgrade the whole MTP chain together with the xUnit 4 migration slice; verify discovery counts, filters, CI artifacts, and full quality gates before removing this waiver.",
-      "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"
-    },
-    {
-      "package": "Microsoft.Testing.Platform.MSBuild",
-      "owner": "engineering",
-      "status": "active",
-      "reason": "Pinned transitively by the current xunit.v3 3.2.x MTP chain (1.9.1); MTP 2.5.0 stable exists but its compatibility with xunit.v3 3.2.2 is unverified, so the chain moves only as part of the dedicated xUnit 4 migration slice. Re-reviewed 2026-10-07.",
+      "reason": "Pinned transitively by the current xunit.v3 3.2.x MTP chain (1.9.1); MTP 2.5.0 stable exists but its compatibility with xunit.v3 3.2.2 is unverified, so the chain moves only as part of the dedicated xUnit 4 migration slice. Covers Microsoft.ApplicationInsights and the four Microsoft.Testing.* packages whose five identical waiver entries were merged on 2026-10-26. Re-reviewed 2026-10-07.",
       "expires_at": "2027-01-15",
       "recovery_plan": "Upgrade the whole MTP chain together with the xUnit 4 migration slice; verify discovery counts, filters, CI artifacts, and full quality gates before removing this waiver.",
       "evidence_link": "docs/change-evidence/20260715-dependency-governance-closure.md"

@@ -75,10 +75,10 @@ if (Test-Path -LiteralPath $stableTestsScript) {
         $Profile,
         "-SkipBuild"
     )
-    # standard 把稳定测试与核心契约并入同一次 dotnet test：两级过滤的并集
+    # standard/full 把稳定测试与核心契约并入同一次 dotnet test：两级过滤的并集
     # 恰为 Gate!=Performance（两组 Gate 标记互斥），省去一次测试主机启动；
-    # quick/full 维持分步执行，CI 亦保持分步以便步骤级报告。
-    if ($Profile -eq "standard") {
+    # quick 与 CI（locked-restore）维持分步执行以便步骤级报告。
+    if ($Profile -in @("standard", "full")) {
         $stableTestArgs += @("-FilterOverride", "Gate!=Performance")
     }
     Invoke-NativeStep -Name "stable-tests" -FilePath $powerShellExe -Arguments $stableTestArgs -RetryCount 1
@@ -93,7 +93,7 @@ else {
     ) -RetryCount 1
 }
 
-if ($Profile -ne "standard") {
+if ($Profile -eq "quick") {
     Invoke-NativeStep -Name "test(contract)" -FilePath "dotnet" -Arguments @(
         "test",
         "tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj",

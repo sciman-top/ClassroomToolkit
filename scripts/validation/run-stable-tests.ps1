@@ -5,8 +5,6 @@ param(
     [string]$Configuration = "Debug",
     [string]$TestProject = "tests/ClassroomToolkit.Tests/ClassroomToolkit.Tests.csproj",
     [switch]$SkipBuild,
-    [switch]$DryRun,
-    [string]$SummaryPath = "",
     # 非空时替代 profile 推导的过滤表达式，供聚合门禁把 stable 与 contract
     # 合并为同一次 dotnet test 执行；留空保持既有 profile 语义（CI 分步路径）。
     [string]$FilterOverride = ""
@@ -17,9 +15,7 @@ $ErrorActionPreference = "Stop"
 
 $artifactLayoutModule = Join-Path $PSScriptRoot "..\artifacts\ArtifactLayout.psm1"
 Import-Module -Name $artifactLayoutModule -Force
-if ([string]::IsNullOrWhiteSpace($SummaryPath)) {
-    $SummaryPath = Join-Path (Get-ClassroomToolkitArtifactPath -Name EvidenceTestsCurrent) "stable-tests-summary.json"
-}
+$SummaryPath = Join-Path (Get-ClassroomToolkitArtifactPath -Name EvidenceTestsCurrent) "stable-tests-summary.json"
 
 $environmentBootstrap = Join-Path $PSScriptRoot "..\env\Initialize-WindowsProcessEnvironment.ps1"
 if (Test-Path -LiteralPath $environmentBootstrap) {
@@ -140,11 +136,8 @@ Write-Host "[stable-tests] Using profile: $Profile"
 Write-Host "[stable-tests] Command: dotnet $($command -join ' ')"
 
 $started = [DateTimeOffset]::UtcNow
-$exitCode = 0
-if (-not $DryRun.IsPresent) {
-    & dotnet @command
-    $exitCode = $LASTEXITCODE
-}
+& dotnet @command
+$exitCode = $LASTEXITCODE
 $finished = [DateTimeOffset]::UtcNow
 
 $summary = [ordered]@{
@@ -153,7 +146,6 @@ $summary = [ordered]@{
     configuration = $Configuration
     test_project = $resolvedProjectPath
     skip_build = $SkipBuild.IsPresent
-    dry_run = $DryRun.IsPresent
     filter = $filter
     command = "dotnet $($command -join ' ')"
     started_utc = $started.ToString("o")

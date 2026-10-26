@@ -259,7 +259,7 @@ public partial class PaintOverlayWindow
         {
             return;
         }
-        if (_photoSequencePaths.Count == 0 || pageIndex < 1 || pageIndex > _photoSequencePaths.Count)
+        if (CrossPageNeighborInkPolicies.IsNeighborPrefetchPageOutOfRange(pageIndex, _photoSequencePaths.Count))
         {
             return;
         }
@@ -308,9 +308,7 @@ public partial class PaintOverlayWindow
                         return;
                     }
 
-                    if (_photoSequencePaths.Count == 0
-                        || pageIndex < 1
-                        || pageIndex > _photoSequencePaths.Count
+                    if (CrossPageNeighborInkPolicies.IsNeighborPrefetchPageOutOfRange(pageIndex, _photoSequencePaths.Count)
                         || !string.Equals(_photoSequencePaths[pageIndex - 1], path, StringComparison.OrdinalIgnoreCase))
                     {
                         return;
