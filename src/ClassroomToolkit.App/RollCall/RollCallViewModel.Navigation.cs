@@ -1,9 +1,11 @@
 using ClassroomToolkit.App.Windowing;
 using ClassroomToolkit.App;
+using ClassroomToolkit.App.Utilities;
 using ClassroomToolkit.Application.UseCases.RollCall;
 using ClassroomToolkit.Domain.Models;
 using ClassroomToolkit.Domain.Utilities;
 using System.Diagnostics;
+using System.Threading;
 
 namespace ClassroomToolkit.App.RollCall;
 
@@ -248,13 +250,127 @@ public sealed partial class RollCallViewModel
         }
 
         StoreCurrentState();
+        var (workbookSnapshot, statesSnapshot) = CaptureWorkbookSaveSnapshot();
+        // 同步保存（关闭路径）优先级最高：作废全部排队后台任务，等待在途写盘完成后落最新快照，
+        // 避免旧快照在关闭保存之后获锁覆盖新状态。
+        Interlocked.Increment(ref _workbookSaveGeneration);
+        _workbookSaveGate.Wait();
+        try
+        {
+            return SafeActionExecutionExecutor.TryExecute(
+                () => _workbookUseCase.Save(_dataPath, workbookSnapshot, statesSnapshot),
+                ex => SafeActionExecutionExecutor.TryExecute(
+                    () => DataSaveFailed?.Invoke($"保存状态失败: {ex.Message}"),
+                    callbackEx => Debug.WriteLine(
+                        $"[RollCallViewModel] data save failed callback failed: {callbackEx.GetType().Name} - {callbackEx.Message}")));
+        }
+        finally
+        {
+            _workbookSaveGate.Release();
+        }
+    }
 
-        return SafeActionExecutionExecutor.TryExecute(
-            () => _workbookUseCase.Save(_dataPath, _workbook, _classStates),
-            ex => SafeActionExecutionExecutor.TryExecute(
-                () => DataSaveFailed?.Invoke($"保存状态失败: {ex.Message}"),
-                callbackEx => Debug.WriteLine(
-                    $"[RollCallViewModel] data save failed callback failed: {callbackEx.GetType().Name} - {callbackEx.Message}")));
+    /// <summary>
+    /// 后台保存点名状态：UI 线程只做状态捕获与快照构造，全册重建+写盘移到后台串行执行。
+    /// 恰好回调 succeeded 或 failed 之一（均在 UI 线程）；返回 false 表示未受理（如已释放）。
+    /// </summary>
+    public bool BeginSaveState(Action? succeeded, Action<string>? failed)
+    {
+        if (_workbook == null || !_canPersistWorkbook)
+        {
+            succeeded?.Invoke();
+            return true;
+        }
+
+        if (_disposed || _disposeCancellation.IsCancellationRequested)
+        {
+            return false;
+        }
+
+        StoreCurrentState();
+        var (workbookSnapshot, statesSnapshot) = CaptureWorkbookSaveSnapshot();
+        var generation = Interlocked.Increment(ref _workbookSaveGeneration);
+        var lifecycleToken = _disposeCancellation.Token;
+        _ = SafeTaskRunner.Run(
+            "RollCallViewModel.BeginSaveState",
+            _ => SaveStateBackgroundCore(generation, workbookSnapshot, statesSnapshot, succeeded, failed),
+            ex => Debug.WriteLine(
+                $"[RollCallViewModel] background save crashed: {ex.GetType().Name} - {ex.Message}"),
+            lifecycleToken);
+        return true;
+    }
+
+    private async Task SaveStateBackgroundCore(
+        int generation,
+        StudentWorkbook workbookSnapshot,
+        Dictionary<string, ClassRollState> statesSnapshot,
+        Action? succeeded,
+        Action<string>? failed)
+    {
+        var saved = false;
+        string? failureMessage = null;
+        await _workbookSaveGate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (Volatile.Read(ref _workbookSaveGeneration) == generation)
+            {
+                try
+                {
+                    _workbookUseCase.Save(_dataPath, workbookSnapshot, statesSnapshot);
+                    saved = true;
+                }
+                catch (Exception ex) when (AppGlobalExceptionHandling.IsNonFatal(ex))
+                {
+                    failureMessage = $"保存状态失败: {ex.Message}";
+                }
+            }
+            else
+            {
+                // 已有更新的快照排队，本次旧快照跳过即视作完成，由最新保存负责落盘。
+                saved = true;
+            }
+        }
+        finally
+        {
+            _workbookSaveGate.Release();
+        }
+
+        if (saved)
+        {
+            PostToUiDispatcher(succeeded);
+        }
+        else if (failureMessage != null)
+        {
+            PostToUiDispatcher(() => failed?.Invoke(failureMessage));
+        }
+    }
+
+    private (StudentWorkbook Workbook, Dictionary<string, ClassRollState> States) CaptureWorkbookSaveSnapshot()
+    {
+        // ClassRoster/StudentRecord 构造后运行期只读，班级间切换只替换 ActiveClass 字符串、
+        // 点名状态每次 CaptureState 生成全新实例，因此浅拷贝班级字典即撕裂安全快照。
+        var workbook = _workbook!;
+        var workbookSnapshot = new StudentWorkbook(
+            new Dictionary<string, ClassRoster>(workbook.Classes, StringComparer.OrdinalIgnoreCase),
+            workbook.ActiveClass);
+        var statesSnapshot = new Dictionary<string, ClassRollState>(_classStates, StringComparer.OrdinalIgnoreCase);
+        return (workbookSnapshot, statesSnapshot);
+    }
+
+    private void PostToUiDispatcher(Action? callback)
+    {
+        if (callback == null)
+        {
+            return;
+        }
+
+        var dispatcher = _uiDispatcher;
+        if (dispatcher == null || dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished)
+        {
+            return;
+        }
+
+        _ = dispatcher.InvokeAsync(callback, System.Windows.Threading.DispatcherPriority.Background);
     }
 
     private void StoreCurrentState()

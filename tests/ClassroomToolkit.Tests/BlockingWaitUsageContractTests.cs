@@ -4,7 +4,13 @@ namespace ClassroomToolkit.Tests;
 
 public sealed class BlockingWaitUsageContractTests
 {
-    private static readonly HashSet<string> AllowedBlockingUsage = new(StringComparer.Ordinal);
+    // 关闭路径在 bump generation 作废排队任务后，同步等待唯一在途后台写盘完成，
+    // 避免两进程内并发原子替换同一 students.xlsx；有界（单次写盘周期）且仅限用户主动关闭。
+    // 回收条件：RollCallWindow 关闭路径改为异步保存编排后移除本条目。
+    private static readonly HashSet<string> AllowedBlockingUsage = new(StringComparer.Ordinal)
+    {
+        "src/ClassroomToolkit.App/RollCall/RollCallViewModel.Navigation.cs|_workbookSaveGate.Wait();"
+    };
 
     [Fact]
     public void Source_ShouldNotIntroduceNewBlockingWaitPatterns()

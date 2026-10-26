@@ -89,7 +89,7 @@ public partial class RollCallWindow
         ExecuteRollCallSafe("hide-rollcall-window", Hide);
         UpdateGroupNameDisplay();
         PersistSettings();
-        TrySaveRollStateNow();
+        BeginSaveRollState();
     }
 
     private void OnMinimizeClick(object sender, RoutedEventArgs e)

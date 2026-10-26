@@ -48,7 +48,41 @@ public partial class RollCallWindow
         {
             return;
         }
-        TrySaveRollStateNow();
+        BeginSaveRollState();
+    }
+
+    // 全册重建+写盘代价随名册规模线性增长，点名节奏下在 UI 线程同步保存会造成可感知顿挫；
+    // 交互路径（debounce 到期/换班/隐藏）一律投递后台保存，关闭路径仍走同步 TrySaveRollStateNow。
+    private int _backgroundRollStateSaveSequence;
+
+    private void BeginSaveRollState()
+    {
+        var generation = ++_backgroundRollStateSaveSequence;
+        var accepted = _viewModel.BeginSaveState(
+            () =>
+            {
+                if (generation != _backgroundRollStateSaveSequence)
+                {
+                    return;
+                }
+                _rollStateSaveTimer.Stop();
+                _rollStateDirty = false;
+            },
+            message =>
+            {
+                if (generation != _backgroundRollStateSaveSequence)
+                {
+                    return;
+                }
+                // 保留 dirty 并重新排队；失败回调可能只提示一次，但状态不能因此
+                // 被当作已落盘。
+                OnDataSaveFailed(message);
+                ScheduleRollStateSave();
+            });
+        if (!accepted)
+        {
+            ScheduleRollStateSave();
+        }
     }
 
     public void ApplySettings(AppSettings settings, bool updatePhoto = true)
@@ -296,7 +330,7 @@ public partial class RollCallWindow
         {
             UpdatePhotoDisplay(forceHide: true);
             PersistSettings();
-            TrySaveRollStateNow();
+            BeginSaveRollState();
             UpdateMinWindowSize();
             SuppressRollClicks(TimeSpan.FromMilliseconds(RollCallRuntimeDefaults.ClassSwitchSuppressMs));
             return;

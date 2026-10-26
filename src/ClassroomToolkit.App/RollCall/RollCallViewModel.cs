@@ -53,6 +53,11 @@ public sealed partial class RollCallViewModel : ViewModelBase, IDisposable
     private readonly Action _timerCompletedHandler;
     private readonly Action _reminderTriggeredHandler;
 
+    // 保存协调：串行门保证同一文件不并发原子替换；代次让排队任务中的旧快照自动失效。
+    private readonly SemaphoreSlim _workbookSaveGate = new(1, 1);
+    private int _workbookSaveGeneration;
+    private readonly System.Windows.Threading.Dispatcher? _uiDispatcher;
+
     private readonly StudentPhotoResolver _photoResolver;
     private string? _currentStudentPhotoPath;
 
@@ -61,6 +66,7 @@ public sealed partial class RollCallViewModel : ViewModelBase, IDisposable
         _dataPath = dataPath;
         _workbookUseCase = workbookUseCase ?? throw new ArgumentNullException(nameof(workbookUseCase));
         _photoResolver = new StudentPhotoResolver(StudentResourceLocator.ResolveStudentPhotoRoot());
+        _uiDispatcher = System.Windows.Threading.Dispatcher.FromThread(System.Threading.Thread.CurrentThread);
         Groups = new ObservableCollection<string>();
         GroupButtons = new ObservableCollection<GroupButtonItem>();
         _timerEngine.SetCountdown(_timerMinutes, _timerSeconds);
@@ -97,6 +103,7 @@ public sealed partial class RollCallViewModel : ViewModelBase, IDisposable
 
         // 不释放 _disposeCancellation：在途的 LoadDataAsync/预热仍持有该 Token，
         // 释放后访问 Token 属性会抛 ObjectDisposedException 且异常未被观察。
+        // _workbookSaveGate 同理不释放：在途保存任务仍会 Wait/Release 它。
     }
 
     private void OnTimerCompletedInternal()
