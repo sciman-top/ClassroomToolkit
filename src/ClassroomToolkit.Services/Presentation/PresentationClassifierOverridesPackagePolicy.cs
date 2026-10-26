@@ -166,7 +166,7 @@ public static class PresentationClassifierOverridesPackagePolicy
             return false;
         }
 
-        var canonical = new CanonicalOverridesModel
+        var canonical = new PresentationClassifierOverridesDocument
         {
             AdditionalWpsClassTokens = SortTokens(overrides.AdditionalWpsClassTokens),
             AdditionalOfficeClassTokens = SortTokens(overrides.AdditionalOfficeClassTokens),
@@ -220,30 +220,4 @@ public static class PresentationClassifierOverridesPackagePolicy
         public string Signature { get; set; } = string.Empty;
     }
 
-    private sealed class CanonicalOverridesModel
-    {
-        public List<string> AdditionalWpsClassTokens { get; set; } = new();
-
-        public List<string> AdditionalOfficeClassTokens { get; set; } = new();
-
-        public List<string> AdditionalSlideshowClassTokens { get; set; } = new();
-
-        public List<string> AdditionalWpsProcessTokens { get; set; } = new();
-
-        public List<string> AdditionalOfficeProcessTokens { get; set; } = new();
-
-        public int ClassMatchWeight { get; set; }
-
-        public int ProcessMatchWeight { get; set; }
-
-        public int NoCaptionWeight { get; set; }
-
-        public int IsFullscreenWeight { get; set; }
-
-        public int FullscreenClassMatchBonus { get; set; }
-
-        public bool RequireClassMatchOrFullscreen { get; set; }
-
-        public int MinimumCandidateScore { get; set; }
-    }
 }

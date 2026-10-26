@@ -662,7 +662,7 @@ public static class StartupCompatibilityProbe
 
         for (var i = 0; i < source.Count; i++)
         {
-            var normalized = NormalizeProcessToken(source[i]);
+            var normalized = PresentationClassifierProcessTokens.Normalize(source[i]);
             if (string.IsNullOrWhiteSpace(normalized))
             {
                 continue;
@@ -670,22 +670,6 @@ public static class StartupCompatibilityProbe
 
             target.Add(normalized);
         }
-    }
-
-    private static string NormalizeProcessToken(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return string.Empty;
-        }
-
-        var normalized = value.Trim();
-        if (normalized.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-        {
-            normalized = normalized[..^4];
-        }
-
-        return normalized;
     }
 
     private static bool TryGetProcessElevation(int processId, out bool elevated, out string error)

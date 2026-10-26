@@ -31,7 +31,7 @@ public static class PresentationClassifierAutoLearnPolicy
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(4)
             .ToArray();
-        var processToken = NormalizeProcessToken(info.ProcessName);
+        var processToken = PresentationClassifierProcessTokens.Normalize(info.ProcessName);
         if (classTokens.Length == 0 && string.IsNullOrWhiteSpace(processToken))
         {
             return false;
@@ -110,7 +110,7 @@ public static class PresentationClassifierAutoLearnPolicy
             return true;
         }
 
-        var model = new PersistedOverridesModel
+        var model = new PresentationClassifierOverridesDocument
         {
             AdditionalWpsClassTokens = additionalWpsClassTokens,
             AdditionalOfficeClassTokens = additionalOfficeClassTokens,
@@ -130,22 +130,6 @@ public static class PresentationClassifierAutoLearnPolicy
         return true;
     }
 
-    private static string NormalizeProcessToken(string? processName)
-    {
-        if (string.IsNullOrWhiteSpace(processName))
-        {
-            return string.Empty;
-        }
-
-        var normalized = processName.Trim();
-        if (normalized.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-        {
-            normalized = normalized[..^4];
-        }
-
-        return normalized;
-    }
-
     private static bool AddDistinct(List<string> list, string token)
     {
         if (list.Any(existing => string.Equals(existing, token, StringComparison.OrdinalIgnoreCase)))
@@ -157,30 +141,4 @@ public static class PresentationClassifierAutoLearnPolicy
         return true;
     }
 
-    private sealed class PersistedOverridesModel
-    {
-        public List<string> AdditionalWpsClassTokens { get; set; } = new();
-
-        public List<string> AdditionalOfficeClassTokens { get; set; } = new();
-
-        public List<string> AdditionalSlideshowClassTokens { get; set; } = new();
-
-        public List<string> AdditionalWpsProcessTokens { get; set; } = new();
-
-        public List<string> AdditionalOfficeProcessTokens { get; set; } = new();
-
-        public int ClassMatchWeight { get; set; }
-
-        public int ProcessMatchWeight { get; set; }
-
-        public int NoCaptionWeight { get; set; }
-
-        public int IsFullscreenWeight { get; set; }
-
-        public int FullscreenClassMatchBonus { get; set; }
-
-        public bool RequireClassMatchOrFullscreen { get; set; }
-
-        public int MinimumCandidateScore { get; set; }
-    }
 }

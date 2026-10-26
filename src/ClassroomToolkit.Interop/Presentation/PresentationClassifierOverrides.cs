@@ -61,7 +61,7 @@ public static class PresentationClassifierOverridesParser
 
     private static bool TryParseModel(
         string? raw,
-        out ClassifierOverridesModel? model,
+        out PresentationClassifierOverridesDocument? model,
         out string error)
     {
         model = null;
@@ -74,7 +74,7 @@ public static class PresentationClassifierOverridesParser
 
         try
         {
-            model = JsonSerializer.Deserialize<ClassifierOverridesModel>(raw);
+            model = JsonSerializer.Deserialize<PresentationClassifierOverridesDocument>(raw);
             if (model == null)
             {
                 error = "empty-json";
@@ -107,33 +107,6 @@ public static class PresentationClassifierOverridesParser
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray()!;
-    }
-
-    private sealed class ClassifierOverridesModel
-    {
-        public List<string>? AdditionalWpsClassTokens { get; set; }
-
-        public List<string>? AdditionalOfficeClassTokens { get; set; }
-
-        public List<string>? AdditionalSlideshowClassTokens { get; set; }
-
-        public List<string>? AdditionalWpsProcessTokens { get; set; }
-
-        public List<string>? AdditionalOfficeProcessTokens { get; set; }
-
-        public int? ClassMatchWeight { get; set; }
-
-        public int? ProcessMatchWeight { get; set; }
-
-        public int? NoCaptionWeight { get; set; }
-
-        public int? IsFullscreenWeight { get; set; }
-
-        public int? FullscreenClassMatchBonus { get; set; }
-
-        public bool? RequireClassMatchOrFullscreen { get; set; }
-
-        public int? MinimumCandidateScore { get; set; }
     }
 
     private static int ResolveNonNegative(int? value, int fallback)
