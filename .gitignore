@@ -15,9 +15,6 @@ artifacts/
 
 # Rider
 .idea/
-.idea/**/workspace.xml
-.idea/**/tasks.xml
-.idea/**/shelf/
 
 # VS Code / JetBrains Fleet / Cursor
 .vscode/
@@ -47,7 +44,6 @@ backups/
 .~lock.*#
 student_photos/
 data/
-logs/*.log
 msbuild*.log
 *~
 
@@ -59,6 +55,7 @@ msbuild*.log
 .temp/
 **/.temp/
 .codex/logs/
+.geminiignore
 .codex/tmp-*/
 .cache-loader/
 .agent-build/
@@ -79,7 +76,6 @@ GlobalUser/
 .opencode/
 .copilot/
 .github/copilot-instructions.md
-.geminiignore
 
 # Local debug / evidence backups
 *_backup.*
