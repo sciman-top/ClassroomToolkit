@@ -154,12 +154,15 @@ if ($Profile -eq "full") {
     # The analyzer baseline is collected under the configuration declared inside
     # analyzer-backlog-baseline.json; the check script aligns to it and fails
     # loudly on mismatch, so the gate build configuration must not leak here.
+    # The build step above already restored the full solution, so the per-project
+    # analyzer builds skip their own restore.
     Invoke-NativeStep -Name "analyzer-latest-all" -FilePath $powerShellExe -Arguments @(
         "-NoProfile",
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "scripts/quality/check-analyzer-backlog-baseline.ps1"
+        "scripts/quality/check-analyzer-backlog-baseline.ps1",
+        "-NoRestore"
     )
 }
 

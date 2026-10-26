@@ -5,7 +5,15 @@ param(
     # different configurations are not comparable.
     [string]$Configuration = "",
     [string]$BaselinePath = "scripts/quality/analyzer-backlog-baseline.json",
-    [string]$ReportPath = ""
+    [string]$ReportPath = "",
+    # Regenerate the baseline from the current scan instead of comparing
+    # against it. Use after intentionally fixing or accepting CA findings;
+    # keeps the previous notes field and prints the old/new totals.
+    [switch]$RefreshBaseline,
+    # Skip the implicit NuGet restore in each project build. Only safe when a
+    # prior full-solution restore already ran in the same session (quality
+    # gates always build the solution first).
+    [switch]$NoRestore
 )
 
 Set-StrictMode -Version Latest
@@ -78,6 +86,7 @@ function Invoke-AnalyzerBuild {
         [Parameter(Mandatory = $true)][string]$ProjectPath,
         [Parameter(Mandatory = $true)][string]$ProjectName,
         [Parameter(Mandatory = $true)][string]$Configuration,
+        [Parameter()][switch]$NoRestore,
         [Parameter()][int]$RetryCount = 1,
         [Parameter()][int]$RetryDelaySeconds = 2
     )
@@ -85,13 +94,19 @@ function Invoke-AnalyzerBuild {
     $attempt = 0
     while ($true) {
         $attempt++
-        $output = @(& dotnet build $ProjectPath `
-            -c $Configuration `
-            --no-incremental `
-            -m:1 `
-            -p:TreatWarningsAsErrors=false `
-            -p:EnableNETAnalyzers=true `
-            -p:AnalysisLevel=latest-all 2>&1)
+        $buildArgs = @(
+            "build", $ProjectPath,
+            "-c", $Configuration,
+            "--no-incremental",
+            "-m:1",
+            "-p:TreatWarningsAsErrors=false",
+            "-p:EnableNETAnalyzers=true",
+            "-p:AnalysisLevel=latest-all"
+        )
+        if ($NoRestore) {
+            $buildArgs += "--no-restore"
+        }
+        $output = @(& dotnet @buildArgs 2>&1)
 
         # dotnet build 正常必有输出；空输出即便退出码为 0 也按失败处理，
         # 否则该项目会被静默漏扫，analyzer 门禁假绿。
@@ -132,7 +147,7 @@ if (-not $projectFiles) {
 $diagnostics = New-Object System.Collections.Generic.List[object]
 foreach ($project in $projectFiles) {
     Write-Host ("[analyzer-backlog] SCAN {0}" -f $project.Name)
-    $output = Invoke-AnalyzerBuild -ProjectPath $project.FullName -ProjectName $project.Name -Configuration $Configuration
+    $output = Invoke-AnalyzerBuild -ProjectPath $project.FullName -ProjectName $project.Name -Configuration $Configuration -NoRestore:$NoRestore
 
     foreach ($line in $output) {
         if ($line -match "^(?<file>.+?)\((?<line>\d+),(?<column>\d+)\):\s+(?:warning|error)\s+(?<rule>CA\d{4}):") {
@@ -199,6 +214,35 @@ if (-not [string]::IsNullOrWhiteSpace($reportDirectory)) {
 }
 
 $report | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $resolvedReportPath -Encoding UTF8
+
+if ($RefreshBaseline) {
+    $previousTotal = $null
+    $previousNotes = $null
+    if (Test-Path -LiteralPath $resolvedBaselinePath) {
+        $previous = Get-Content -LiteralPath $resolvedBaselinePath -Raw | ConvertFrom-Json
+        $previousTotal = [int]$previous.diagnostics_total
+        $previousNotes = $previous.notes
+    }
+
+    # 基线正文与 report 同构；notes 手工维护的豁免理由在刷新时保留。
+    $refreshed = [pscustomobject]@{
+        generated_at_utc = $report.generated_at_utc
+        configuration = $Configuration
+        scope = "src-projects"
+        analysis_level = "latest-all"
+        diagnostics_total = $report.diagnostics_total
+        project_counts = $report.project_counts
+        rule_counts = $report.rule_counts
+        diagnostics = $report.diagnostics
+    }
+    if ($previousNotes) {
+        $refreshed | Add-Member -NotePropertyName notes -NotePropertyValue $previousNotes
+    }
+    $refreshed | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $resolvedBaselinePath -Encoding UTF8
+
+    Write-Host ("[analyzer-backlog] BASELINE REFRESHED total {0} -> {1} baseline={2}" -f $previousTotal, @($uniqueDiagnostics).Count, $BaselinePath)
+    exit 0
+}
 
 $baselineRuleMap = @{}
 foreach ($entry in @($baseline.rule_counts)) {

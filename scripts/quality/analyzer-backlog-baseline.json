@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-10-25T17:10:19.0858289Z",
+  "generated_at_utc": "2026-10-26T00:13:33.5720887Z",
   "configuration": "Release",
   "scope": "src-projects",
   "analysis_level": "latest-all",
@@ -156,5 +156,6 @@
       "column": 27,
       "rule": "CA2007"
     }
-  ]
+  ],
+  "notes": "豁免理由(2026-10-26 复核): CA2007=KeyboardHook/WpsSlideshowNavigationHook/GlobalHookService 的异步续接位于 Win32 hook 与 COM STA 路径, ConfigureAwait(false) 会破坏线程亲和性,故意不加; CA5394=InkNoiseTileCache 用 System.Random 生成墨迹噪点纹理,非安全敏感随机; CA1515=UI/Themes 三个类被 WPF XAML/DynamicResource 引用,public 为 WPF 加载要求; CA2213=RollCallViewModel._disposeCancellation 有意不释放在途异步持有的 Token(见 Dispose 内注释)。 同一共享源码文件被编译进多个项目时按项目重复计数。"
 }
