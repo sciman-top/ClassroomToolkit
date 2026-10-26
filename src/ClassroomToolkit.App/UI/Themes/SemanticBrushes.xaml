@@ -21,9 +21,7 @@
     <SolidColorBrush x:Key="CTK.Brush.Primary.Pressed" Color="{DynamicResource CTK.Color.PrimaryPressed}"/>
     <SolidColorBrush x:Key="CTK.Brush.Primary.Soft" Color="{DynamicResource CTK.Color.PrimarySoft}"/>
     <SolidColorBrush x:Key="CTK.Brush.Info" Color="{DynamicResource CTK.Color.Info}"/>
-    <SolidColorBrush x:Key="CTK.Brush.Info.Soft" Color="{DynamicResource CTK.Color.InfoSoft}"/>
     <SolidColorBrush x:Key="CTK.Brush.Success" Color="{DynamicResource CTK.Color.Success}"/>
-    <SolidColorBrush x:Key="CTK.Brush.Success.Soft" Color="{DynamicResource CTK.Color.SuccessSoft}"/>
     <SolidColorBrush x:Key="CTK.Brush.Warning" Color="{DynamicResource CTK.Color.Warning}"/>
     <SolidColorBrush x:Key="CTK.Brush.Warning.Soft" Color="{DynamicResource CTK.Color.WarningSoft}"/>
     <SolidColorBrush x:Key="CTK.Brush.Danger" Color="{DynamicResource CTK.Color.Danger}"/>
@@ -31,7 +29,6 @@
     <SolidColorBrush x:Key="CTK.Brush.Danger.Soft" Color="{DynamicResource CTK.Color.DangerSoft}"/>
     <SolidColorBrush x:Key="CTK.Brush.Selection" Color="{DynamicResource CTK.Color.Selection}"/>
     <SolidColorBrush x:Key="CTK.Brush.SelectionOverlay" Color="{DynamicResource CTK.Color.SelectionOverlay}"/>
-    <SolidColorBrush x:Key="CTK.Brush.SelectionOverlaySoft" Color="{DynamicResource CTK.Color.SelectionOverlaySoft}"/>
     <SolidColorBrush x:Key="CTK.Brush.Overlay" Color="{DynamicResource CTK.Color.Overlay}"/>
     <SolidColorBrush x:Key="CTK.Brush.OverlayToolbar" Color="{DynamicResource CTK.Color.OverlayToolbar}"/>
     <SolidColorBrush x:Key="CTK.Brush.ToolActive" Color="{DynamicResource CTK.Color.Primary}"/>

@@ -17,10 +17,6 @@
     <sys:Double x:Key="Size_Touch_ScrollBar">16</sys:Double>
     <sys:Double x:Key="Size_Button_Action_Regular">96</sys:Double>
     <sys:Double x:Key="Size_Button_Action_Height_Compact">32</sys:Double>
-    <sys:Double x:Key="Size_Shell_TitleBar_Dialog">42</sys:Double>
-    <sys:Double x:Key="Size_Shell_TitleBar_Management">46</sys:Double>
-    <sys:Double x:Key="Size_Shell_TitleBar_Work">40</sys:Double>
-    <sys:Double x:Key="Size_Icon_Glyph_XS">10</sys:Double>
     <sys:Double x:Key="Size_Icon_Glyph_SM">12</sys:Double>
     <sys:Double x:Key="Size_Icon_Glyph_MD">14</sys:Double>
     <sys:Double x:Key="Size_Icon_Glyph_LG">18</sys:Double>
@@ -33,7 +29,6 @@
     <sys:Double x:Key="Opacity_State_Pressed">0.8</sys:Double>
     <sys:Double x:Key="Opacity_State_Hover_Subtle">0.9</sys:Double>
     <sys:Double x:Key="Opacity_State_Icon_Disabled">0.3</sys:Double>
-    <sys:Double x:Key="Opacity_Effect_InnerShine">0.5</sys:Double>
     <sys:Double x:Key="Opacity_Overlay_CloseButton">0.85</sys:Double>
     <sys:Double x:Key="Opacity_Overlay_SideRail">0.8</sys:Double>
     <sys:Double x:Key="Opacity_Overlay_HintBadge">0.9</sys:Double>
@@ -65,9 +60,6 @@
     <Thickness x:Key="Spacing_Control_BubbleShellRoot">5,4</Thickness>
     <Thickness x:Key="Spacing_Control_BubbleShellItem">4</Thickness>
     <Thickness x:Key="Spacing_Control_OverlayHintBadge">10,4</Thickness>
-    <Thickness x:Key="Size_DialogMargin_Standard">20</Thickness>
-    <CornerRadius x:Key="Radius_Shell_Dialog">12</CornerRadius>
-    <CornerRadius x:Key="Radius_Shell_Management">12</CornerRadius>
     <CornerRadius x:Key="Radius_Shell_Work">14</CornerRadius>
     <CornerRadius x:Key="Radius_Shell_WorkBottomBar">10</CornerRadius>
     <CornerRadius x:Key="Radius_Shell_OverlaySideRail">20</CornerRadius>
@@ -1562,10 +1554,6 @@
         <Setter Property="Padding" Value="{StaticResource Spacing_Control_BubbleShellItem}"/>
     </Style>
 
-    <Style x:Key="Style_BubbleShellSelectedItem" TargetType="Border" BasedOn="{StaticResource Style_BubbleShellItem}">
-        <Setter Property="Background" Value="{DynamicResource Brush_Surface_Active}"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource Brush_Border_Focus}"/>
-    </Style>
 
     <!-- Legacy aliases kept for current overlay windows -->
     <Style x:Key="Style_FullscreenShellCloseButton" TargetType="Button" BasedOn="{StaticResource Style_OverlayShellCloseButton}"/>
