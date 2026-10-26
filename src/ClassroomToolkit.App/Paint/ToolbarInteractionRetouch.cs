@@ -275,11 +275,8 @@ internal static class ToolbarInteractionRetouchPolicies
 
         return new ToolbarInteractionRetouchDecision(
             ShouldRetouch: true,
-            ForceEnforceZOrder: FloatingTopmostPolicies.ShouldForceEnforce(snapshot)
-                || ForegroundZOrderRetouchPolicy.ShouldForceOnToolbarInteraction(
-                snapshot.OverlayVisible,
-                snapshot.PhotoModeActive,
-                snapshot.WhiteboardActive),
+            // 工具栏交互 retouch 按设计不升级强制 z-order；全屏/照片表面另有升级路径。
+            ForceEnforceZOrder: false,
             Reason: ToolbarInteractionRetouchDecisionReason.None);
     }
 

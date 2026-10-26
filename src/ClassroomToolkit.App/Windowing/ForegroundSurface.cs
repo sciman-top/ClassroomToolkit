@@ -204,100 +204,14 @@ internal static class ForegroundSurfaceTransitionPolicy
     }
 }
 
-internal enum ForegroundZOrderRetouchTrigger
-{
-    ToolbarInteraction = 0,
-    ImageManagerActivated = 1,
-    ImageManagerClosed = 2,
-    ImageManagerStateChanged = 3,
-    PhotoModeChanged = 4,
-    PresentationFullscreenDetected = 5
-}
-
-internal enum ForegroundZOrderRetouchReason
-{
-    None = 0,
-    ForceDisabledByDesign = 1,
-    OverlayVisiblePresentation = 2,
-    OverlayHiddenPresentation = 3
-}
-
-internal readonly record struct ForegroundZOrderRetouchDecision(
-    bool ShouldForce,
-    ForegroundZOrderRetouchReason Reason);
-
 internal static class ForegroundZOrderRetouchPolicy
 {
-    internal static ForegroundZOrderRetouchDecision Resolve(
-        ForegroundZOrderRetouchTrigger trigger,
-        bool overlayVisible,
-        bool photoModeActive = false,
-        bool whiteboardActive = false)
-    {
-        _ = photoModeActive;
-        _ = whiteboardActive;
-
-        if (trigger == ForegroundZOrderRetouchTrigger.PresentationFullscreenDetected)
-        {
-            return overlayVisible
-                ? new ForegroundZOrderRetouchDecision(
-                    ShouldForce: true,
-                    Reason: ForegroundZOrderRetouchReason.OverlayVisiblePresentation)
-                : new ForegroundZOrderRetouchDecision(
-                    ShouldForce: false,
-                    Reason: ForegroundZOrderRetouchReason.OverlayHiddenPresentation);
-        }
-
-        return new ForegroundZOrderRetouchDecision(
-            ShouldForce: false,
-            Reason: ForegroundZOrderRetouchReason.ForceDisabledByDesign);
-    }
-
-    internal static bool ShouldForceOnToolbarInteraction(
-        bool overlayVisible,
-        bool photoModeActive,
-        bool whiteboardActive)
-    {
-        return Resolve(
-            ForegroundZOrderRetouchTrigger.ToolbarInteraction,
-            overlayVisible,
-            photoModeActive,
-            whiteboardActive).ShouldForce;
-    }
-
-    internal static bool ShouldForceOnImageManagerActivated(bool overlayVisible)
-    {
-        return Resolve(
-            ForegroundZOrderRetouchTrigger.ImageManagerActivated,
-            overlayVisible).ShouldForce;
-    }
-
-    internal static bool ShouldForceOnImageManagerClosed(bool overlayVisible)
-    {
-        return Resolve(
-            ForegroundZOrderRetouchTrigger.ImageManagerClosed,
-            overlayVisible).ShouldForce;
-    }
-
-    internal static bool ShouldForceOnImageManagerStateChanged(bool overlayVisible)
-    {
-        return Resolve(
-            ForegroundZOrderRetouchTrigger.ImageManagerStateChanged,
-            overlayVisible).ShouldForce;
-    }
-
-    internal static bool ShouldForceOnPhotoModeChanged(bool photoModeActive)
-    {
-        return Resolve(
-            ForegroundZOrderRetouchTrigger.PhotoModeChanged,
-            overlayVisible: false,
-            photoModeActive: photoModeActive).ShouldForce;
-    }
-
+    /// <summary>
+    /// 仅放映全屏检测按设计允许强制 z-order（覆盖层可见时）；工具栏交互、图库与照片模式
+    /// 的强制升级一律禁用，由常规 retouch 与 topmost 漂移修复路径处理。
+    /// </summary>
     internal static bool ShouldForceOnPresentationFullscreenDetected(bool overlayVisible)
     {
-        return Resolve(
-            ForegroundZOrderRetouchTrigger.PresentationFullscreenDetected,
-            overlayVisible).ShouldForce;
+        return overlayVisible;
     }
 }

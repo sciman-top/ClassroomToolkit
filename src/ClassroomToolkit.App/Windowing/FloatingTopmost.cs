@@ -243,16 +243,6 @@ internal static class FloatingTopmostPolicies
             || (snapshot.LauncherVisible && !snapshot.LauncherTopmost);
     }
 
-    /// <summary>
-    /// Toolbar-interaction retouch deliberately never escalates to forced z-order;
-    /// photo/fullscreen surfaces own that escalation elsewhere.
-    /// </summary>
-    internal static bool ShouldForceEnforce(ToolbarInteractionRetouchSnapshot snapshot)
-    {
-        _ = snapshot;
-        return false;
-    }
-
     internal static bool ResolveDriftRepairEnforce(ToolbarInteractionRetouchSnapshot snapshot, ToolbarInteractionRetouchTrigger trigger)
     {
         if (trigger != ToolbarInteractionRetouchTrigger.Activated)

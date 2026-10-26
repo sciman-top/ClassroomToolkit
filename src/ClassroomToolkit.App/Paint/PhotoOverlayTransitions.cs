@@ -187,13 +187,11 @@ internal static class PhotoOverlayTransitionsPolicies
         bool requestZOrderApply,
         bool forceEnforceZOrder)
     {
-        var baseForce = ForegroundZOrderRetouchPolicy.ShouldForceOnPhotoModeChanged(photoModeActive);
-
         return new SurfaceZOrderDecision(
             ShouldTouchSurface: requestZOrderApply && photoModeActive,
             Surface: photoModeActive ? ZOrderSurface.PhotoFullscreen : ZOrderSurface.None,
             RequestZOrderApply: requestZOrderApply,
-            ForceEnforceZOrder: forceEnforceZOrder || baseForce);
+            ForceEnforceZOrder: forceEnforceZOrder);
     }
 
     private static SurfaceZOrderDecision ResolvePresentationFullscreenDetected(bool overlayVisible)

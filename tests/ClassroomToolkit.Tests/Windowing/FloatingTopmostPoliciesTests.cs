@@ -151,40 +151,6 @@ public sealed class FloatingTopmostDriftPolicyTests
     }
 
     [Fact]
-    public void ResolveForceEnforce_ShouldReturnDisabledByDesign_WhenLauncherNotTopmost()
-    {
-        var snapshot = new ToolbarInteractionRetouchSnapshot(
-            OverlayVisible: true,
-            PhotoModeActive: true,
-            WhiteboardActive: false,
-            ToolbarVisible: true,
-            ToolbarTopmost: true,
-            RollCallVisible: false,
-            RollCallTopmost: false,
-            LauncherVisible: true,
-            LauncherTopmost: false);
-
-        FloatingTopmostPolicies.ShouldForceEnforce(snapshot).Should().BeFalse();
-    }
-
-    [Fact]
-    public void ResolveForceEnforce_ShouldReturnDisabledByDesign_WhenLauncherHidden()
-    {
-        var snapshot = new ToolbarInteractionRetouchSnapshot(
-            OverlayVisible: true,
-            PhotoModeActive: true,
-            WhiteboardActive: false,
-            ToolbarVisible: true,
-            ToolbarTopmost: false,
-            RollCallVisible: false,
-            RollCallTopmost: false,
-            LauncherVisible: false,
-            LauncherTopmost: false);
-
-        FloatingTopmostPolicies.ShouldForceEnforce(snapshot).Should().BeFalse();
-    }
-
-    [Fact]
     public void HasDrift_ReturnsTrue_WhenAnyVisibleWindowLacksTopmost()
     {
         var snapshot = new ToolbarInteractionRetouchSnapshot(

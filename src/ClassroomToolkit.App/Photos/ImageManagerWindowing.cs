@@ -355,16 +355,13 @@ internal static class ImageManagerWindowingPolicies
             ImageManagerSurfaceTransitionKind.Open => ImageManagerSurfaceDecisionFactory.TouchImageManager(
                 forceEnforceZOrder: false),
             ImageManagerSurfaceTransitionKind.Activated => ImageManagerSurfaceDecisionFactory.TouchImageManager(
-                forceEnforceZOrder: ForegroundZOrderRetouchPolicy.ShouldForceOnImageManagerActivated(
-                    overlayVisible)),
+                forceEnforceZOrder: false),
             ImageManagerSurfaceTransitionKind.Closed => ImageManagerSurfaceDecisionFactory.NoTouch(
                 requestZOrderApply: true,
-                forceEnforceZOrder: ForegroundZOrderRetouchPolicy.ShouldForceOnImageManagerClosed(
-                    overlayVisible)),
+                forceEnforceZOrder: false),
             ImageManagerSurfaceTransitionKind.StateChanged => ImageManagerSurfaceDecisionFactory.NoTouch(
                 requestZOrderApply: overlayVisible,
-                forceEnforceZOrder: ForegroundZOrderRetouchPolicy.ShouldForceOnImageManagerStateChanged(
-                    overlayVisible)),
+                forceEnforceZOrder: false),
             _ => ImageManagerSurfaceDecisionFactory.NoTouch(
                 requestZOrderApply: false,
                 forceEnforceZOrder: false)
