@@ -26,14 +26,9 @@ public static class BusinessStorageBackendCapabilityPolicy
 {
     public static bool IsSqliteAvailable(bool experimentalEnabled)
     {
-        if (!experimentalEnabled)
-        {
-            return false;
-        }
-
-        // Probe runtime availability without hard dependency at compile-time.
-        var sqliteType = Type.GetType("Microsoft.Data.Sqlite.SqliteConnection, Microsoft.Data.Sqlite", throwOnError: false);
-        return sqliteType != null;
+        // Microsoft.Data.Sqlite 是 csproj 硬引用，程序集必随部署分发（未启用 PublishTrimmed）；
+        // 可用性仅由实验开关决定。
+        return experimentalEnabled;
     }
 }
 

@@ -150,7 +150,7 @@ internal static class AppCompositionRoot
                 var persistence = provider.GetRequiredService<Ink.InkPersistenceService>();
                 var bridge = new Ink.InkHistoryPersistenceBridge(persistence);
                 var sqliteAdapter = new InkHistorySqliteStoreAdapter(bridge);
-                return new InkHistorySnapshotStoreAdapter(sqliteAdapter);
+                return sqliteAdapter;
             });
         }
 

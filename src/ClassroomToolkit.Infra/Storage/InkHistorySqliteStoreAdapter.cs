@@ -8,7 +8,7 @@ using ClassroomToolkit.Infra.Logging;
 
 namespace ClassroomToolkit.Infra.Storage;
 
-public sealed class InkHistorySqliteStoreAdapter
+public sealed class InkHistorySqliteStoreAdapter : IInkHistorySnapshotStore
 {
     private readonly IInkHistoryStoreBridge _bridge;
     private readonly Func<string, string> _dbPathResolver;

@@ -170,12 +170,6 @@ internal readonly record struct FloatingTopmostPlan(
 
 internal static class FloatingTopmostPolicies
 {
-    private readonly record struct TopmostPlanSnapshot(
-        bool ToolbarTopmost,
-        bool RollCallTopmost,
-        bool LauncherTopmost,
-        bool ImageManagerTopmost);
-
     internal static bool ShouldEnforceZOrder(
         ZOrderSurface? lastFrontSurface,
         ZOrderSurface currentFrontSurface,
@@ -198,9 +192,7 @@ internal static class FloatingTopmostPolicies
             return true;
         }
 
-        var lastTopmost = ToTopmostPlan(lastPlan.Value);
-        var currentTopmost = ToTopmostPlan(currentPlan);
-        if (lastTopmost != currentTopmost)
+        if (TopmostFieldsChanged(lastPlan.Value, currentPlan))
         {
             return true;
         }
@@ -213,12 +205,12 @@ internal static class FloatingTopmostPolicies
         return false;
     }
 
-    private static TopmostPlanSnapshot ToTopmostPlan(FloatingTopmostPlan plan)
-        => new(
-            plan.ToolbarTopmost,
-            plan.RollCallTopmost,
-            plan.LauncherTopmost,
-            plan.ImageManagerTopmost);
+    // 仅比较四个窗口 topmost 位；OverlayShouldActivate 不参与 Z 序强化判定。
+    private static bool TopmostFieldsChanged(FloatingTopmostPlan last, FloatingTopmostPlan current)
+        => last.ToolbarTopmost != current.ToolbarTopmost
+           || last.RollCallTopmost != current.RollCallTopmost
+           || last.LauncherTopmost != current.LauncherTopmost
+           || last.ImageManagerTopmost != current.ImageManagerTopmost;
 
     private static bool ShouldRetouchLauncherOnInteractiveSurface(
         ZOrderSurface frontSurface,

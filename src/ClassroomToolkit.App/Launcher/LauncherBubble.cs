@@ -56,10 +56,6 @@ internal enum LauncherBubbleVisibleChangedApplyReason
     CooldownActive = 3
 }
 
-internal readonly record struct LauncherBubbleVisibleChangedApplyDecision(
-    bool ShouldApply,
-    LauncherBubbleVisibleChangedApplyReason Reason);
-
 internal enum LauncherBubbleVisibleChangedDedupReason
 {
     None = 0,

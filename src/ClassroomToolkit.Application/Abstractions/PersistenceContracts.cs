@@ -2,16 +2,9 @@ using ClassroomToolkit.Domain.Models;
 
 namespace ClassroomToolkit.Application.Abstractions;
 
-public sealed record InkHistorySnapshotLoadResult(
-    string SourcePath,
-    int PageIndex,
-    string? StrokesJson,
-    bool CreatedTemplate,
-    DateTime? UpdatedAtUtc = null);
-
 public interface IInkHistorySnapshotStore
 {
-    InkHistorySnapshotLoadResult LoadOrCreate(string sourcePath, int pageIndex, bool writeSnapshot = true);
+    InkHistoryLoadResult LoadOrCreate(string sourcePath, int pageIndex, bool writeSnapshot = true);
     bool Save(string sourcePath, int pageIndex, string? strokesJson);
 }
 
