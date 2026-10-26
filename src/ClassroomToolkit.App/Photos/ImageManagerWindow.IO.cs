@@ -100,7 +100,7 @@ public partial class ImageManagerWindow
                     ex.Message)));
     }
 
-    private static ImageSource? LoadThumbnail(byte[] content, int decodePixelWidth)
+    internal static ImageSource? LoadThumbnail(byte[] content, int decodePixelWidth)
     {
         return ExecuteIoSafe<ImageSource?>(
             () =>
@@ -192,7 +192,7 @@ public partial class ImageManagerWindow
         }
     }
 
-    private static List<ImageItem>? ScanDirectory(string folder, System.Threading.CancellationToken token)
+    internal static List<ImageItem>? ScanDirectory(string folder, System.Threading.CancellationToken token)
     {
         var list = new List<ImageItem>();
         if (token.IsCancellationRequested)

@@ -38,7 +38,7 @@ public partial class ImageManagerWindow : Window
     private string[] _navigablePathsCache = [];
     private bool _navigableDirty = true;
     private bool _isClosing;
-    private CancellationTokenSource? _thumbnailCts;
+    internal CancellationTokenSource? _thumbnailCts;
     private readonly SemaphoreSlim _thumbnailSemaphore = new(ThumbnailWorkerConcurrency);
     private readonly CancellationTokenSource _lifecycleCancellation = new();
     private int _loadImagesRequestId;

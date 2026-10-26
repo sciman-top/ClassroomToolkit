@@ -1,4 +1,3 @@
-using System.Reflection;
 using System.Windows.Media;
 using ClassroomToolkit.App.Photos;
 using AwesomeAssertions;
@@ -16,17 +15,9 @@ public sealed class ImageManagerLoadLifecycleTests
     {
         WpfStaTestRunner.Run(() =>
         {
-            var method = typeof(ImageManagerWindow).GetMethod(
-                "LoadThumbnail",
-                BindingFlags.NonPublic | BindingFlags.Static,
-                binder: null,
-                new[] { typeof(byte[]), typeof(int) },
-                modifiers: null);
-            method.Should().NotBeNull();
-
-            var thumbnail = method!.Invoke(
-                null,
-                [Convert.FromBase64String(OnePixelPngBase64), 120]) as ImageSource;
+            var thumbnail = ImageManagerWindow.LoadThumbnail(
+                Convert.FromBase64String(OnePixelPngBase64),
+                120) as ImageSource;
             thumbnail.Should().NotBeNull();
         });
     }
@@ -52,12 +43,8 @@ public sealed class ImageManagerLoadLifecycleTests
             File.WriteAllText(ignoredPath, "ignored");
             File.SetAttributes(hiddenPath, FileAttributes.Hidden);
 
-            var method = typeof(ImageManagerWindow).GetMethod(
-                "ScanDirectory",
-                BindingFlags.NonPublic | BindingFlags.Static);
-            method.Should().NotBeNull();
+            var result = ImageManagerWindow.ScanDirectory(rootPath, CancellationToken.None);
 
-            var result = method!.Invoke(null, [rootPath, CancellationToken.None]) as List<ImageItem>;
             result.Should().NotBeNull();
             result!.Select(item => item.Path).Should().Equal(folderPath, pdfPath, imagePath);
         }
@@ -85,14 +72,11 @@ public sealed class ImageManagerLoadLifecycleTests
             WpfStaTestRunner.Run(() =>
             {
                 window = new ImageManagerWindow([], []);
-                typeof(ImageManagerWindow).GetField("_thumbnailCts", BindingFlags.NonPublic | BindingFlags.Instance)!
-                    .SetValue(window, previous);
-                load = (Task)typeof(ImageManagerWindow).GetMethod("LoadImagesAsync", BindingFlags.NonPublic | BindingFlags.Instance)!
-                    .Invoke(window, [Path.GetTempPath(), 0])!;
+                window._thumbnailCts = previous;
+                load = window.LoadImagesAsync(Path.GetTempPath(), 0);
                 // The same cleanup runs when the teacher leaves a folder while its
                 // previous thumbnail cancellation callbacks are still executing.
-                typeof(ImageManagerWindow).GetMethod("ShowEmptyState", BindingFlags.NonPublic | BindingFlags.Instance)!
-                    .Invoke(window, null);
+                window.ShowEmptyState();
             });
             releaseCallback.Set();
 

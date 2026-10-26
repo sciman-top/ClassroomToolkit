@@ -1,6 +1,5 @@
-using System.Reflection;
-using ClassroomToolkit.App.Paint;
 using AwesomeAssertions;
+using ClassroomToolkit.App.Paint;
 using Xunit;
 
 namespace ClassroomToolkit.Tests.Paint;
@@ -15,21 +14,13 @@ public sealed class InkCacheKeyParsingTests
     [InlineData("unknown|abc", false, "", 1)]
     public void TryParseCacheKey_ShouldParseExpectedValues(string key, bool expectedOk, string expectedPath, int expectedPage)
     {
-        var type = typeof(PaintOverlayWindow);
-
-        var method = type!.GetMethod(
-            "TryParseCacheKey",
-            BindingFlags.NonPublic | BindingFlags.Static);
-        method.Should().NotBeNull();
-
-        var args = new object[] { key, "", 1 };
-        var ok = (bool)method!.Invoke(null, args)!;
+        var ok = InkExportSnapshotBuilder.TryParseCacheKey(key, out var path, out var page);
 
         ok.Should().Be(expectedOk);
         if (expectedOk)
         {
-            args[1].Should().Be(expectedPath);
-            args[2].Should().Be(expectedPage);
+            path.Should().Be(expectedPath);
+            page.Should().Be(expectedPage);
         }
     }
 }

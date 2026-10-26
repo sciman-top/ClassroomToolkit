@@ -53,7 +53,7 @@ public partial class ImageManagerWindow
         _ = LoadImagesAsync(folder, requestId);
     }
 
-    private async Task LoadImagesAsync(string folder, int requestId)
+    internal async Task LoadImagesAsync(string folder, int requestId)
     {
         var nextThumbnailCts = new CancellationTokenSource();
         var token = nextThumbnailCts.Token;
@@ -129,7 +129,7 @@ public partial class ImageManagerWindow
         }
     }
 
-    private void ShowEmptyState()
+    internal void ShowEmptyState()
     {
         TryCancelAndDisposeThumbnailCts();
         _thumbnailBackgroundQueueTimer.Stop();
