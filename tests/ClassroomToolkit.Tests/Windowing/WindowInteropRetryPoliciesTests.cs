@@ -4,15 +4,15 @@ using Xunit;
 
 namespace ClassroomToolkit.Tests.Windowing;
 
-public sealed class WindowPlacementInteropRetryPolicyTests
+public sealed class WindowInteropRetryPolicyTests
 {
     [Fact]
     public void Resolve_ShouldReturnMaxAttemptsReached_WhenAttemptReachedMax()
     {
-        var decision = WindowInteropRetryPolicies.ResolveWindowPlacementInteropRetry(attempt: 2, errorCode: 5);
+        var decision = WindowInteropRetryPolicies.Resolve(attempt: 2, errorCode: 5);
 
         decision.ShouldRetry.Should().BeFalse();
-        decision.Reason.Should().Be(WindowPlacementInteropRetryReason.MaxAttemptsReached);
+        decision.Reason.Should().Be(WindowInteropRetryReason.MaxAttemptsReached);
     }
 
     [Theory]
@@ -20,85 +20,18 @@ public sealed class WindowPlacementInteropRetryPolicyTests
     [InlineData(6)]
     public void Resolve_ShouldReturnInvalidHandleError_ForInvalidHandleErrors(int errorCode)
     {
-        var decision = WindowInteropRetryPolicies.ResolveWindowPlacementInteropRetry(attempt: 1, errorCode: errorCode);
+        var decision = WindowInteropRetryPolicies.Resolve(attempt: 1, errorCode: errorCode);
 
         decision.ShouldRetry.Should().BeFalse();
-        decision.Reason.Should().Be(WindowPlacementInteropRetryReason.InvalidHandleError);
+        decision.Reason.Should().Be(WindowInteropRetryReason.InvalidHandleError);
     }
 
     [Fact]
     public void Resolve_ShouldReturnRetryableError_ForRecoverableErrorBeforeMaxAttempt()
     {
-        var decision = WindowInteropRetryPolicies.ResolveWindowPlacementInteropRetry(attempt: 1, errorCode: 5);
+        var decision = WindowInteropRetryPolicies.Resolve(attempt: 1, errorCode: 5);
 
         decision.ShouldRetry.Should().BeTrue();
-        decision.Reason.Should().Be(WindowPlacementInteropRetryReason.RetryableError);
+        decision.Reason.Should().Be(WindowInteropRetryReason.RetryableError);
     }
-
-}
-
-public sealed class WindowStyleInteropRetryPolicyTests
-{
-    [Fact]
-    public void Resolve_ShouldReturnFalse_WhenAttemptReachedMax()
-    {
-        var decision = WindowInteropRetryPolicies.ResolveWindowStyleInteropRetry(attempt: 2, errorCode: 5);
-
-        decision.ShouldRetry.Should().BeFalse();
-        decision.Reason.Should().Be(WindowStyleInteropRetryReason.MaxAttemptsReached);
-    }
-
-    [Theory]
-    [InlineData(1400)]
-    [InlineData(6)]
-    public void Resolve_ShouldReturnFalse_ForInvalidHandleErrors(int errorCode)
-    {
-        var decision = WindowInteropRetryPolicies.ResolveWindowStyleInteropRetry(attempt: 1, errorCode: errorCode);
-
-        decision.ShouldRetry.Should().BeFalse();
-        decision.Reason.Should().Be(WindowStyleInteropRetryReason.InvalidHandleError);
-    }
-
-    [Fact]
-    public void Resolve_ShouldReturnTrue_ForRecoverableErrorBeforeMaxAttempt()
-    {
-        var decision = WindowInteropRetryPolicies.ResolveWindowStyleInteropRetry(attempt: 1, errorCode: 5);
-
-        decision.ShouldRetry.Should().BeTrue();
-        decision.Reason.Should().Be(WindowStyleInteropRetryReason.RetryableError);
-    }
-
-}
-
-public sealed class WindowTopmostInteropRetryPolicyTests
-{
-    [Fact]
-    public void Resolve_ShouldReturnFalse_WhenAttemptReachedMax()
-    {
-        var decision = WindowInteropRetryPolicies.ResolveWindowTopmostInteropRetry(attempt: 2, errorCode: 5);
-
-        decision.ShouldRetry.Should().BeFalse();
-        decision.Reason.Should().Be(WindowTopmostInteropRetryReason.MaxAttemptsReached);
-    }
-
-    [Theory]
-    [InlineData(1400)]
-    [InlineData(6)]
-    public void Resolve_ShouldReturnFalse_ForInvalidHandleErrors(int errorCode)
-    {
-        var decision = WindowInteropRetryPolicies.ResolveWindowTopmostInteropRetry(attempt: 1, errorCode: errorCode);
-
-        decision.ShouldRetry.Should().BeFalse();
-        decision.Reason.Should().Be(WindowTopmostInteropRetryReason.InvalidHandleError);
-    }
-
-    [Fact]
-    public void Resolve_ShouldReturnTrue_ForRecoverableErrorBeforeMaxAttempt()
-    {
-        var decision = WindowInteropRetryPolicies.ResolveWindowTopmostInteropRetry(attempt: 1, errorCode: 5);
-
-        decision.ShouldRetry.Should().BeTrue();
-        decision.Reason.Should().Be(WindowTopmostInteropRetryReason.RetryableError);
-    }
-
 }

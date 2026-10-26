@@ -8,11 +8,6 @@ internal static class WindowInteropRetryDefaults
     internal const int ErrorInvalidHandle = 6;
 }
 
-internal static class WindowInteropRuntimeDefaults
-{
-    internal const int RetrySleepMs = 0;
-}
-
 internal enum WindowInteropRetryCoreDecision
 {
     Retryable = 0,
@@ -42,7 +37,7 @@ internal static class WindowInteropRetryPolicyCore
     }
 }
 
-internal enum WindowPlacementInteropRetryReason
+internal enum WindowInteropRetryReason
 {
     None = 0,
     MaxAttemptsReached = 1,
@@ -50,85 +45,25 @@ internal enum WindowPlacementInteropRetryReason
     RetryableError = 3
 }
 
-internal readonly record struct WindowPlacementInteropRetryDecision(
+internal readonly record struct WindowInteropRetryDecision(
     bool ShouldRetry,
-    WindowPlacementInteropRetryReason Reason);
-
-internal enum WindowStyleInteropRetryReason
-{
-    None = 0,
-    MaxAttemptsReached = 1,
-    InvalidHandleError = 2,
-    RetryableError = 3
-}
-
-internal readonly record struct WindowStyleInteropRetryDecision(
-    bool ShouldRetry,
-    WindowStyleInteropRetryReason Reason);
-
-internal enum WindowTopmostInteropRetryReason
-{
-    None = 0,
-    MaxAttemptsReached = 1,
-    InvalidHandleError = 2,
-    RetryableError = 3
-}
-
-internal readonly record struct WindowTopmostInteropRetryDecision(
-    bool ShouldRetry,
-    WindowTopmostInteropRetryReason Reason);
+    WindowInteropRetryReason Reason);
 
 internal static class WindowInteropRetryPolicies
 {
-    internal static WindowPlacementInteropRetryDecision ResolveWindowPlacementInteropRetry(int attempt, int errorCode)
+    internal static WindowInteropRetryDecision Resolve(int attempt, int errorCode)
     {
-        var coreDecision = WindowInteropRetryPolicyCore.Resolve(attempt, errorCode);
-        return coreDecision switch
+        return WindowInteropRetryPolicyCore.Resolve(attempt, errorCode) switch
         {
-            WindowInteropRetryCoreDecision.MaxAttemptsReached => new WindowPlacementInteropRetryDecision(
+            WindowInteropRetryCoreDecision.MaxAttemptsReached => new WindowInteropRetryDecision(
                 ShouldRetry: false,
-                Reason: WindowPlacementInteropRetryReason.MaxAttemptsReached),
-            WindowInteropRetryCoreDecision.InvalidHandleError => new WindowPlacementInteropRetryDecision(
+                Reason: WindowInteropRetryReason.MaxAttemptsReached),
+            WindowInteropRetryCoreDecision.InvalidHandleError => new WindowInteropRetryDecision(
                 ShouldRetry: false,
-                Reason: WindowPlacementInteropRetryReason.InvalidHandleError),
-            _ => new WindowPlacementInteropRetryDecision(
+                Reason: WindowInteropRetryReason.InvalidHandleError),
+            _ => new WindowInteropRetryDecision(
                 ShouldRetry: true,
-                Reason: WindowPlacementInteropRetryReason.RetryableError)
+                Reason: WindowInteropRetryReason.RetryableError)
         };
     }
-
-    internal static WindowStyleInteropRetryDecision ResolveWindowStyleInteropRetry(int attempt, int errorCode)
-    {
-        var coreDecision = WindowInteropRetryPolicyCore.Resolve(attempt, errorCode);
-        return coreDecision switch
-        {
-            WindowInteropRetryCoreDecision.MaxAttemptsReached => new WindowStyleInteropRetryDecision(
-                ShouldRetry: false,
-                Reason: WindowStyleInteropRetryReason.MaxAttemptsReached),
-            WindowInteropRetryCoreDecision.InvalidHandleError => new WindowStyleInteropRetryDecision(
-                ShouldRetry: false,
-                Reason: WindowStyleInteropRetryReason.InvalidHandleError),
-            _ => new WindowStyleInteropRetryDecision(
-                ShouldRetry: true,
-                Reason: WindowStyleInteropRetryReason.RetryableError)
-        };
-    }
-
-    internal static WindowTopmostInteropRetryDecision ResolveWindowTopmostInteropRetry(int attempt, int errorCode)
-    {
-        var coreDecision = WindowInteropRetryPolicyCore.Resolve(attempt, errorCode);
-        return coreDecision switch
-        {
-            WindowInteropRetryCoreDecision.MaxAttemptsReached => new WindowTopmostInteropRetryDecision(
-                ShouldRetry: false,
-                Reason: WindowTopmostInteropRetryReason.MaxAttemptsReached),
-            WindowInteropRetryCoreDecision.InvalidHandleError => new WindowTopmostInteropRetryDecision(
-                ShouldRetry: false,
-                Reason: WindowTopmostInteropRetryReason.InvalidHandleError),
-            _ => new WindowTopmostInteropRetryDecision(
-                ShouldRetry: true,
-                Reason: WindowTopmostInteropRetryReason.RetryableError)
-        };
-    }
-
 }
