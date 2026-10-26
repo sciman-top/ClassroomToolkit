@@ -24,8 +24,9 @@ public sealed partial class KeyboardHook
             var msg = wParam.ToInt32();
             var isDown = msg == WmKeyDown || msg == WmSysKeyDown;
             var isUp = msg == WmKeyUp || msg == WmSysKeyUp;
-            var data = Marshal.PtrToStructure<KbdHookStruct>(lParam);
-            var virtualKey = (VirtualKey)data.VirtualKeyCode;
+            // 全系统按键均过此回调且仅消费键码：裸读偏移免整结构 marshal 分配
+            // （偏移经 OffsetOf 与结构定义保持同步）。
+            var virtualKey = (VirtualKey)(uint)Marshal.ReadInt32(lParam, KeyboardHookVkCodeOffset);
 
             if (isDown || isUp)
             {

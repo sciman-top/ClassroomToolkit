@@ -107,10 +107,26 @@ public sealed partial class Win32PresentationResolver
             return cached.Name;
         }
 
+        // TTL 过期与已退出进程条目不主动驱逐会随常驻运行累积（每日数十、周级 KB）；
+        // 借刷新时机顺带清扫，成本摊销在已发生的枚举路径上。
+        if (!ProcessNameCache.IsEmpty && (nowUtc - _processNameCacheLastSweepUtc).TotalMinutes >= 10)
+        {
+            _processNameCacheLastSweepUtc = nowUtc;
+            foreach (var staleKey in ProcessNameCache
+                .Where(pair => (nowUtc - pair.Value.FetchedUtc).TotalSeconds >= ProcessNameCacheTtlSeconds)
+                .Select(pair => pair.Key)
+                .ToArray())
+            {
+                ProcessNameCache.TryRemove(staleKey, out _);
+            }
+        }
+
         var name = QueryProcessName(processId);
         ProcessNameCache[processId] = (name, nowUtc);
         return name;
     }
+
+    private static DateTime _processNameCacheLastSweepUtc = DateTime.MinValue;
 
     private static string QueryProcessName(uint processId)
     {

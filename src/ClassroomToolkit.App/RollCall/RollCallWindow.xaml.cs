@@ -60,6 +60,10 @@ public partial class RollCallWindow : Window
     private bool _settingsSaveDirty;
     private int _speechUnavailableNotifiedState;
     private int _remoteHookUnavailableNotifiedState;
+    private DateTime _lastRemoteRollTriggeredUtc = DateTime.MinValue;
+
+    /// <summary>遥控点名键的去重窗口；与 WPS 导航侧 WpsNavDebounceMs 同量级。</summary>
+    private const int RemoteRollDebounceMs = 250;
     private bool _initialized;
     private bool _settingsSnapshotApplied;
     private bool _warmupStarted;

@@ -36,17 +36,20 @@ public sealed partial class WpsSlideshowNavigationHook
                 return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
             }
 
-            var data = Marshal.PtrToStructure<KbdHookStruct>(lParam);
-            if (WpsHookKeyboardInjectionPolicy.ShouldIgnore(data.Flags))
-            {
-                return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
-            }
-
-            var key = (VirtualKey)data.VirtualKeyCode;
+            // 全系统按键均过此回调：先裸读键码与注入标记做过滤，绝大多数按键
+            // 免去整结构 marshal 分配（字段均为 uint，无前置 padding）。
+            var key = (VirtualKey)(uint)Marshal.ReadInt32(lParam, KbdHookVkCodeOffset);
             if (!_allowedKeys.Contains(key))
             {
                 return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
             }
+
+            var flags = (uint)Marshal.ReadInt32(lParam, KbdHookFlagsOffset);
+            if (WpsHookKeyboardInjectionPolicy.ShouldIgnore(flags))
+            {
+                return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
+            }
+
             if (IsKeyboardKeySuppressed(key))
             {
                 return CallNextHookEx(_keyboardHook, nCode, wParam, lParam);
@@ -138,10 +141,21 @@ public sealed partial class WpsSlideshowNavigationHook
         }
     }
 
+    // 滚轮同方向在途合并标记（0=无在途）：惯性触摸板的高频刻度（~120/s）不再线性放大
+    // 后台派发与闭包分配；上层 200ms 防抖窗口内的多刻度本就合并为一页。
+    private int _inFlightWheelDirection;
+
     internal void QueueNavigationRequest(int direction, string source)
     {
         if (_disposed || !_interceptEnabled)
         {
+            return;
+        }
+
+        if (string.Equals(source, "wheel", StringComparison.Ordinal)
+            && Interlocked.CompareExchange(ref _inFlightWheelDirection, direction, 0) != 0)
+        {
+            // 已有同/异方向刻度在途：同方向合并跳过，异方向由在途请求先行。
             return;
         }
 
@@ -151,23 +165,36 @@ public sealed partial class WpsSlideshowNavigationHook
             source,
             CaptureForegroundWindow(),
             Stopwatch.GetTimestamp());
+        var queueName = string.Equals(source, "wheel", StringComparison.Ordinal)
+            ? "WpsSlideshowNavigationHook.QueueNavigationRequest.wheel"
+            : "WpsSlideshowNavigationHook.QueueNavigationRequest.keyboard";
         _queueBackgroundWork(
-            $"WpsSlideshowNavigationHook.QueueNavigationRequest.{source}",
+            queueName,
             () =>
             {
-                if (_disposed || !_interceptEnabled || generation != Volatile.Read(ref _dispatchGeneration))
+                try
                 {
-                    return;
+                    if (_disposed || !_interceptEnabled || generation != Volatile.Read(ref _dispatchGeneration))
+                    {
+                        return;
+                    }
+                    InteropEventDispatchPolicy.InvokeSafely(
+                        NavigationRequestCaptured,
+                        request,
+                        "WpsSlideshowNavigationHook.NavigationRequestCaptured");
+                    InteropEventDispatchPolicy.InvokeSafely(
+                        NavigationRequested,
+                        direction,
+                        source,
+                        "WpsSlideshowNavigationHook.NavigationRequested");
                 }
-                InteropEventDispatchPolicy.InvokeSafely(
-                    NavigationRequestCaptured,
-                    request,
-                    "WpsSlideshowNavigationHook.NavigationRequestCaptured");
-                InteropEventDispatchPolicy.InvokeSafely(
-                    NavigationRequested,
-                    direction,
-                    source,
-                    "WpsSlideshowNavigationHook.NavigationRequested");
+                finally
+                {
+                    if (string.Equals(source, "wheel", StringComparison.Ordinal))
+                    {
+                        Interlocked.Exchange(ref _inFlightWheelDirection, 0);
+                    }
+                }
             },
             ex => InteropHookDiagnostics.RecordCallbackException(
                 component: "WpsNavHook",

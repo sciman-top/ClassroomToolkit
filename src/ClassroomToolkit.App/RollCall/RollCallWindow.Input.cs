@@ -178,6 +178,15 @@ public partial class RollCallWindow
             {
                 EnqueueRemoteHookUiAction("roll", () =>
                 {
+                    // 键盘自动重复（按住翻页笔 ~25-30Hz）会把点名+TTS+照片+保存按重复率
+                    // 放大直进 UI 线程；与 WPS 导航侧防抖对齐，250ms 窗口内的重复触发合并
+                    // 为一次点名。人手连按间隔通常大于该窗口，不受影响。
+                    var nowUtc = DateTime.UtcNow;
+                    if ((nowUtc - _lastRemoteRollTriggeredUtc).TotalMilliseconds < RemoteRollDebounceMs)
+                    {
+                        return;
+                    }
+                    _lastRemoteRollTriggeredUtc = nowUtc;
                     RollCallRemoteHookActionExecutionCoordinator.ExecuteRoll(
                         _viewModel.IsRollCallMode,
                         _viewModel.TryRollNext,

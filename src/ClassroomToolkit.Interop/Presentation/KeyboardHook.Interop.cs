@@ -16,6 +16,9 @@ public sealed partial class KeyboardHook
         public IntPtr ExtraInfo;
     }
 
+    // 回调热路径裸读字段用：偏移经 OffsetOf 与结构定义保持同步。
+    private static readonly int KeyboardHookVkCodeOffset = (int)Marshal.OffsetOf<KbdHookStruct>(nameof(KbdHookStruct.VirtualKeyCode));
+
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     private static extern IntPtr SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hMod, uint dwThreadId);

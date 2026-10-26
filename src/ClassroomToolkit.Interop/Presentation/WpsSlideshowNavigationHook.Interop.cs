@@ -16,6 +16,10 @@ public sealed partial class WpsSlideshowNavigationHook
         public IntPtr ExtraInfo;
     }
 
+    // 回调热路径裸读字段用：偏移经 OffsetOf 与结构定义保持同步。
+    private static readonly int KbdHookVkCodeOffset = (int)Marshal.OffsetOf<KbdHookStruct>(nameof(KbdHookStruct.VirtualKeyCode));
+    private static readonly int KbdHookFlagsOffset = (int)Marshal.OffsetOf<KbdHookStruct>(nameof(KbdHookStruct.Flags));
+
     [StructLayout(LayoutKind.Sequential)]
     private struct MsllHookStruct
     {
