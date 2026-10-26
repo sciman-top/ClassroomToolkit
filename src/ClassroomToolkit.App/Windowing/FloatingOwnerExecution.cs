@@ -39,16 +39,6 @@ internal static class FloatingOwnerBindingPolicy
 
         return FloatingOwnerBindingAction.None;
     }
-
-    internal static bool ShouldAttachOverlayOwner(bool overlayVisible, bool ownerAlreadyOverlay)
-    {
-        return Resolve(overlayVisible, ownerAlreadyOverlay) == FloatingOwnerBindingAction.AttachOverlay;
-    }
-
-    internal static bool ShouldDetachOverlayOwner(bool overlayVisible, bool ownerAlreadyOverlay)
-    {
-        return Resolve(overlayVisible, ownerAlreadyOverlay) == FloatingOwnerBindingAction.DetachOverlay;
-    }
 }
 
 internal readonly record struct FloatingOwnerExecutionPlan(

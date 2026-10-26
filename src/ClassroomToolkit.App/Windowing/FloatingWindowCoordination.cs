@@ -490,12 +490,6 @@ internal static class FloatingWindowCoordinationPolicies
                 Reason: FloatingActivationExecutionReason.ActivationNotRequested);
     }
 
-    internal static bool ShouldActivate<TWindow>(TWindow? target, bool shouldActivate)
-        where TWindow : class
-    {
-        return Resolve(target, shouldActivate).ShouldActivate;
-    }
-
     internal static FloatingActivationGuardDecision ResolveFloatingActivationGuard(FloatingUtilityActivitySnapshot snapshot)
     {
         if (snapshot.ToolbarActive)

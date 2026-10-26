@@ -33,17 +33,6 @@ public sealed class OverlayFocusExecutionExecutorTests
     }
 
     [Fact]
-    public void Resolve_ShouldReturnInputFlags()
-    {
-        var decision = OverlayFocusExecutionExecutor.Resolve(
-            shouldActivate: true,
-            shouldKeyboardFocus: false);
-
-        decision.ShouldActivate.Should().BeTrue();
-        decision.ShouldKeyboardFocus.Should().BeFalse();
-    }
-
-    [Fact]
     public void Apply_ShouldInvokeActivateAndKeyboardFocus_WithRequestedFlags()
     {
         var activateCalled = false;

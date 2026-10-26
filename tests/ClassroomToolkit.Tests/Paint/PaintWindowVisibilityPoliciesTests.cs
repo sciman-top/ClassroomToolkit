@@ -9,17 +9,6 @@ namespace ClassroomToolkit.Tests.Paint;
 public sealed class PaintVisibilityTransitionPolicyTests
 {
     [Fact]
-    public void ResolveEnsureOverlayVisible_AlwaysRequestsEnsureVisible()
-    {
-        PaintWindowVisibilityPolicies.ResolveEnsureOverlayVisible(overlayVisible: false)
-            .Should()
-            .Be(PaintVisibilityTransition.EnsureOverlayVisible);
-        PaintWindowVisibilityPolicies.ResolveEnsureOverlayVisible(overlayVisible: true)
-            .Should()
-            .Be(PaintVisibilityTransition.EnsureOverlayVisible);
-    }
-
-    [Fact]
     public void ResolvePaintToggle_MapsOverlayStateToHideOrShow()
     {
         PaintWindowVisibilityPolicies.ResolvePaintToggle(overlayVisible: true)

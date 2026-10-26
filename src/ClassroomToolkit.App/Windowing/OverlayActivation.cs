@@ -107,10 +107,6 @@ internal static class OverlayActivatedRetouchStateUpdater
     }
 }
 
-internal readonly record struct OverlayFocusExecutionDecision(
-    bool ShouldActivate,
-    bool ShouldKeyboardFocus);
-
 internal static class OverlayFocusExecutionExecutor
 {
     internal static void Apply(
@@ -137,18 +133,8 @@ internal static class OverlayFocusExecutionExecutor
         ArgumentNullException.ThrowIfNull(tryActivate);
         ArgumentNullException.ThrowIfNull(tryKeyboardFocus);
 
-        var decision = Resolve(shouldActivate, shouldKeyboardFocus);
-        _ = SafeActionExecutionExecutor.TryExecute(() => tryActivate(target, decision.ShouldActivate));
-        _ = SafeActionExecutionExecutor.TryExecute(() => tryKeyboardFocus(target, decision.ShouldKeyboardFocus));
-    }
-
-    internal static OverlayFocusExecutionDecision Resolve(
-        bool shouldActivate,
-        bool shouldKeyboardFocus)
-    {
-        return new OverlayFocusExecutionDecision(
-            ShouldActivate: shouldActivate,
-            ShouldKeyboardFocus: shouldKeyboardFocus);
+        _ = SafeActionExecutionExecutor.TryExecute(() => tryActivate(target, shouldActivate));
+        _ = SafeActionExecutionExecutor.TryExecute(() => tryKeyboardFocus(target, shouldKeyboardFocus));
     }
 }
 
@@ -305,13 +291,6 @@ internal static class OverlayActivationPolicies
                 ShouldApply: false,
                 ShouldUpdateLastRetouchUtc: false,
                 Reason: OverlayActivationRetouchReason.Throttled);
-    }
-
-    internal static bool ShouldUpdateLastRetouchUtc(
-        SurfaceZOrderDecision decision,
-        bool shouldApply)
-    {
-        return shouldApply && decision.RequestZOrderApply && !decision.ForceEnforceZOrder;
     }
 
     internal static bool ShouldUpdateLastRetouchUtc(OverlayActivationRetouchDecision decision)

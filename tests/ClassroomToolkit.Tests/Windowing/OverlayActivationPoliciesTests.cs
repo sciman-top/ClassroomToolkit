@@ -187,21 +187,6 @@ public sealed class OverlayActivationRetouchPolicyTests
         retouchDecision.Reason.Should().Be(OverlayActivationRetouchReason.None);
         retouchDecision.ShouldUpdateLastRetouchUtc.Should().BeTrue();
     }
-
-    [Fact]
-    public void ShouldUpdateLastRetouchUtc_ShouldReturnFalse_WhenForced()
-    {
-        var decision = new SurfaceZOrderDecision(
-            ShouldTouchSurface: true,
-            Surface: ZOrderSurface.PhotoFullscreen,
-            RequestZOrderApply: true,
-            ForceEnforceZOrder: true);
-
-        OverlayActivationPolicies.ShouldUpdateLastRetouchUtc(decision, shouldApply: true)
-            .Should()
-            .BeFalse();
-    }
-
 }
 
 public sealed class OverlayActivationSuppressionPolicyTests

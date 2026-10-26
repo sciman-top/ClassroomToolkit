@@ -417,7 +417,6 @@ public partial class MainWindow
             return;
         }
 
-        PaintWindowVisibilityPolicies.ResolveEnsureOverlayVisible(overlay.IsVisible);
         ApplyEnsurePaintOverlayVisibleTransition();
     }
 

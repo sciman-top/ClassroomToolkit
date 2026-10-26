@@ -105,11 +105,6 @@ internal static class PaintWindowVisibilityPolicies
                && !shouldWireToolbarLifecycle;
     }
 
-    internal static PaintVisibilityTransition ResolveEnsureOverlayVisible(bool overlayVisible)
-    {
-        return PaintVisibilityTransition.EnsureOverlayVisible;
-    }
-
     internal static PaintVisibilityTransition ResolvePaintToggle(bool overlayVisible)
     {
         return overlayVisible

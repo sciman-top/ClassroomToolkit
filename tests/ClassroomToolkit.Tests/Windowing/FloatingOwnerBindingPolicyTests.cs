@@ -52,25 +52,4 @@ public sealed class FloatingOwnerBindingPolicyTests
                 overlayVisible: true,
                 ownerAlreadyOverlay: false));
     }
-
-    [Fact]
-    public void ShouldAttachAndDetach_MatchResolvedAction()
-    {
-        FloatingOwnerBindingPolicy
-            .ShouldAttachOverlayOwner(overlayVisible: true, ownerAlreadyOverlay: false)
-            .Should()
-            .BeTrue();
-        FloatingOwnerBindingPolicy
-            .ShouldAttachOverlayOwner(overlayVisible: true, ownerAlreadyOverlay: true)
-            .Should()
-            .BeFalse();
-        FloatingOwnerBindingPolicy
-            .ShouldDetachOverlayOwner(overlayVisible: false, ownerAlreadyOverlay: true)
-            .Should()
-            .BeTrue();
-        FloatingOwnerBindingPolicy
-            .ShouldDetachOverlayOwner(overlayVisible: true, ownerAlreadyOverlay: true)
-            .Should()
-            .BeFalse();
-    }
 }

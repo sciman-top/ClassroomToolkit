@@ -129,7 +129,7 @@ internal static class WindowingDedupPolicies
                 Reason: RetouchThrottleReason.WithinThrottleWindow);
     }
 
-    internal static bool ShouldAllow(
+    internal static bool ShouldAllowRetouch(
         DateTime lastRetouchUtc,
         DateTime nowUtc,
         int minimumIntervalMs)
@@ -138,13 +138,5 @@ internal static class WindowingDedupPolicies
             lastRetouchUtc,
             nowUtc,
             minimumIntervalMs).ShouldAllow;
-    }
-
-    internal static bool ShouldAllowRetouch(
-        DateTime lastRetouchUtc,
-        DateTime nowUtc,
-        int minimumIntervalMs)
-    {
-        return ShouldAllow(lastRetouchUtc, nowUtc, minimumIntervalMs);
     }
 }
