@@ -19,6 +19,9 @@ if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Get-ClassroomToolkitArtifactPath -Name PrivateMigrationRoot
 }
 
+$scriptHelpersModule = Join-Path $PSScriptRoot "..\artifacts\ScriptHelpers.psm1"
+Import-Module -Name $scriptHelpersModule -Force
+
 # GetFullPath 规整语义（裁 .. 与分隔符），与 artifacts/ScriptHelpers.psm1 的 Resolve-AbsolutePath 有意分叉。
 function Resolve-AbsolutePathNormalized {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -27,15 +30,6 @@ function Resolve-AbsolutePathNormalized {
     }
 
     return [System.IO.Path]::GetFullPath((Join-Path (Get-Location) $Path))
-}
-
-function Assert-SafeSegment {
-    param([Parameter(Mandatory = $true)][string]$Value, [Parameter(Mandatory = $true)][string]$Label)
-    if ([string]::IsNullOrWhiteSpace($Value) -or $Value.Trim() -ne $Value -or $Value -eq "." -or $Value -eq ".." -or
-        $Value.Contains([System.IO.Path]::DirectorySeparatorChar) -or $Value.Contains([System.IO.Path]::AltDirectorySeparatorChar) -or
-        $Value.IndexOfAny([System.IO.Path]::GetInvalidFileNameChars()) -ge 0) {
-        throw "Invalid $Label '$Value'."
-    }
 }
 
 function Copy-MigrationItem {
@@ -54,8 +48,8 @@ function Copy-MigrationItem {
     }
 }
 
-Assert-SafeSegment -Value $Version -Label "release version"
-Assert-SafeSegment -Value $MigrationId -Label "migration id"
+Assert-SafeReleaseVersionSegment -Value $Version -Label "release version"
+Assert-SafeReleaseVersionSegment -Value $MigrationId -Label "migration id"
 $resolvedSourceRoot = Resolve-AbsolutePathNormalized -Path $SourceRoot
 if (-not (Test-Path -LiteralPath $resolvedSourceRoot -PathType Container)) {
     throw "Migration source root does not exist: $resolvedSourceRoot"

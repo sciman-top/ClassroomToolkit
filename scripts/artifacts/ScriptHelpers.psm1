@@ -9,6 +9,54 @@ function Resolve-AbsolutePath {
     return Join-Path (Get-Location) $Path
 }
 
+function Resolve-PowerShellExecutable {
+    if (Get-Command "pwsh" -ErrorAction SilentlyContinue) {
+        return "pwsh"
+    }
+
+    if (Get-Command "powershell" -ErrorAction SilentlyContinue) {
+        return "powershell"
+    }
+
+    throw "No PowerShell executable found. Expected 'pwsh' or 'powershell'."
+}
+
+function Test-ContainsOrdinalIgnoreCase {
+    param(
+        [Parameter(Mandatory = $true)][AllowEmptyString()][string]$Text,
+        [Parameter(Mandatory = $true)][string]$Value
+    )
+
+    return $Text.IndexOf($Value, [StringComparison]::OrdinalIgnoreCase) -ge 0
+}
+
+function Format-DotnetListFailureOutput {
+    param([Parameter()][AllowNull()][AllowEmptyCollection()][string[]]$Lines)
+
+    $detail = (@($Lines) | Out-String).Trim()
+    if ($detail.Length -gt 2000) {
+        return $detail.Substring(0, 2000) + "`n...[truncated]"
+    }
+
+    return $detail
+}
+
+function Assert-SafeReleaseVersionSegment {
+    param(
+        [Parameter(Mandatory = $true)][string]$Value,
+        [Parameter()][string]$Label = "release version"
+    )
+    if ([string]::IsNullOrWhiteSpace($Value) -or $Value.Trim() -ne $Value -or $Value -eq "." -or $Value -eq "..") {
+        throw "Invalid $Label '$Value'."
+    }
+
+    if ($Value.Contains([System.IO.Path]::DirectorySeparatorChar) -or
+        $Value.Contains([System.IO.Path]::AltDirectorySeparatorChar) -or
+        $Value.IndexOfAny([System.IO.Path]::GetInvalidFileNameChars()) -ge 0) {
+        throw "Invalid $Label '$Value': value must be a single safe directory name."
+    }
+}
+
 function Resolve-ReleaseSourceCommit {
     param(
         [Parameter(Mandatory = $true)][string]$SourceRef,
@@ -45,4 +93,11 @@ function Resolve-ReleaseSourceCommit {
     return $commit
 }
 
-Export-ModuleMember -Function @('Resolve-AbsolutePath', 'Resolve-ReleaseSourceCommit')
+Export-ModuleMember -Function @(
+    'Resolve-AbsolutePath',
+    'Resolve-PowerShellExecutable',
+    'Test-ContainsOrdinalIgnoreCase',
+    'Format-DotnetListFailureOutput',
+    'Assert-SafeReleaseVersionSegment',
+    'Resolve-ReleaseSourceCommit'
+)

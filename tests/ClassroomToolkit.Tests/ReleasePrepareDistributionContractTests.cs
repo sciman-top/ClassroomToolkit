@@ -10,8 +10,12 @@ public sealed class ReleasePrepareDistributionContractTests
     public void PrepareDistribution_ShouldRejectUnsafeReleaseVersionSegments()
     {
         var source = ReadPrepareDistributionScript();
+        var helpers = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "scripts",
+            "artifacts",
+            "ScriptHelpers.psm1"));
 
-        source.Should().Contain("function Assert-SafeReleaseVersionSegment");
+        helpers.Should().Contain("function Assert-SafeReleaseVersionSegment");
         source.Should().Contain("Assert-SafeReleaseVersionSegment -Value $Version");
     }
 

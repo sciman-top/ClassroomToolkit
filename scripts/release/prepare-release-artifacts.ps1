@@ -24,6 +24,9 @@ if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Get-ClassroomToolkitArtifactPath -Name ReleaseRoot
 }
 
+$scriptHelpersModule = Join-Path $PSScriptRoot "..\artifacts\ScriptHelpers.psm1"
+Import-Module -Name $scriptHelpersModule -Force
+
 function Invoke-ReleaseScript {
     param(
         [Parameter(Mandatory = $true)][string]$Name,
@@ -37,17 +40,6 @@ function Invoke-ReleaseScript {
         throw "[release-artifacts] FAIL $Name (exit=$LASTEXITCODE)"
     }
     Write-Host "[release-artifacts] PASS  $Name"
-}
-
-function Assert-CleanSourceCheckout {
-    $statusLines = @(& git status --porcelain --untracked-files=all)
-    if ($LASTEXITCODE -ne 0) {
-        throw "Unable to inspect the Git worktree before release packaging."
-    }
-
-    if ($statusLines.Count -gt 0) {
-        throw "Release packaging requires a clean checkout/worktree; refusing to mix working-tree files with committed source."
-    }
 }
 
 function Get-DeliveryArtifactHashes {
@@ -96,15 +88,7 @@ if ($AllowOverwriteVersion) {
 $outputRootPath = if ([System.IO.Path]::IsPathRooted($OutputRoot)) { $OutputRoot } else { Join-Path (Get-Location) $OutputRoot }
 $stagingOutputRoot = Join-Path $outputRootPath ".staging"
 $stagingReleaseRoot = Join-Path $stagingOutputRoot $Version
-$sourceCommit = (& git rev-parse --verify --end-of-options "$SourceRef^{commit}").Trim()
-if ($LASTEXITCODE -ne 0 -or $sourceCommit -notmatch '^[0-9a-f]{40}$') {
-    throw "SourceRef does not resolve to a commit: $SourceRef"
-}
-Assert-CleanSourceCheckout
-$currentCommit = (& git rev-parse --verify --end-of-options "HEAD^{commit}").Trim()
-if ($LASTEXITCODE -ne 0 -or $currentCommit -ne $sourceCommit) {
-    throw "Current checkout HEAD '$currentCommit' does not match resolved source commit '$sourceCommit'."
-}
+$sourceCommit = Resolve-ReleaseSourceCommit -SourceRef $SourceRef -ScenarioLabel 'release'
 $installerArguments += @("-ResolvedSourceCommit", $sourceCommit)
 
 if (Test-Path -LiteralPath (Join-Path $outputRootPath $Version)) {

@@ -47,17 +47,6 @@ function Get-PackageRowsFromDotnetOutput {
     return $rows
 }
 
-function Format-DotnetListFailureOutput {
-    param([Parameter()][AllowNull()][AllowEmptyCollection()][string[]]$Lines)
-
-    $detail = (@($Lines) | Out-String).Trim()
-    if ($detail.Length -gt 2000) {
-        return $detail.Substring(0, 2000) + "`n...[truncated]"
-    }
-
-    return $detail
-}
-
 function Invoke-DotnetPackageList {
     param(
         [Parameter(Mandatory = $true)][string]$Label,

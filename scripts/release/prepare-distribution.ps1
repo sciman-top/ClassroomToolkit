@@ -35,28 +35,6 @@ if (Test-Path -LiteralPath $environmentBootstrap) {
 $scriptHelpersModule = Join-Path $PSScriptRoot "..\artifacts\ScriptHelpers.psm1"
 Import-Module -Name $scriptHelpersModule -Force
 
-function Assert-SafeReleaseVersionSegment {
-    param([Parameter(Mandatory = $true)][string]$Value)
-
-    if ([string]::IsNullOrWhiteSpace($Value)) {
-        throw "Invalid release version: value is required."
-    }
-
-    if ($Value.Trim() -ne $Value) {
-        throw "Invalid release version '$Value': leading or trailing whitespace is not allowed."
-    }
-
-    if ($Value -eq "." -or $Value -eq "..") {
-        throw "Invalid release version '$Value': path traversal segments are not allowed."
-    }
-
-    if ($Value.Contains([System.IO.Path]::DirectorySeparatorChar) -or
-        $Value.Contains([System.IO.Path]::AltDirectorySeparatorChar) -or
-        $Value.IndexOfAny([System.IO.Path]::GetInvalidFileNameChars()) -ge 0) {
-        throw "Invalid release version '$Value': version must be a single safe directory name."
-    }
-}
-
 function Assert-HttpsDownloadUrl {
     param([Parameter(Mandatory = $true)][string]$DownloadUrl)
 

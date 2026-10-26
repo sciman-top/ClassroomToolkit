@@ -30,19 +30,13 @@ if (Test-Path -LiteralPath $environmentBootstrap) {
     . $environmentBootstrap
 }
 
+$scriptHelpersModule = Join-Path $PSScriptRoot "..\artifacts\ScriptHelpers.psm1"
+Import-Module -Name $scriptHelpersModule -Force
+
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot "..\..")).Path
 $resolvedBaselinePath = Join-Path $repoRoot $BaselinePath
 $resolvedReportPath = Join-Path $repoRoot $ReportPath
 $srcRoot = Join-Path $repoRoot "src"
-
-function Test-ContainsOrdinalIgnoreCase {
-    param(
-        [Parameter(Mandatory = $true)][AllowEmptyString()][string]$Text,
-        [Parameter(Mandatory = $true)][string]$Value
-    )
-
-    return $Text.IndexOf($Value, [StringComparison]::OrdinalIgnoreCase) -ge 0
-}
 
 function Convert-ToRepoRelativePath {
     param(

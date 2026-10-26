@@ -37,9 +37,20 @@ public sealed class ReleaseArtifactContractTests
         var source = ReadScript("prepare-source-package.ps1");
 
         source.Should().Contain("git archive --format=zip");
-        source.Should().Contain("git rev-parse --verify --end-of-options");
-        source.Should().Contain("git status --porcelain --untracked-files=all");
         source.Should().Contain("excludes_local_classroom_data = $true");
+    }
+
+    [Fact]
+    public void ScriptHelpers_ShouldPinSharedSourceCommitResolutionAndVersionSegmentGuard()
+    {
+        var helpers = File.ReadAllText(TestPathHelper.ResolveRepoPath(
+            "scripts",
+            "artifacts",
+            "ScriptHelpers.psm1"));
+
+        helpers.Should().Contain("git rev-parse --verify --end-of-options");
+        helpers.Should().Contain("git status --porcelain --untracked-files=all");
+        helpers.Should().Contain("function Assert-SafeReleaseVersionSegment");
     }
 
     [Fact]
@@ -68,8 +79,7 @@ public sealed class ReleaseArtifactContractTests
     {
         var source = ReadScript("prepare-release-artifacts.ps1");
 
-        source.Should().Contain("Assert-CleanSourceCheckout");
-        source.Should().Contain("git rev-parse --verify --end-of-options");
+        source.Should().Contain("Resolve-ReleaseSourceCommit");
         source.Should().Contain("Get-DeliveryArtifactHashes");
         source.Should().Contain("Write-DeliveryChecksums");
         source.Should().Contain("SHA256SUMS.txt");

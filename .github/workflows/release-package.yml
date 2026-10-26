@@ -76,8 +76,10 @@ jobs:
       - name: Release preflight
         if: ${{ steps.release_vars.outputs.run_preflight == 'true' }}
         shell: pwsh
+        # CI checkout 无 logs/ 目录（被 .gitignore 忽略），UI 性能采样在 CI 恒为
+        # 零观测值空转，仅本机预检有观测意义，故跳过。
         run: |
-          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile full
+          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/release/preflight-check.ps1 -Configuration Release -Profile full -SkipUiPerformanceSampling
 
       - name: Build release artifacts
         shell: pwsh

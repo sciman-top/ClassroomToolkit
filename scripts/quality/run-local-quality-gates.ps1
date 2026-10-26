@@ -13,26 +13,8 @@ if (Test-Path -LiteralPath $environmentBootstrap) {
     . $environmentBootstrap
 }
 
-function Resolve-PowerShellExecutable {
-    if (Get-Command "pwsh" -ErrorAction SilentlyContinue) {
-        return "pwsh"
-    }
-
-    if (Get-Command "powershell" -ErrorAction SilentlyContinue) {
-        return "powershell"
-    }
-
-    throw "No PowerShell executable found. Expected 'pwsh' or 'powershell'."
-}
-
-function Test-ContainsOrdinalIgnoreCase {
-    param(
-        [Parameter(Mandatory = $true)][AllowEmptyString()][string]$Text,
-        [Parameter(Mandatory = $true)][string]$Value
-    )
-
-    return $Text.IndexOf($Value, [StringComparison]::OrdinalIgnoreCase) -ge 0
-}
+$scriptHelpersModule = Join-Path $PSScriptRoot "..\artifacts\ScriptHelpers.psm1"
+Import-Module -Name $scriptHelpersModule -Force
 
 function Invoke-NativeStep {
     param(

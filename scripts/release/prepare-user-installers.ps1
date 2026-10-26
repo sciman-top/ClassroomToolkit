@@ -46,19 +46,6 @@ function Invoke-Step {
 }
 
 
-function Assert-SafeReleaseVersionSegment {
-    param([Parameter(Mandatory = $true)][string]$Value)
-    if ([string]::IsNullOrWhiteSpace($Value) -or $Value.Trim() -ne $Value -or $Value -eq "." -or $Value -eq "..") {
-        throw "Invalid release version '$Value'."
-    }
-
-    if ($Value.Contains([System.IO.Path]::DirectorySeparatorChar) -or
-        $Value.Contains([System.IO.Path]::AltDirectorySeparatorChar) -or
-        $Value.IndexOfAny([System.IO.Path]::GetInvalidFileNameChars()) -ge 0) {
-        throw "Invalid release version '$Value': version must be a single safe directory name."
-    }
-}
-
 Assert-SafeReleaseVersionSegment -Value $Version
 $sourceCommit = Resolve-ReleaseSourceCommit -SourceRef $SourceRef -ResolvedSourceCommit $ResolvedSourceCommit -ScenarioLabel 'installer'
 $resolvedConfigPath = Resolve-AbsolutePath -Path $ConfigPath

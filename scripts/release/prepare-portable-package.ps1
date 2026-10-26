@@ -21,18 +21,6 @@ if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
 $scriptHelpersModule = Join-Path $PSScriptRoot "..\artifacts\ScriptHelpers.psm1"
 Import-Module -Name $scriptHelpersModule -Force
 
-function Assert-SafeReleaseVersionSegment {
-    param([Parameter(Mandatory = $true)][string]$Value)
-    if ([string]::IsNullOrWhiteSpace($Value) -or $Value.Trim() -ne $Value -or $Value -in @('.', '..')) {
-        throw "Invalid release version '$Value'."
-    }
-    if ($Value.Contains([System.IO.Path]::DirectorySeparatorChar) -or
-        $Value.Contains([System.IO.Path]::AltDirectorySeparatorChar) -or
-        $Value.IndexOfAny([System.IO.Path]::GetInvalidFileNameChars()) -ge 0) {
-        throw "Invalid release version '$Value': version must be a single safe directory name."
-    }
-}
-
 function Invoke-Step {
     param(
         [Parameter(Mandatory = $true)][string]$Name,

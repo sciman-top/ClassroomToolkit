@@ -39,11 +39,7 @@ function Get-VulnerabilityRowsFromDotnetOutput {
         $package = $tokens[0]
         $severity = $tokens[$tokens.Count - 2]
         $advisory = $tokens[$tokens.Count - 1]
-
-        $resolved = "unknown"
-        if ($tokens.Count -ge 3) {
-            $resolved = $tokens[2]
-        }
+        $resolved = $tokens[2]
 
         $rows += [pscustomobject]@{
             package = $package
@@ -55,17 +51,6 @@ function Get-VulnerabilityRowsFromDotnetOutput {
     }
 
     return $rows
-}
-
-function Format-DotnetListFailureOutput {
-    param([Parameter()][AllowNull()][AllowEmptyCollection()][string[]]$Lines)
-
-    $detail = (@($Lines) | Out-String).Trim()
-    if ($detail.Length -gt 2000) {
-        return $detail.Substring(0, 2000) + "`n...[truncated]"
-    }
-
-    return $detail
 }
 
 $resolvedSolution = Resolve-AbsolutePath -Path $Solution

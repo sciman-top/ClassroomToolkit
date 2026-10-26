@@ -46,5 +46,4 @@ jobs:
           name: locked-restore-stable-test-summary
           path: |
             artifacts/evidence/tests/current/stable-tests-summary.json
-            artifacts/evidence/tests/current/stable-tests-entries
           if-no-files-found: warn
