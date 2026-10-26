@@ -125,6 +125,7 @@ public partial class PaintOverlayWindow
     private int _clearSurfaceBufferSize;
     private byte[]? _compositeSurfaceBuffer;
     private int _compositeSurfaceBufferSize;
+    private byte[]? _eraseRectClearBuffer;
     private readonly DrawingVisual _scratchRenderVisual = new();
 
     private InkCacheScope _currentCacheScope = InkCacheScope.None;

@@ -45,8 +45,13 @@ public partial class PaintOverlayWindow
             return changed || !_inkRecordEnabled;
         }
         var stride = rect.Width * 4;
-        var clear = new byte[stride * rect.Height];
-        _rasterSurface.WritePixels(rect, clear, stride, 0);
+        // 每次区域擦除手势一次：清零缓冲 grow-only 复用，不再按矩形尺寸瞬时分配。
+        var requiredClearBytes = stride * rect.Height;
+        if (_eraseRectClearBuffer == null || _eraseRectClearBuffer.Length < requiredClearBytes)
+        {
+            _eraseRectClearBuffer = new byte[requiredClearBytes];
+        }
+        _rasterSurface.WritePixels(rect, _eraseRectClearBuffer, stride, 0);
         _hasDrawing = true;
         return changed || !_inkRecordEnabled;
     }

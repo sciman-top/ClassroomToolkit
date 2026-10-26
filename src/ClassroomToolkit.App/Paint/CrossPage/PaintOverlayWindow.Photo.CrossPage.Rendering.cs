@@ -81,7 +81,13 @@ public partial class PaintOverlayWindow
                 allowSynchronousResolve: allowSynchronousHeightResolve);
             if (prevHeight <= 0)
             {
-                _inkDiagnostics?.OnCrossPageUpdateEvent("abort", "neighbor-height", $"page={pageIndex} dir=prev");
+                {
+                    var diagnostics = _inkDiagnostics;
+                    if (diagnostics != null)
+                    {
+                        diagnostics.OnCrossPageUpdateEvent("abort", "neighbor-height", $"page={pageIndex} dir=prev");
+                    }
+                }
                 break;
             }
             prevTop -= prevHeight;
@@ -109,24 +115,43 @@ public partial class PaintOverlayWindow
                 allowSynchronousResolve: allowSynchronousHeightResolve);
             if (nextHeight <= 0)
             {
-                _inkDiagnostics?.OnCrossPageUpdateEvent("abort", "neighbor-height", $"page={pageIndex} dir=next");
+                {
+                    var diagnostics = _inkDiagnostics;
+                    if (diagnostics != null)
+                    {
+                        diagnostics.OnCrossPageUpdateEvent("abort", "neighbor-height", $"page={pageIndex} dir=next");
+                    }
+                }
                 break;
             }
             nextTop += nextHeight;
         }
         if (_photoDocumentIsPdf)
         {
-            var missingPages = visiblePages
-                .Where(p => p.PageIndex != currentPage)
-                .Select(p => p.PageIndex)
-                .Distinct()
-                .Where(p => !TryGetCachedPdfPageBitmap(p, out _, tryEnterTimeoutMs: 0))
-                .ToList();
+            // 每合成帧执行：手写循环收集 missing/pinned，避免 LINQ 迭代器+闭包的每帧分配。
+            var missingPages = new List<int>();
+            var pinnedPages = new List<int>();
+            for (int index = 0; index < visiblePages.Count; index++)
+            {
+                int pageIndex = visiblePages[index].PageIndex;
+                if (!pinnedPages.Contains(pageIndex))
+                {
+                    pinnedPages.Add(pageIndex);
+                }
+
+                if (pageIndex != currentPage
+                    && !missingPages.Contains(pageIndex)
+                    && !TryGetCachedPdfPageBitmap(pageIndex, out _, tryEnterTimeoutMs: 0))
+                {
+                    missingPages.Add(pageIndex);
+                }
+            }
+
             if (missingPages.Count > 0)
             {
                 SchedulePdfVisiblePrefetch(missingPages);
             }
-            _pdfDocumentSession.SetPinnedPages(visiblePages.Select(p => p.PageIndex).Distinct());
+            _pdfDocumentSession.SetPinnedPages(pinnedPages);
         }
         if (!_photoDocumentIsPdf)
         {
@@ -138,8 +163,16 @@ public partial class PaintOverlayWindow
             }
         }
         // Render neighbor pages
-        var neighborPages = CrossPageNeighborInkPolicies.ResolveCrossPageNeighborPageDedup(
-            visiblePages.Where(p => p.PageIndex != currentPage).ToList());
+        var neighborPagesSource = new List<(int PageIndex, double Top)>();
+        for (int index = 0; index < visiblePages.Count; index++)
+        {
+            if (visiblePages[index].PageIndex != currentPage)
+            {
+                neighborPagesSource.Add(visiblePages[index]);
+            }
+        }
+
+        var neighborPages = CrossPageNeighborInkPolicies.ResolveCrossPageNeighborPageDedup(neighborPagesSource);
         if (_crossPageDragging && _crossPageTranslateClamped && neighborPages.Count == 0)
         {
             return;
@@ -167,7 +200,17 @@ public partial class PaintOverlayWindow
             var nowForClearUtc = GetCurrentUtcTimestamp();
             var interactionActiveForClear = IsCrossPageInteractionActive();
             var elapsedSinceNonEmptyMs = (nowForClearUtc - _lastNeighborPagesNonEmptyUtc).TotalMilliseconds;
-            var hasVisibleNeighborFrame = _neighborPageImages.Any(img => img.Visibility == Visibility.Visible && img.Source != null);
+            var hasVisibleNeighborFrame = false;
+            for (int index = 0; index < _neighborPageImages.Count; index++)
+            {
+                var image = _neighborPageImages[index];
+                if (image.Visibility == Visibility.Visible && image.Source != null)
+                {
+                    hasVisibleNeighborFrame = true;
+                    break;
+                }
+            }
+
             if (CrossPageNeighborInkPolicies.ShouldKeepFrames(
                 hasVisibleNeighborFrame,
                 interactionActiveForClear,
@@ -175,7 +218,12 @@ public partial class PaintOverlayWindow
                 nowForClearUtc,
                 CrossPageRuntimeDefaults.NeighborPagesClearGraceMs))
             {
-                _inkDiagnostics?.OnCrossPageUpdateEvent("hold", "neighbor-pages", $"reason=grace elapsedMs={elapsedSinceNonEmptyMs:F0}");
+                var diagnostics = _inkDiagnostics;
+                if (diagnostics != null)
+                {
+                    diagnostics.OnCrossPageUpdateEvent("hold", "neighbor-pages", $"reason=grace elapsedMs={elapsedSinceNonEmptyMs:F0}");
+                }
+
                 return;
             }
             ClearNeighborPages();
@@ -335,7 +383,13 @@ public partial class PaintOverlayWindow
                 img.Visibility = Visibility.Visible;
                 heldCurrentSlotFrame = true;
                 missingPageBitmapCount++;
-                _inkDiagnostics?.OnCrossPageUpdateEvent("hold", "neighbor-bitmap", $"page={pageIndex} mode=slot-hold");
+                {
+                    var diagnostics = _inkDiagnostics;
+                    if (diagnostics != null)
+                    {
+                        diagnostics.OnCrossPageUpdateEvent("hold", "neighbor-bitmap", $"page={pageIndex} mode=slot-hold");
+                    }
+                }
             }
             else if (pageFrameDecision.CollapseSlot)
             {
@@ -343,7 +397,13 @@ public partial class PaintOverlayWindow
                 img.Visibility = Visibility.Collapsed;
                 missingPageBitmapCount++;
                 var slotTag = slotPageChanged ? "reused" : "same";
-                _inkDiagnostics?.OnCrossPageUpdateEvent("miss", "neighbor-bitmap", $"page={pageIndex} slot={slotTag}");
+                {
+                    var diagnostics = _inkDiagnostics;
+                    if (diagnostics != null)
+                    {
+                        diagnostics.OnCrossPageUpdateEvent("miss", "neighbor-bitmap", $"page={pageIndex} slot={slotTag}");
+                    }
+                }
             }
             else if (img.Source is BitmapSource heldBitmap)
             {
@@ -351,13 +411,25 @@ public partial class PaintOverlayWindow
                 // This avoids one-frame black flicker in cross-page seams.
                 bitmap = heldBitmap;
                 img.Visibility = Visibility.Visible;
-                _inkDiagnostics?.OnCrossPageUpdateEvent("hold", "neighbor-bitmap", $"page={pageIndex}");
+                {
+                    var diagnostics = _inkDiagnostics;
+                    if (diagnostics != null)
+                    {
+                        diagnostics.OnCrossPageUpdateEvent("hold", "neighbor-bitmap", $"page={pageIndex}");
+                    }
+                }
             }
             else
             {
                 img.Visibility = Visibility.Collapsed;
                 missingPageBitmapCount++;
-                _inkDiagnostics?.OnCrossPageUpdateEvent("miss", "neighbor-bitmap", $"page={pageIndex} slot=same");
+                {
+                    var diagnostics = _inkDiagnostics;
+                    if (diagnostics != null)
+                    {
+                        diagnostics.OnCrossPageUpdateEvent("miss", "neighbor-bitmap", $"page={pageIndex} slot=same");
+                    }
+                }
             }
             if (heldCurrentSlotFrame)
             {
