@@ -319,7 +319,37 @@ internal class MarkerBrushRenderer : IBrushRenderer
         {
             return _cachedGeometry;
         }
-        _cachedGeometry = BuildStrokeGeometryCore();
+
+        // 抬笔最终几何复用书写期预览的基座+尾窗组合：与教师所见画面一致（消除切换跳变），
+        // 且超长笔画不再在抬笔一帧内对全部点逐段 widen 造成 O(n) hitch。
+        // 基座未建立（短笔画）时保持原全量构建。
+        if (_previewBaseGeometry != null && _previewBasePointCount > 0)
+        {
+            var tail = BuildPreviewGeometryForRange(Math.Max(0, _previewBasePointCount - 3), _points.Count);
+            if (_previewBaseGeometry.CanFreeze)
+            {
+                _previewBaseGeometry.Freeze();
+            }
+
+            var combined = new GeometryGroup { FillRule = FillRule.Nonzero };
+            combined.Children.Add(_previewBaseGeometry);
+            if (tail != null)
+            {
+                combined.Children.Add(tail);
+            }
+
+            if (combined.CanFreeze)
+            {
+                combined.Freeze();
+            }
+
+            _cachedGeometry = combined;
+        }
+        else
+        {
+            _cachedGeometry = BuildStrokeGeometryCore();
+        }
+
         _cacheDirty = false;
         return _cachedGeometry;
     }

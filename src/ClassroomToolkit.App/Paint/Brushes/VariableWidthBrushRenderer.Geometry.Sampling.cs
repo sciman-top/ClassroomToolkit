@@ -66,16 +66,63 @@ internal partial class VariableWidthBrushRenderer
                 maxSpeed = sourcePoints[i].Speed;
             }
         }
+
+        var centerline = BuildCenterlineSamples(sourcePoints, previewFastPath, globalStartLength, totalLength, maxSpeed);
+        var resampled = ResampleByArcLength(centerline, previewFastPath);
+        if (_config.EnableEndpointTaperPostResample)
+        {
+            ApplyEndpointTaper(resampled, globalStartLength, totalLength);
+        }
+        _lastResampledPointCount = resampled.Count;
+        return resampled;
+    }
+
+    private List<StrokePoint> BuildCenterlineSamples(
+        IReadOnlyList<StrokePoint> sourcePoints,
+        bool previewFastPath,
+        double globalStartLength,
+        double totalLength,
+        double maxSpeed)
+    {
+        var samples = new List<StrokePoint>();
         double accumulatedLength = Math.Max(0.0, globalStartLength);
 
-        for (int i = 0; i < sourcePoints.Count - 1; i++)
+        // 预扫各段上采样步数；总量超预算时按比例压缩，防止超长笔画（万点级）抬笔帧的
+        // 瞬时 MB 级中间分配。中间样本只服务弧长重采样（上限 MaxResampledPointCount），
+        // 压缩后的密度仍远高于其插值需求，最终几何差异为亚像素级。
+        int segmentCount = sourcePoints.Count - 1;
+        int[] segmentSteps = segmentCount > 0 ? new int[segmentCount] : Array.Empty<int>();
+        long plannedTotal = 0;
+        for (int i = 0; i < segmentCount; i++)
+        {
+            var p0 = sourcePoints[Math.Max(i - 1, 0)];
+            var p1 = sourcePoints[i];
+            var p2 = sourcePoints[i + 1];
+            var p3 = sourcePoints[Math.Min(i + 2, sourcePoints.Count - 1)];
+            int steps = ResolveUpsampleSteps(p0, p1, p2, p3, previewFastPath);
+            segmentSteps[i] = steps;
+            plannedTotal += (i == 0) ? steps : steps - 1;
+        }
+
+        int upsampleBudget = Math.Max(2, _config.MaxResampledPointCount) * 8;
+        double stepScale = plannedTotal > upsampleBudget
+            ? upsampleBudget / (double)plannedTotal
+            : 1.0;
+        if (samples.Capacity < plannedTotal && plannedTotal <= upsampleBudget + segmentCount)
+        {
+            samples.Capacity = (int)plannedTotal + 1;
+        }
+
+        for (int i = 0; i < segmentCount; i++)
         {
             var p0 = sourcePoints[Math.Max(i - 1, 0)];
             var p1 = sourcePoints[i];
             var p2 = sourcePoints[i + 1];
             var p3 = sourcePoints[Math.Min(i + 2, sourcePoints.Count - 1)];
 
-            int upsampleSteps = ResolveUpsampleSteps(p0, p1, p2, p3, previewFastPath);
+            int upsampleSteps = stepScale < 1.0
+                ? Math.Max(1, (int)(segmentSteps[i] * stepScale))
+                : segmentSteps[i];
             int startStep = (i == 0) ? 0 : 1;
             for (int step = startStep; step <= upsampleSteps; step++)
             {
@@ -132,13 +179,7 @@ internal partial class VariableWidthBrushRenderer
             }
         }
 
-        var resampled = ResampleByArcLength(samples, previewFastPath);
-        if (_config.EnableEndpointTaperPostResample)
-        {
-            ApplyEndpointTaper(resampled, globalStartLength, totalLength);
-        }
-        _lastResampledPointCount = resampled.Count;
-        return resampled;
+        return samples;
     }
 
     private List<StrokePoint> ResampleByArcLength(List<StrokePoint> source, bool previewFastPath)
