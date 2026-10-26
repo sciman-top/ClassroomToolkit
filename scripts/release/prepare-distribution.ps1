@@ -421,7 +421,9 @@ $buildOffline = $PackageMode -eq "all" -or $PackageMode -eq "offline"
 if ($buildStandard) {
     New-Item -ItemType Directory -Path $standardApp -Force | Out-Null
     if (-not $SkipPublish) {
-        Invoke-Publish -Project $resolvedProjectPath -ConfigurationValue $resolvedConfiguration -Rid $resolvedRid -SelfContained:$false -OutputPath $standardApp -ApplicationVersion $Version
+        # 主更新渠道（Velopack 每次整目录替换，JIT 成本无法跨版本摊销）：
+        # 与 offline 渠道一致启用 ReadyToRun，消除教师升级后首次启动的全量 JIT。
+        Invoke-Publish -Project $resolvedProjectPath -ConfigurationValue $resolvedConfiguration -Rid $resolvedRid -SelfContained:$false -OutputPath $standardApp -ApplicationVersion $Version -ReadyToRun
     }
 
     Assert-FileExists -Path $standardApp -Label "standard app output folder"
