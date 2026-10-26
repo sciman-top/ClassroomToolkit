@@ -28,14 +28,8 @@ if (Test-Path -LiteralPath $environmentBootstrap) {
     . $environmentBootstrap
 }
 
-function Resolve-AbsolutePath {
-    param([Parameter(Mandatory = $true)][string]$Path)
-    if ([System.IO.Path]::IsPathRooted($Path)) {
-        return $Path
-    }
-
-    return Join-Path (Get-Location) $Path
-}
+$scriptHelpersModule = Join-Path $PSScriptRoot "..rtifacts\ScriptHelpers.psm1"
+Import-Module -Name $scriptHelpersModule -Force
 
 function Invoke-Step {
     param(
@@ -51,34 +45,6 @@ function Invoke-Step {
     Write-Host "[user-installer] PASS  $Name"
 }
 
-function Resolve-ReleaseSourceCommit {
-    $commitRef = if ([string]::IsNullOrWhiteSpace($ResolvedSourceCommit)) {
-        "$SourceRef^{commit}"
-    }
-    else {
-        "$ResolvedSourceCommit^{commit}"
-    }
-
-    $commit = (& git rev-parse --verify --end-of-options $commitRef).Trim()
-    if ($LASTEXITCODE -ne 0 -or $commit -notmatch '^[0-9a-f]{40}$') {
-        throw "Source reference does not resolve to a commit: $commitRef"
-    }
-
-    $statusLines = @(& git status --porcelain --untracked-files=all)
-    if ($LASTEXITCODE -ne 0) {
-        throw "Unable to inspect the Git worktree before installer packaging."
-    }
-    if ($statusLines.Count -gt 0) {
-        throw "Installer packaging requires a clean checkout/worktree; refusing to mix working-tree files with committed source."
-    }
-
-    $currentCommit = (& git rev-parse --verify --end-of-options "HEAD^{commit}").Trim()
-    if ($LASTEXITCODE -ne 0 -or $currentCommit -ne $commit) {
-        throw "Current checkout HEAD '$currentCommit' does not match resolved source commit '$commit'."
-    }
-
-    return $commit
-}
 
 function Assert-SafeReleaseVersionSegment {
     param([Parameter(Mandatory = $true)][string]$Value)
@@ -94,7 +60,7 @@ function Assert-SafeReleaseVersionSegment {
 }
 
 Assert-SafeReleaseVersionSegment -Value $Version
-$sourceCommit = Resolve-ReleaseSourceCommit
+$sourceCommit = Resolve-ReleaseSourceCommit -SourceRef $SourceRef -ResolvedSourceCommit $ResolvedSourceCommit -ScenarioLabel 'installer'
 $resolvedConfigPath = Resolve-AbsolutePath -Path $ConfigPath
 $config = Get-Content -LiteralPath $resolvedConfigPath -Raw | ConvertFrom-Json
 $releaseConfig = $config.release

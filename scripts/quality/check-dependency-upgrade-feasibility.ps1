@@ -14,13 +14,8 @@ if (Test-Path -LiteralPath $environmentBootstrap) {
     . $environmentBootstrap
 }
 
-function Resolve-AbsolutePath {
-    param([Parameter(Mandatory = $true)][string]$Path)
-    if ([System.IO.Path]::IsPathRooted($Path)) {
-        return $Path
-    }
-    return Join-Path (Get-Location) $Path
-}
+$scriptHelpersModule = Join-Path $PSScriptRoot "..rtifacts\ScriptHelpers.psm1"
+Import-Module -Name $scriptHelpersModule -Force
 
 function Get-PackageRowsFromDotnetOutput {
     param([Parameter()][AllowNull()][AllowEmptyCollection()][string[]]$Lines)

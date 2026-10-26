@@ -8,7 +8,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-function Resolve-AbsolutePath {
+# GetFullPath 规整语义（裁 .. 与分隔符），与 artifacts/ScriptHelpers.psm1 的 Resolve-AbsolutePath 有意分叉。
+function Resolve-AbsolutePathNormalized {
     param([Parameter(Mandatory = $true)][string]$Path)
     if ([System.IO.Path]::IsPathRooted($Path)) {
         return [System.IO.Path]::GetFullPath($Path)
@@ -41,7 +42,7 @@ function Assert-PackageIntegrity {
     }
 }
 
-$resolvedPackageRoot = Resolve-AbsolutePath -Path $PackageRoot
+$resolvedPackageRoot = Resolve-AbsolutePathNormalized -Path $PackageRoot
 if ([string]::IsNullOrWhiteSpace($TargetRoot)) {
     $localAppData = [Environment]::GetFolderPath("LocalApplicationData")
     $TargetRoot = Join-Path $localAppData "ClassroomToolkit"
@@ -55,7 +56,7 @@ if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf) -or -not (Test-Pa
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 Assert-PackageIntegrity -Manifest $manifest -PayloadRoot $payloadRoot
 
-$resolvedTargetRoot = Resolve-AbsolutePath -Path $TargetRoot
+$resolvedTargetRoot = Resolve-AbsolutePathNormalized -Path $TargetRoot
 if ($resolvedTargetRoot -eq [System.IO.Path]::GetPathRoot($resolvedTargetRoot)) {
     throw "TargetRoot must not be a filesystem root."
 }

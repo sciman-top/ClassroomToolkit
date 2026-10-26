@@ -17,14 +17,8 @@ if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Get-ClassroomToolkitArtifactPath -Name ReleaseRoot
 }
 
-function Resolve-AbsolutePath {
-    param([Parameter(Mandatory = $true)][string]$Path)
-    if ([System.IO.Path]::IsPathRooted($Path)) {
-        return $Path
-    }
-
-    return Join-Path (Get-Location) $Path
-}
+$scriptHelpersModule = Join-Path $PSScriptRoot "..rtifacts\ScriptHelpers.psm1"
+Import-Module -Name $scriptHelpersModule -Force
 
 function Assert-SafeReleaseVersionSegment {
     param([Parameter(Mandatory = $true)][string]$Value)

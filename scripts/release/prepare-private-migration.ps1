@@ -19,7 +19,8 @@ if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Get-ClassroomToolkitArtifactPath -Name PrivateMigrationRoot
 }
 
-function Resolve-AbsolutePath {
+# GetFullPath 规整语义（裁 .. 与分隔符），与 artifacts/ScriptHelpers.psm1 的 Resolve-AbsolutePath 有意分叉。
+function Resolve-AbsolutePathNormalized {
     param([Parameter(Mandatory = $true)][string]$Path)
     if ([System.IO.Path]::IsPathRooted($Path)) {
         return [System.IO.Path]::GetFullPath($Path)
@@ -55,7 +56,7 @@ function Copy-MigrationItem {
 
 Assert-SafeSegment -Value $Version -Label "release version"
 Assert-SafeSegment -Value $MigrationId -Label "migration id"
-$resolvedSourceRoot = Resolve-AbsolutePath -Path $SourceRoot
+$resolvedSourceRoot = Resolve-AbsolutePathNormalized -Path $SourceRoot
 if (-not (Test-Path -LiteralPath $resolvedSourceRoot -PathType Container)) {
     throw "Migration source root does not exist: $resolvedSourceRoot"
 }
