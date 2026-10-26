@@ -37,14 +37,6 @@ internal static class TestPathHelper
         return Path.Combine(root, $"{prefix}_{Guid.NewGuid():N}{extension}");
     }
 
-    public static string CreateIsolatedDirectory(string prefix)
-    {
-        var root = GetIsolatedWritableRoot();
-        var path = Path.Combine(root, $"{prefix}_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(path);
-        return path;
-    }
-
     public static string ResolveRepoPath(params string[] segments)
     {
         var root = GetRepositoryRootOrThrow();
@@ -90,26 +82,6 @@ internal static class TestPathHelper
         Directory.CreateDirectory(root);
         EnsureRepositoryTempRootMaintenance(root);
         return root;
-    }
-
-    private static string GetIsolatedWritableRoot()
-    {
-        try
-        {
-            var userHome = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            if (!string.IsNullOrWhiteSpace(userHome))
-            {
-                var root = Path.Combine(userHome, ".codex", "memories", "classroomtoolkit-tests");
-                Directory.CreateDirectory(root);
-                return root;
-            }
-        }
-        catch
-        {
-            // fall back to repository-local writable root
-        }
-
-        return GetWritableRoot();
     }
 
     private static DirectoryInfo? FindRepositoryRoot(DirectoryInfo? start)

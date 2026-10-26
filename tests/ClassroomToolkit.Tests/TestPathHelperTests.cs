@@ -59,7 +59,7 @@ public sealed class TestPathHelperTests
     [Fact]
     public void TryCleanupRepositoryTempRoot_ShouldDeleteDirectoriesOlderThanRetention()
     {
-        var root = TestPathHelper.CreateIsolatedDirectory("ctool_temp_cleanup_stale_root");
+        var root = TestPathHelper.CreateDirectory("ctool_temp_cleanup_stale_root");
         var staleDirectory = Directory.CreateDirectory(Path.Combine(root, "stale"));
         var freshDirectory = Directory.CreateDirectory(Path.Combine(root, "fresh"));
         staleDirectory.LastWriteTimeUtc = DateTime.UtcNow.AddDays(-10);
@@ -74,7 +74,7 @@ public sealed class TestPathHelperTests
     [Fact]
     public void TryCleanupRepositoryTempRoot_ShouldTrimOldestDirectoriesWhenOverSoftLimit()
     {
-        var root = TestPathHelper.CreateIsolatedDirectory("ctool_temp_cleanup_limit_root");
+        var root = TestPathHelper.CreateDirectory("ctool_temp_cleanup_limit_root");
         var oldest = Directory.CreateDirectory(Path.Combine(root, "oldest"));
         var middle = Directory.CreateDirectory(Path.Combine(root, "middle"));
         var newest = Directory.CreateDirectory(Path.Combine(root, "newest"));
@@ -92,7 +92,7 @@ public sealed class TestPathHelperTests
     [Fact]
     public void TryCleanupRepositoryTempRoot_ShouldDeleteStaleFilesAndTrimMixedEntries()
     {
-        var root = TestPathHelper.CreateIsolatedDirectory("ctool_temp_cleanup_files_root");
+        var root = TestPathHelper.CreateDirectory("ctool_temp_cleanup_files_root");
         var staleFile = new FileInfo(Path.Combine(root, "stale.ini"));
         File.WriteAllText(staleFile.FullName, "stale");
         staleFile.LastWriteTimeUtc = DateTime.UtcNow.AddDays(-10);
