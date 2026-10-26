@@ -73,7 +73,7 @@ function Assert-FilterTestClassSegmentsExist {
     }
 }
 
-$scriptHelpersModule = Join-Path $PSScriptRoot "..rtifacts\ScriptHelpers.psm1"
+$scriptHelpersModule = Join-Path $PSScriptRoot "..\artifacts\ScriptHelpers.psm1"
 Import-Module -Name $scriptHelpersModule -Force
 
 function Write-SummaryFileBestEffort {

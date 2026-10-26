@@ -13,7 +13,7 @@ if (Test-Path -LiteralPath $environmentBootstrap) {
     . $environmentBootstrap
 }
 
-$scriptHelpersModule = Join-Path $PSScriptRoot "..rtifacts\ScriptHelpers.psm1"
+$scriptHelpersModule = Join-Path $PSScriptRoot "..\artifacts\ScriptHelpers.psm1"
 Import-Module -Name $scriptHelpersModule -Force
 
 function Get-VulnerabilityRowsFromDotnetOutput {

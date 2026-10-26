@@ -18,7 +18,7 @@ if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Get-ClassroomToolkitArtifactPath -Name ReleaseRoot
 }
 
-$scriptHelpersModule = Join-Path $PSScriptRoot "..rtifacts\ScriptHelpers.psm1"
+$scriptHelpersModule = Join-Path $PSScriptRoot "..\artifacts\ScriptHelpers.psm1"
 Import-Module -Name $scriptHelpersModule -Force
 
 function Assert-SafeReleaseVersionSegment {
