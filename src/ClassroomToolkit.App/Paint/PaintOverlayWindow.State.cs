@@ -42,6 +42,7 @@ public partial class PaintOverlayWindow : Window
     private const int PhotoRenderQualityRestoreDelayMs = PhotoTransformTimingDefaults.RenderQualityRestoreDelayMs;
     private const int WpsNavDebounceMs = PresentationRuntimeDefaults.WpsNavDebounceMs;
     private const double PdfDefaultDpi = PhotoDocumentRuntimeDefaults.PdfDefaultDpi;
+    private const int PdfInteractiveSwitchMaxWaitMs = 50;
     private const int NeighborPageCacheLimit = PhotoDocumentRuntimeDefaults.NeighborPageCacheLimit;
 
     private IntPtr _hwnd;

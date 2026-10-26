@@ -112,7 +112,7 @@ public partial class PaintOverlayWindow
                 var newBitmap = CrossPageSwitchBitmapResolver.ResolveForInteractiveSwitch(
                     interactiveSwitch,
                     preloadedBitmap,
-                    () => GetPageBitmap(newPageIndex));
+                    () => GetPageBitmapBoundedForInteractiveSwitch(newPageIndex));
                 if (newBitmap != null)
                 {
                     // Put the target page bitmap in place first, so interactive ink fast-path

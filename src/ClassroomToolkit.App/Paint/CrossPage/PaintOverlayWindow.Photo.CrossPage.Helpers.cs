@@ -171,6 +171,20 @@ public partial class PaintOverlayWindow
         return _photoSequenceIndex >= 0 ? _photoSequenceIndex + 1 : 1;
     }
 
+    /// <summary>
+    /// 交互切换兜底的有界等待版：渲染门被后台预取长期持有时最多等
+    /// PdfInteractiveSwitchMaxWaitMs 即让路（null 由既有异步补图通道接管），
+    /// 消除 UI 线程在他人渲染上的无界等待；锁空闲/短等待时行为与 GetPageBitmap 一致。
+    /// </summary>
+    private BitmapSource? GetPageBitmapBoundedForInteractiveSwitch(int pageIndex)
+    {
+        if (_photoDocumentIsPdf && _pdfDocumentSession != null)
+        {
+            return _pdfDocumentSession.TryGetPageBitmapBounded(pageIndex, PdfDefaultDpi, PdfInteractiveSwitchMaxWaitMs);
+        }
+        return GetPageBitmap(pageIndex);
+    }
+
     private BitmapSource? GetPageBitmap(int pageIndex)
     {
         if (_photoDocumentIsPdf)
@@ -186,8 +200,7 @@ public partial class PaintOverlayWindow
         if (_neighborImageCache.TryGetValue(pageIndex, out var cached))
         {
             return cached;
-        }
-        var path = _photoSequencePaths[arrayIndex];
+        }        var path = _photoSequencePaths[arrayIndex];
         var bitmap = TryLoadBitmapSource(path, downsampleToMonitor: IsCrossPageImageSequenceActive());
         if (bitmap == null && IsCrossPageImageSequenceActive())
         {

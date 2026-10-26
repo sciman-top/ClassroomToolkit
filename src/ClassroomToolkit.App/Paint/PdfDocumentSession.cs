@@ -123,6 +123,28 @@ internal sealed class PdfDocumentSession : IDisposable
         }
     }
 
+    /// <summary>
+    /// 有界等待版：渲染门被后台预取持有时最多等 tryEnterTimeoutMs，
+    /// 超时返回 null 交由既有异步通道（BeginPdfPageRender/预取回调）补图，
+    /// 避免交互切换兜底在 UI 线程无界等待他人的渲染。
+    /// </summary>
+    public BitmapSource? TryGetPageBitmapBounded(int pageIndex, double dpi, int tryEnterTimeoutMs)
+    {
+        if (!Monitor.TryEnter(_renderGate, Math.Max(0, tryEnterTimeoutMs)))
+        {
+            return null;
+        }
+
+        try
+        {
+            return GetOrRenderPageUnsafe(pageIndex, dpi);
+        }
+        finally
+        {
+            Monitor.Exit(_renderGate);
+        }
+    }
+
     public bool TryPrefetchPage(
         int pageIndex,
         double dpi,
