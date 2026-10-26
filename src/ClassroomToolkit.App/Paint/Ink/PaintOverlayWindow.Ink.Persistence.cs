@@ -27,6 +27,7 @@ public partial class PaintOverlayWindow
         }
 
         _inkDirtyPages.MarkLoaded(sourcePath, pageIndex, ComputeInkHash(strokes));
+        _inkPageHashTracker.Reset();
         if (IsCurrentInkPage(sourcePath, pageIndex))
         {
             SyncSessionInkDirtyFlag();
@@ -42,7 +43,10 @@ public partial class PaintOverlayWindow
             return;
         }
 
-        var hash = ComputeInkHash(_inkStrokes);
+        // 笔画结束主路径：前缀经引用指纹核对未变时只对新增笔做增量 SHA256，
+        // 密集页不再每笔付全页 payload 哈希；任何检测不到的形态按论证不存在，
+        // 校验失败自动退回全量重算（见 InkPageHashTracker）。
+        var hash = _inkPageHashTracker.ComputeStrokesHash(_currentDocumentPath, _currentPageIndex, _inkStrokes);
         _inkDirtyPages.MarkModified(_currentDocumentPath, _currentPageIndex, hash);
         TrackInkWalSnapshot(_currentDocumentPath, _currentPageIndex, _inkStrokes, hash);
         SyncSessionInkDirtyFlag();
@@ -77,6 +81,9 @@ public partial class PaintOverlayWindow
         }
 
         _inkDirtyPages.MarkModified(sourcePath, pageIndex, hash);
+        // 外部显式哈希路径（undo 恢复/清除等）不经过 tracker 增量入口，运行状态作废；
+        // 后续笔画结束会按引用指纹校验失败自动全量重建，这里 Reset 只是省一次核对。
+        _inkPageHashTracker.Reset();
         if (walSnapshot != null)
         {
             TrackInkWalSnapshot(sourcePath, pageIndex, walSnapshot, hash);

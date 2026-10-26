@@ -145,6 +145,7 @@ public partial class PaintOverlayWindow
     private readonly InkFinalCache _photoCache = new(80);
     private readonly InkDirtyPageCoordinator _inkDirtyPages = new();
     private readonly InkWriteAheadLogService _inkWal = new();
+    private readonly InkPageHashTracker _inkPageHashTracker = new();
     private readonly InkRuntimeDiagnostics? _inkDiagnostics = InkRuntimeDiagnostics.CreateFromEnvironment();
     private int _neighborPrefetchRadiusMaxSetting = CrossPageNeighborPrefetchRadiusMax;
 

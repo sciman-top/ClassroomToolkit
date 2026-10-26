@@ -80,29 +80,13 @@ public partial class PaintOverlayWindow
             return null;
         }
 
-        var stride = _surfacePixelWidth * 4;
-        var bytesRequired = stride * _surfacePixelHeight;
-
-        // Check memory pressure and trim if needed
-        while (_history.Count > 0 && (_history.Count >= HistoryLimit || _currentHistoryMemoryBytes + bytesRequired > MaxHistoryMemoryBytes))
+        // 向量快照在场时 undo 恒走向量分支（ResetInkHistory 双栈同步清空、Undo 只 pop 向量栈），
+        // 栅格快照在该会话中不可达：跳过全屏 CopyPixels 与 Rent，落笔不再付整页 memcpy。
+        RasterSnapshot? rasterSnapshot = null;
+        if (!trackVectorSnapshot)
         {
-            var oldest = _history[0];
-            _currentHistoryMemoryBytes -= oldest.Pixels.Length;
-            oldest.Dispose();
-            _history.RemoveAt(0);
+            rasterSnapshot = CaptureRasterSnapshot();
         }
-
-        var pixels = PixelPool.Rent(bytesRequired);
-        _rasterSurface.CopyPixels(pixels, stride, 0);
-
-        var rasterSnapshot = new RasterSnapshot(
-            _surfacePixelWidth,
-            _surfacePixelHeight,
-            _surfaceDpiX,
-            _surfaceDpiY,
-            pixels);
-        _history.Add(rasterSnapshot);
-        _currentHistoryMemoryBytes += pixels.Length;
 
         InkSnapshot? localInkSnapshot = null;
         GlobalInkSnapshot? globalInkSnapshot = null;
@@ -132,6 +116,34 @@ public partial class PaintOverlayWindow
         }
 
         return new HistoryPushReceipt(rasterSnapshot, localInkSnapshot, globalInkSnapshot);
+    }
+
+    private RasterSnapshot CaptureRasterSnapshot()
+    {
+        var stride = _surfacePixelWidth * 4;
+        var bytesRequired = stride * _surfacePixelHeight;
+
+        // Check memory pressure and trim if needed
+        while (_history.Count > 0 && (_history.Count >= HistoryLimit || _currentHistoryMemoryBytes + bytesRequired > MaxHistoryMemoryBytes))
+        {
+            var oldest = _history[0];
+            _currentHistoryMemoryBytes -= oldest.Pixels.Length;
+            oldest.Dispose();
+            _history.RemoveAt(0);
+        }
+
+        var pixels = PixelPool.Rent(bytesRequired);
+        _rasterSurface!.CopyPixels(pixels, stride, 0);
+
+        var rasterSnapshot = new RasterSnapshot(
+            _surfacePixelWidth,
+            _surfacePixelHeight,
+            _surfaceDpiX,
+            _surfaceDpiY,
+            pixels);
+        _history.Add(rasterSnapshot);
+        _currentHistoryMemoryBytes += pixels.Length;
+        return rasterSnapshot;
     }
 
     private GlobalInkSnapshot? PushGlobalInkHistorySnapshot(Guid operationId)
