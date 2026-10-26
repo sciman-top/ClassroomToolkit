@@ -32,6 +32,9 @@ internal sealed class InkWriteAheadLogService : IDisposable
     private readonly System.Threading.Timer _flushTimer;
     private readonly object _pendingGate = new();
     private readonly Dictionary<string, Dictionary<string, InkWalEntry?>> _pendingByWalPath = new(StringComparer.OrdinalIgnoreCase);
+    // flush 持生命周期锁写盘期间的 Upsert 落在这里，由下一次 FlushPending 开头吸收，
+    // 让抬笔路径从"等整个 WAL 写盘周期"降为无锁入队。
+    private readonly ConcurrentQueue<(string WalPath, string Key, InkWalEntry Entry)> _deferredUpserts = new();
     private int _flushScheduled;
     private int _disposeRequested;
     private int _disposed;
@@ -54,24 +57,48 @@ internal sealed class InkWriteAheadLogService : IDisposable
             return;
         }
 
+        // 唯一调用方传入运行时深克隆（构造即无 null 元素），跳过 NormalizeStrokes 的
+        // 再拷贝；磁盘恢复路径（RecoverDirectory）仍走完整归一化。
+        var strokeList = strokes as List<InkStrokeData>
+            ?? new List<InkStrokeData>(strokes ?? Array.Empty<InkStrokeData>());
+        var key = BuildKey(sourcePath, pageIndex);
         var walPath = GetWalPath(sourcePath);
-        lock (_pendingGate)
+        if (!Monitor.TryEnter(_pendingGate))
+        {
+            // flush 正持生命周期锁写盘：入队延迟吸收，UI 线程不等磁盘；防抖调度保证
+            // 停笔场景下该条目最迟随下一次 flush 落盘。
+            _deferredUpserts.Enqueue((walPath, key, new InkWalEntry
+            {
+                SourcePath = sourcePath,
+                PageIndex = pageIndex,
+                Hash = hash ?? string.Empty,
+                UpdatedAt = DateTime.UtcNow,
+                Strokes = strokeList
+            }));
+            ScheduleFlush();
+            return;
+        }
+
+        try
         {
             if (Volatile.Read(ref _disposed) != 0 || Volatile.Read(ref _disposeRequested) != 0)
             {
                 return;
             }
 
-            var normalizedStrokes = InkPayloadNormalizer.NormalizeStrokes(strokes?.ToList());
-            GetOrAddPending(walPath)[BuildKey(sourcePath, pageIndex)] = new InkWalEntry
+            GetOrAddPending(walPath)[key] = new InkWalEntry
             {
                 SourcePath = sourcePath,
                 PageIndex = pageIndex,
                 Hash = hash ?? string.Empty,
                 UpdatedAt = DateTime.UtcNow,
-                Strokes = normalizedStrokes
+                Strokes = strokeList
             };
             ScheduleFlush();
+        }
+        finally
+        {
+            Monitor.Exit(_pendingGate);
         }
     }
 
@@ -234,6 +261,15 @@ internal sealed class InkWriteAheadLogService : IDisposable
         }
     }
 
+    /// <summary>把锁忙期间延迟入队的 Upsert 吸收进 pending；调用方必须持有 _pendingGate。</summary>
+    private void AbsorbDeferredUpserts()
+    {
+        while (_deferredUpserts.TryDequeue(out var update))
+        {
+            GetOrAddPending(update.WalPath)[update.Key] = update.Entry;
+        }
+    }
+
     public void Dispose()
     {
         var disposeTimer = false;
@@ -281,15 +317,18 @@ internal sealed class InkWriteAheadLogService : IDisposable
         // 单次遍历：合并失败的路径（如 WAL 文件被占用）保留 pending，由结尾的
         // 重新调度按防抖间隔延后重试，不做紧密循环。整个遍历持有生命周期锁，
         // 使 Dispose 不会在刷盘尾部与新的调度交错。
+        AbsorbDeferredUpserts();
         var paths = _pendingByWalPath.Keys.ToArray();
         foreach (var walPath in paths)
         {
             MergePendingToDiskCore(walPath);
         }
 
-        // 合并失败的路径也会在这里获得下一次重试机会。由于整个过程持锁，
+        // 遍历期间锁忙入队的 Upsert 也纳入重试判定，避免停笔场景下延迟条目滞留；
+        // 合并失败的路径同样在这里获得下一次重试机会。由于整个过程持锁，
         // 不再存在“清标志与新 Upsert 交错”而漏调度的窗口。
         Volatile.Write(ref _flushScheduled, 0);
+        AbsorbDeferredUpserts();
         if (scheduleRetry && _pendingByWalPath.Count > 0)
         {
             ScheduleFlush();

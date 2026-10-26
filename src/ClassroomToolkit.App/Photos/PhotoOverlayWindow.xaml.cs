@@ -143,18 +143,22 @@ public partial class PhotoOverlayWindow : Window
         // 窗口复显后再次施加透明保护，避免复显首帧复用旧合成帧。
         Opacity = 0.0;
         IsHitTestVisible = false;
-        if (TryGetCachedBitmap(path, out var cachedBitmap))
+        if (HasCachedBitmapForPath(path))
         {
             PhotoOverlayDiagnostics.Log(
                 "cache-hit",
                 $"req={requestId} path={IOPath.GetFileName(path)}");
+            // 路径相同不代表内容相同：全文件指纹校验（读+SHA256）移到后台与同图复显路径
+            // 共用机制，避免命中路径在 UI 线程阻塞数十毫秒；失配时后台回调清缓存并按
+            // 最新文件重载。
             ApplyLoadedBitmap(
                 requestId,
-                cachedBitmap,
+                _cachedBitmap!,
                 studentName,
                 durationSeconds,
                 hideWhenFailed: false,
                 ensureVisibleOnApply: deferShowUntilBitmapReady);
+            QueueCachedBitmapValidation(path, normalizedStudentId, studentName, durationSeconds, requestId);
             return;
         }
 
@@ -404,30 +408,6 @@ public partial class PhotoOverlayWindow : Window
                 () => PhotoClosed?.Invoke(studentId),
                 ex => Debug.WriteLine($"[PhotoOverlayWindow] photo closed callback failed: {ex.Message}"));
         }
-    }
-
-    private bool TryGetCachedBitmap(string path, out BitmapSource bitmap)
-    {
-        if (HasCachedBitmapForPath(path))
-        {
-            // 路径相同不代表内容相同：老师可能课中替换照片文件，按稳定文件指纹
-            // 校验缓存有效性。该方法只在明确的 ShowPhoto 缓存复用路径调用，不在绘制帧内。
-            if (_hasCachedBitmapFingerprint
-                && PhotoFileFingerprintReader.TryRead(path, out var currentFingerprint)
-                && _cachedBitmapFingerprint.Matches(currentFingerprint))
-            {
-                bitmap = _cachedBitmap!;
-                return true;
-            }
-
-            ClearCachedBitmapReference();
-            PhotoOverlayDiagnostics.Log(
-                "cache-stale",
-                IOPath.GetFileName(path));
-        }
-
-        bitmap = null!;
-        return false;
     }
 
     private bool HasCachedBitmapForPath(string path)
