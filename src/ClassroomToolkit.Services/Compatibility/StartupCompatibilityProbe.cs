@@ -163,15 +163,6 @@ public static class StartupCompatibilityProbe
                 Suggestion: "请使用 x64 系统并部署 win-x64 包。",
                 IsBlocking: true));
         }
-
-        if (Environment.Version.Major < 10)
-        {
-            issues.Add(new StartupCompatibilityIssue(
-                Code: "runtime-major-mismatch",
-                Message: $"当前 .NET 运行时版本过低（{Environment.Version}）。",
-                Suggestion: "请安装 .NET Desktop Runtime 10.x，或使用离线版。",
-                IsBlocking: true));
-        }
     }
 
     private static void EvaluateSettingsPath(
@@ -515,11 +506,6 @@ public static class StartupCompatibilityProbe
             error = ex.Message;
             return false;
         }
-    }
-
-    private static IEnumerable<Process> EnumeratePresentationProcesses()
-    {
-        return EnumeratePresentationProcesses(DefaultPresentationProcessTokens);
     }
 
     private static List<PresentationProcessSnapshot> BuildPresentationProcessSnapshots(

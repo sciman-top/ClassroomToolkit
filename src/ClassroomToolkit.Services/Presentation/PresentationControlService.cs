@@ -45,7 +45,6 @@ public sealed class PresentationControlService
     }
 
     public bool IsWpsAutoForcedMessage => HasForcedState(_wpsAutoFallbackStates);
-    public bool IsOfficeAutoForcedMessage => HasForcedState(_officeAutoFallbackStates);
 
     public bool IsWpsAutoForcedMessageForTarget(IntPtr targetHandle)
     {

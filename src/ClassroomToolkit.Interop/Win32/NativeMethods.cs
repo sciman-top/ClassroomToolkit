@@ -7,23 +7,17 @@ namespace ClassroomToolkit.Interop;
 public static class NativeMethods
 {
     public const int GwlStyle = -16;
-    public const int GwlExstyle = -20;
 
     public const int WsCaption = 0x00C00000;
-    public const int WsMinimizeBox = 0x20000;
 
     public const uint MonitorDefaultToNearest = 2;
 
     public const int WsExTransparent = 0x00000020;
-    public const int WsExToolWindow = 0x00000080;
     public const int WsExNoActivate = 0x08000000;
 
     public const int SwpNoSize = 0x0001;
     public const int SwpNoMove = 0x0002;
-    public const int SwpNoZOrder = 0x0004;
     public const int SwpNoActivate = 0x0010;
-    public const int SwpFrameChanged = 0x0020;
-    public const int SwpShowWindow = 0x0040;
     public const int SwpNoOwnerZOrder = 0x0200;
 
     public static readonly IntPtr HwndTopmost = new(-1);
@@ -152,10 +146,6 @@ public static class NativeMethods
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool GetCursorPos(out NativePoint point);
 
-    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
-    [DllImport("user32.dll")]
-    public static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint flags);
-
     // Merged Methods
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll")]
@@ -172,10 +162,6 @@ public static class NativeMethods
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern int GetClassName(IntPtr hwnd, [Out] char[] className, int maxCount);
-
-    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
-    [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-    public static extern int GetWindowText(IntPtr hwnd, [Out] char[] text, int maxCount);
 
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [DllImport("user32.dll", SetLastError = true)]

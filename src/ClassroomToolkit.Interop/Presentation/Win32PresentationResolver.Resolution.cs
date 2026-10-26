@@ -98,62 +98,6 @@ public sealed partial class Win32PresentationResolver
         return PresentationTarget.Empty;
     }
 
-    public PresentationTarget ResolveFullscreenPresentationTarget(
-        PresentationClassifier classifier,
-        bool allowWps,
-        bool allowOffice,
-        uint? excludeProcessId = null)
-    {
-        if (!OperatingSystem.IsWindows())
-        {
-            return PresentationTarget.Empty;
-        }
-
-        var bestTarget = PresentationTarget.Empty;
-        var bestScore = int.MinValue;
-        NativeMethods.EnumWindows(
-            (hwnd, _) =>
-            {
-                if (hwnd == IntPtr.Zero || !NativeMethods.IsWindowVisible(hwnd))
-                {
-                    return true;
-                }
-
-                var info = BuildWindowInfo(hwnd);
-                if (excludeProcessId.HasValue && info.ProcessId == excludeProcessId.Value)
-                {
-                    return true;
-                }
-
-                var check = BuildWindowCheck(hwnd, info, classifier);
-                if (check == null || !IsSelectableCandidate(check) || !check.IsFullscreen)
-                {
-                    return true;
-                }
-                if (check.Type == PresentationType.Wps && !allowWps)
-                {
-                    return true;
-                }
-                if (check.Type == PresentationType.Office && !allowOffice)
-                {
-                    return true;
-                }
-
-                var score = check.Score + (check.ClassMatch ? _scoringOptions.FullscreenClassMatchBonus : 0);
-                if (score <= bestScore)
-                {
-                    return true;
-                }
-
-                bestScore = score;
-                bestTarget = new PresentationTarget(hwnd, info);
-                return true;
-            },
-            IntPtr.Zero);
-
-        return bestTarget;
-    }
-
     internal static bool IsSelectableCandidate(PresentationWindowCheck check)
     {
         ArgumentNullException.ThrowIfNull(check);
